@@ -1,0 +1,4 @@
+# Welcome-back digest — daily 04:40 UTC. Drop into /etc/cron.d/ (0644).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+40 4 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job welcome-back-digest -- send_welcome_back_digest >> /var/log/alpha-finance/welcome-back-digest.log 2>&1

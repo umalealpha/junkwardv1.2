@@ -1,0 +1,12 @@
+# Time Doctor token-expiry reminder — daily 05:30 UTC (07:30 SAST).
+# Time Doctor API tokens expire ~6 months after minting and there is no
+# non-expiring company key (vendor confirmed 2026-07-14); when one lapses the
+# daily workforce pull silently 401s and the reports stop. This job reads the
+# token's own expiry and emails the CFO, Arjun and Unami EVERY day for the last
+# week before it lapses (and urgently once expired) so it is re-minted in time.
+# Non-fatal / SKIPPED when no token is set.
+# Drop this file into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 5 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py check_timedoctor_token >> /var/log/alpha-finance/timedoctor-token-check.log 2>&1

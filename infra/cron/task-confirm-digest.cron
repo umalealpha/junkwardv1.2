@@ -1,0 +1,13 @@
+# Task-confirm digest (CFO 2026-08-26 v2). Twice a week, email each manager the
+# tasks their team finished that are still waiting for the manager's OK, each with
+# a ONE-TAP "Confirm done" link (signed, no login). Confirming is what lets a
+# finished task count toward the person's Alpha League score + monthly reward —
+# without it the incentive pays nobody (the anti-gaming rule starves itself).
+# Anything waiting > 7 days is flagged. Routine manager nudge — no CFO cc.
+#
+# Drop into /etc/cron.d/ on the omni EC2 (installed by infra/install-crons.sh).
+# Mon + Thu 05:00 UTC = 07:00 SAST. Output -> /var/log/alpha-finance/task-confirm-digest.log
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 5 * * 1,4 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job task-confirm-digest -- task_confirm_digest --commit >> /var/log/alpha-finance/task-confirm-digest.log 2>&1

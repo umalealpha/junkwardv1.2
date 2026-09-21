@@ -1,0 +1,22 @@
+# Build Log digest — 15:30 UTC = 17:30 Africa/Gaborone, end of the working day.
+#
+# CFO 2026-09-11: "i am developing so many things and i am missing things and
+# claude is saying it deployed and made it live but it misses so many things
+# eg this telegram and CFO morning breif, adding kevins manager."
+#
+# The board that answers this shipped on 9-Sep and he had no reason to open it.
+# Measured on prod the morning he asked: 56 requests recorded, exactly ONE ever
+# confirmed live. So the board now comes to him instead.
+#
+# End of day, not morning, on purpose — it reports what today's sessions claimed
+# and what production will actually confirm, and the last deploy of the day has
+# usually landed by then.
+#
+# Sends EVERY day, including a clean one. A digest that only arrives when there
+# is news cannot be told apart from one that has silently stopped.
+#
+# Drop into /etc/cron.d/ (chmod 644, owned by root). Times are UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 15 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py devlog_digest >> /var/log/alpha-finance/devlog-digest.log 2>&1

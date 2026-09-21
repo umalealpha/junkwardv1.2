@@ -1,0 +1,16 @@
+[
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "QUERY_DISPUTE", "label": "Bill queried / in dispute with supplier", "group": "dispute", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "DOCS_MISSING", "label": "Missing PO, goods receipt or valid tax invoice", "group": "docs_missing", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "SALVAGE_NOT_IN_YARD", "label": "Salvage not yet physically in the yard", "group": "salvage_not_in_yard", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "AWAITING_APPROVAL", "label": "Awaiting internal approval", "group": "awaiting_approval", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "NO_PO", "label": "No purchase order raised", "group": "no_po", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "NO_CLAIM_AUTH", "label": "No claim authorisation on the PO", "group": "docs_missing", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "CASHFLOW_HOLD", "label": "Deferred - cash-flow / funding hold", "group": "funds", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "SUSPECTED_DUPLICATE", "label": "Suspected duplicate bill", "group": "duplicate", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "PRICE_VARIANCE", "label": "Bill exceeds the PO - variance unresolved", "group": "dispute", "requires_escalation": true, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "WORK_INCOMPLETE", "label": "Repair / delivery not complete", "group": "dispute", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "BANK_DETAILS", "label": "Supplier bank details unverified", "group": "docs_missing", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "FX_CONFIRM", "label": "Awaiting FX / rate confirmation", "group": "fx", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "PAID_AFTER_CUTOFF", "label": "Paid after the 09:00 cut-off - settles next run", "group": "awaiting_approval", "requires_escalation": false, "active": true}},
+  {"model": "supplier_recon.reasoncode", "fields": {"code": "OTHER", "label": "Other (see justification)", "group": "other", "requires_escalation": false, "active": true}}
+]

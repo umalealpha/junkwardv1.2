@@ -1,0 +1,707 @@
+<style>
+  /* ── Alpha Direct — standard underwriting quote ───────────────────────────
+     ONE layout for single-risk, group and motor-fleet quotes. The cover table
+     simply gains rows; a fleet adds the vehicle schedule block.
+
+     Everything in .locked is printed by the system. The underwriter fills in
+     figures and cover only — never the masthead, the licence line, the VAT
+     maths or the closing conditions. That is what stops a competitor's
+     schedule being reused as our base, and VAT appearing three different ways.
+
+     A4 at 96dpi = 794 × 1123px. CANONICAL Alpha Direct brand (org standard):
+     Alpha Navy #1D3270, Direct Orange #F47C20, Montserrat (falls back to a clean
+     sans-serif on the render box). Replaces the old Finance palette here because
+     a quotation is a CLIENT document and carries the company brand, not the
+     Finance dept look.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* ── Type — the brand faces, embedded in the document ────────────────────
+     The render box has only the basic free fonts, so this document printed in
+     Liberation Sans however the CSS was written — why it still did not read as
+     premium after two passes (CFO handover, 11 Aug 2026). Both faces now travel
+     inside the file as base64 (quote_render._woff2_data_uri): Montserrat for the
+     masthead, headings and labels, Open Sans for text and figures — the org
+     brand pairing, and Open Sans carries true tabular numerals so the money
+     columns line up. Falls back to the old stack if a face is ever missing. */
+{% if font_display %}  @font-face{
+    font-family:'AD Display'; src:url({{ font_display }}) format('woff2');
+    font-weight:400 800; font-style:normal; font-display:block;
+  }
+{% endif %}{% if font_text %}  @font-face{
+    font-family:'AD Text'; src:url({{ font_text }}) format('woff2');
+    font-weight:400 800; font-style:normal; font-display:block;
+  }
+{% endif %}
+  /* The CFO's own format for this document (Q-2026-00009, 11 Aug 2026): a WHITE
+     page that opens on the real colour logo, not a navy band with the mark
+     reversed out of it. Deep navy and amber, the set he signed the layout off in. */
+  :root{
+    --navy:#0D1B2A;
+    --orange:#F4A623;
+    --ink:#0D1B2A;
+    --ink2:#3D4A5C;
+    --muted:#6C757D;
+    --rule:#E7EAF0;
+    --wash:#F4F6FA;
+    --tile-label:#B9C4D4;
+    --sans:'AD Text','Open Sans','Liberation Sans','DejaVu Sans',Arial,sans-serif;
+    --display:'AD Display','Montserrat','Liberation Sans',Arial,sans-serif;
+  }
+
+  /* No min-height and no bottom-pinned footer: on a multi-page quote a forced
+     full-page box plus `margin-top:auto` spilled a near-empty extra page and the
+     in-page footer collided with the signature block (CFO caught it on the 5-page
+     print). The document now ends where the content ends; the printed footer
+     comes from the PDF renderer's own per-page footer. */
+  .page{
+    width:794px; margin:0 auto; background:#fff;
+    font-family:var(--sans);
+    color:var(--ink); font-size:13px; line-height:1.5; word-wrap:break-word;
+  }
+
+  /* Every label, heading and figure-headline is set in the display face; body
+     copy and table text stay in the text face, which is built to be read small. */
+  .brand-name, .doc-title, .quote-badge .label, .quote-badge .number,
+  .client .to, .client .name, .fact .k, .glance .k, h2.sec, table.cover th,
+  table.cover tr.group .bar-name, .validity .k, .bank .k, .verify .k, .sign .k,
+  table.pay th{ font-family:var(--display); }
+
+  /* ── Masthead — NAVY band opening on the WHITE mark, then a full-width
+     ORANGE title bar (CFO 2026-08-13: the quotation reverts to the navy-band +
+     orange-bar of the earlier signed format — "look and feel the same as the
+     uploaded quote", the rating/numbers unchanged). The full-colour mark would
+     vanish on navy, so the white monotone mark is used up here. */
+  .masthead{ background:var(--navy); color:#fff; padding:22px 44px 18px; }
+  .masthead-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
+  .brand-logo{ display:block; height:58px; width:auto; }
+  .brand-name{ font-size:21px; color:#fff; font-weight:bold; }
+  .brand-rule{ width:52px; height:3px; background:var(--orange); margin:11px 0 10px; }
+  .brand-licence{ font-size:9px; color:#AFC0D2; line-height:1.6; max-width:340px; }
+  .quote-badge{ text-align:right; }
+  .quote-badge .label{ font-size:9px; letter-spacing:1.9px; text-transform:uppercase; color:var(--orange); font-weight:bold; }
+  .quote-badge .number{
+    font-variant-numeric:tabular-nums; font-size:20px; font-weight:bold; color:#fff; margin-top:3px;
+  }
+  .quote-badge .meta{ font-size:9.5px; color:#AFC0D2; margin-top:7px; line-height:1.7; }
+
+  /* Full-width orange title bar under the masthead — navy caps on it. */
+  .doc-title{
+    background:var(--orange); color:var(--navy);
+    padding:8px 44px; text-align:center; font-size:13px; font-weight:bold;
+    letter-spacing:4px; text-transform:uppercase;
+  }
+
+  /* ── Body ──────────────────────────────────────────────────────────────── */
+  .body{ padding:20px 44px 0; }
+
+  /* Who and what, as a bordered panel: the client across the top, then class,
+     period, broker and underwriter in their own cells. */
+  .facts{
+    display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule);
+    border:1px solid var(--rule); margin-bottom:14px;
+  }
+  .client, .fact{ background:#fff; padding:10px 14px; }
+  .client{ grid-column:1 / -1; }
+  .client .to, .fact .k{
+    font-size:8.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted);
+    font-weight:bold; margin-bottom:3px;
+  }
+  .client .name{ font-size:12px; font-weight:bold; color:var(--navy); }
+  .client .sub{ font-size:10.5px; color:var(--ink2); margin-top:2px; }
+  .fact .v{ font-size:10.5px; font-weight:bold; color:var(--navy); }
+  .fact .v .sub{ display:block; font-size:9.5px; font-weight:normal; color:var(--ink2); }
+
+  /* ── The four headline figures ───────────────────────────────────────────── */
+  .glance{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:#24354D; border:1px solid var(--navy); margin-bottom:16px;
+  }
+  .glance .g{ background:var(--navy); color:#fff; padding:12px 10px; text-align:center; }
+  .glance .k{ font-size:8px; letter-spacing:1.4px; text-transform:uppercase; color:var(--tile-label); font-weight:bold; }
+  /* Every headline figure carries BWP. "274,917.27" on a document that crosses a
+     border is a number, not a price (CFO 2026-08-11). */
+  .glance .v{
+    font-variant-numeric:tabular-nums; font-size:14px; font-weight:bold;
+    color:#fff; margin-top:5px; white-space:nowrap;
+  }
+  /* The amount the client actually pays is the one figure in amber. */
+  .glance .g.hi .k, .glance .g.hi .v{ color:var(--orange); }
+  /* The monthly tile has to disclose what paying monthly costs OVER THE YEAR —
+     the instalment on its own reads as the cheaper option (CFO 2026-08-11). */
+  .glance .sub{ font-size:7.5px; color:var(--tile-label); line-height:1.4; margin-top:3px; }
+
+  h2.sec{
+    font-size:10.5px; letter-spacing:2.6px; text-transform:uppercase; color:var(--navy);
+    margin:0 0 9px; padding-bottom:5px; border-bottom:2px solid var(--navy);
+  }
+  .block{ margin-bottom:16px; }
+
+  /* Rows are separated by a single hairline, not boxed in a grid — a five-page
+     schedule in a full cell grid reads as a spreadsheet, not a quotation
+     (CFO's format, 11 Aug 2026). */
+  table.cover{ width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; }
+  /* A long schedule runs to several pages. Without these a row splits across the
+     page boundary and its wrapped text lands on top of the footer licence line —
+     the "information cutting below" the CFO flagged (11 Aug 2026, LUCIENT quote).
+     Keep every row whole, repeat the column header on each page, and never leave
+     a section bar stranded at the foot of a page away from its first row. */
+  table.cover tr{ page-break-inside:avoid; break-inside:avoid; }
+  table.cover thead{ display:table-header-group; }
+  table.cover tr.group{ page-break-after:avoid; break-after:avoid; }
+  /* Column headings are CENTRED over their column. Left-aligned headings with
+     wide letter-spacing sat off to one side of the figures they label, and the
+     spacing ran the last character into the next heading (CFO 2026-08-11). */
+  table.cover th{
+    text-align:center; font-size:9px; letter-spacing:1.3px; text-transform:uppercase;
+    color:#fff; background:var(--navy); font-weight:bold; padding:10px; vertical-align:middle;
+  }
+  /* Figures are right-aligned in the BODY so they line up on the decimal; the
+     heading above them stays centred over the column. */
+  table.cover td.num{ text-align:right; }
+  table.cover td{ padding:5px 10px; border-bottom:1px solid var(--rule); vertical-align:top; word-wrap:break-word; overflow-wrap:anywhere; }
+  table.cover td.num{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+  /* Section bars carry an orange accent so the eye can navigate 15 identical
+     pale-grey headings on a long quote (CFO 2026-08-10). */
+  /* The section bar: a washed band with an amber spine, floated clear of the rows
+     above and below so the eye can navigate fifteen sections on a long quote. */
+  table.cover tr.group td{ padding:14px 0 4px; border:none; }
+  table.cover tr.group .bar{
+    display:flex; justify-content:space-between; align-items:baseline; gap:16px;
+    background:var(--wash); border-left:4px solid var(--orange); padding:7px 12px;
+  }
+  table.cover tr.group .bar-name{
+    font-size:10px; letter-spacing:1.4px; text-transform:uppercase; color:var(--navy); font-weight:bold;
+  }
+  /* The section's excess, stated ONCE on its bar and applying to everything
+     under it — it used to be repeated on all 24 motor rows (CFO 2026-08-11). */
+  table.cover tr.group .bar-exc{
+    font-size:9px; color:var(--muted); font-weight:normal; text-align:right; white-space:normal;
+  }
+  /* The item is the line the eye is looking for; its sub-line explains it. */
+  table.cover td.sec-name{ font-weight:bold; }
+  table.cover td.sec-name{ color:var(--navy); }
+  /* Sub-limits of a priced section (products liability, common law, windscreen)
+     are indented and quiet: they are part of what the section's premium buys,
+     not items with a price of their own (CFO's format, 11 Aug 2026). */
+  table.cover td.sec-name.sub{ padding-left:26px; font-weight:normal; color:var(--ink2); }
+  table.cover td .note{ display:block; font-size:8.5px; color:var(--muted); margin-top:1px; font-weight:normal; }
+  /* Per-section notes — printed once under a whole cover/section, distinct from
+     the tiny per-item .note above and from the general Notes block at the foot
+     (Gomolemo Sebudula, 17 Aug 2026). pre-line keeps the underwriter's own
+     line breaks; the row stays with its section across a page break. */
+  table.cover tr.section-note{ break-inside:avoid; page-break-inside:avoid; }
+  table.cover tr.section-note td{ padding:3px 10px 9px; border-bottom:1px solid var(--rule); }
+  /* Thin orange edge marks it as extra terms for this cover, not body text. */
+  table.cover tr.section-note .sn{ border-left:3px solid var(--orange); background:#FFF8EC; padding:5px 9px; }
+  table.cover tr.section-note .sn-k{ display:block; font-size:8px; letter-spacing:1.2px; text-transform:uppercase; color:#9A6B00; margin-bottom:2px; }
+  table.cover tr.section-note .sn-b{ display:block; font-size:9.5px; color:#3B4654; line-height:1.55; white-space:pre-line; }
+  /* What the sum-insured total actually is — see the TOTALS row. */
+  .tblnote{ font-size:10.5px; color:var(--muted); line-height:1.5; margin:6px 0 0; }
+  .leadin{ font-size:11.5px; color:var(--muted); line-height:1.5; margin:-2px 0 9px; }
+
+  /* ── Premium block — locked maths ──────────────────────────────────────── */
+  .premium{ display:flex; gap:22px; align-items:flex-start; margin-bottom:16px; }
+  .premium-table{ flex:1; }
+  .premium-table table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .premium-table td{ padding:7px 0; }
+  .premium-table td.num{
+    text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .premium-table tr.total td{
+    border-top:2px solid var(--navy); padding-top:10px;
+    font-size:16px; color:var(--navy); font-weight:bold;
+  }
+  .premium-table tr.vat td{ color:var(--muted); border-bottom:1px solid var(--rule); }
+  .validity{
+    width:236px; background:#FFF8EC; border-left:3px solid var(--orange);
+    padding:13px 15px; font-size:12px;
+  }
+  .validity .k{ font-size:9px; letter-spacing:1.6px; text-transform:uppercase; color:#9A6B00; }
+  .validity .v{ font-size:15px; color:var(--navy); margin:2px 0 7px; }
+  .validity p{ margin:0; font-size:11.5px; color:#7A5A16; line-height:1.5; }
+
+  .conditions{ font-size:11.5px; color:#3B4654; }
+  .conditions ol{ margin:0; padding-left:17px; }
+  .conditions li{ margin-bottom:4px; }
+  ul.excl{ margin:0 0 8px; padding-left:17px; }
+  ul.excl li{ margin-bottom:3px; }
+  /* NOTES — the underwriter's own free text (e.g. the Motor Excess Conditions
+     block). pre-line keeps every line they typed on its own line, without the
+     document adding or inventing any wording (Gomolemo Sebudula, 14 Aug 2026). */
+  .block.notes .notes-body{ font-size:11.5px; color:#3B4654; line-height:1.6; white-space:pre-line; }
+
+  .sign{ display:flex; gap:40px; margin:34px 0 24px; }
+  /* Reserve the stamp's own height ABOVE the signature line, in BOTH columns so
+     the two lines stay level. This keeps the seal's full 74px INSIDE the .sign
+     box, so break-inside:avoid protects it and it can never be sliced across the
+     page edge. It used to be position:absolute anchored to the bottom, hanging
+     OUTSIDE the box — the box measured short, so the block fit at a page bottom
+     and the seal spilled past the edge and was cut off (Gomolemo Sebudula,
+     14 Aug 2026; earlier "do not overlap data" note, CFO 11 Aug 2026). */
+  .sign .col{ flex:1; position:relative; padding-top:80px; }
+  /* The company stamp, on an ISSUED quotation only — a draft must not look
+     stamped. Sits just above the signature line, whole, as it does on paper. */
+  .sign .stamp{
+    position:absolute; left:6px; top:0; width:74px; height:auto; opacity:.85;
+  }
+  .sign .line{ border-bottom:1px solid var(--navy); height:26px; }
+  .sign .k{ font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); margin-top:5px; }
+
+  /* NOT APPROVED — a draft (unissued) quotation carries a faint diagonal
+     watermark so an agent's working copy can never read as a firm, approved
+     quote (CFO 2026-08-12, Motlatsi). Faint enough to read the figures through
+     it; a fixed element repeats on every page of the PDF, and it clears on issue
+     when the company stamp takes over. */
+  .draft-mark{
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) rotate(-32deg);
+    font-family:var(--display); font-size:104px; font-weight:800; letter-spacing:8px;
+    color:rgba(244,166,35,.15); border:7px solid rgba(244,166,35,.15);
+    border-radius:16px; padding:12px 52px; text-transform:uppercase; white-space:nowrap;
+    pointer-events:none; z-index:0;
+    print-color-adjust:exact; -webkit-print-color-adjust:exact;
+  }
+
+  /* ── Footer — locked ───────────────────────────────────────────────────── */
+  .foot{
+    border-top:1px solid var(--rule); margin-top:26px; padding:11px 44px 16px;
+    display:flex; justify-content:space-between; font-size:10px; color:var(--muted);
+  }
+  .foot .ref{ font-variant-numeric:tabular-nums; color:var(--navy); }
+
+  /* ── Banking — locked, ADIC's premium-receiving account ────────────────── */
+  .bank{
+    border:1px solid var(--rule); border-left:3px solid var(--navy);
+    border-radius:2px; padding:11px 16px; margin-bottom:16px; background:var(--wash);
+  }
+  .bank .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px 22px; margin-top:8px; }
+  .bank .k{ font-size:9px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
+  .bank .v{ font-size:12.5px; color:var(--navy); margin-top:1px; }
+  .bank .v.mono{ font-variant-numeric:tabular-nums; }
+  .bank .pay{ font-size:11px; color:#3B4654; margin:9px 0 0; }
+
+  /* ── Per-product premium breakdown ─────────────────────────────────────── */
+  /* Wording ("Included", "As per policy") is not money: read it as words rather
+     than right-aligned monospace, where it looks like a broken figure. */
+  table.cover td.num.text{ font-family:inherit; text-align:left; color:var(--ink); white-space:normal; word-wrap:break-word; overflow-wrap:anywhere; }
+  /* Rate % — shown so the client can see HOW the premium was arrived at, not just
+     the answer (CFO 2026-08-10). Muted: it explains the figure, it is not the figure. */
+  table.cover td.num.rate{ color:var(--muted); }
+  /* TOTALS — ONE rule. There were two: an earlier one painted the row navy with
+     white text, a later one set the text back to navy without touching the
+     background, so the totals row printed navy on navy and the figures the whole
+     schedule adds up to were invisible on the page. Light row, navy figures,
+     heavy navy rule above it — as the CFO's format sets it out (11 Aug 2026). */
+  /* NEVER letter-space numerals (CFO fix list, 11 Aug 2026 #2). Tracking set on
+     the whole row spread the FIGURES out too — "90,930,261.36" printed with a
+     gap inside every group. The label cell alone carries the tracking; every
+     numeric cell is pinned back to normal. */
+  table.cover tr.grand td{
+    background:var(--wash); border:none; border-top:2px solid var(--navy);
+    padding:9px 10px; font-size:10px; color:var(--navy); font-weight:bold;
+  }
+  table.cover tr.grand td:first-child{ letter-spacing:.8px; }
+  table.cover tr.grand td.num{ letter-spacing:normal; font-variant-numeric:tabular-nums; }
+  /* The caption under the sum-insured total, not a figure — it stays quiet. */
+  table.cover tr.grand td.num.rate{
+    font-size:9px; font-weight:normal; color:var(--muted); letter-spacing:.4px;
+  }
+  /* ── Summary of premiums by section ─────────────────────────────────────────
+     Was a two-column list of subtotals in schedule order, which answered "what
+     did each part cost" only if the reader added it up themselves. Now a table,
+     ordered by cost with the largest first, each section's share of the premium
+     drawn as a bar, and its own total row so the recap proves it reconciles
+     (CFO 2026-08-11). */
+  table.sumsec{ width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; margin:9px 0 0; border:1px solid var(--rule); }
+  table.sumsec th{
+    font-family:var(--display); text-align:center; font-size:8.5px; letter-spacing:1px; text-transform:uppercase;
+    color:#fff; background:var(--navy); font-weight:bold; padding:7px 9px; border:1px solid var(--navy);
+  }
+  table.sumsec td{ padding:5px 9px; border:1px solid var(--rule); vertical-align:middle; }
+  table.sumsec td.n{ color:var(--navy); font-weight:bold; word-wrap:break-word; overflow-wrap:anywhere; }
+  table.sumsec td.v{ text-align:right; font-variant-numeric:tabular-nums; color:var(--navy); font-weight:bold; white-space:nowrap; }
+  table.sumsec td.p{ text-align:right; font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+  table.sumsec .track{ height:9px; background:#EDF0F5; }
+  table.sumsec .fill{ height:9px; background:var(--orange); }
+  table.sumsec tr.tot td{ background:var(--navy); color:#fff; font-weight:bold; border-color:var(--navy); }
+  table.sumsec tr.tot td.p{ color:#AFC0D2; }
+  table.sumsec tr.tot td.v{ color:#fff; }
+
+  /* ── Payment options + scan-to-verify (last page) ──────────────────────── */
+  .payblock{ display:flex; gap:18px; align-items:stretch; margin-bottom:16px; }
+  .payopts{ flex:1; }
+  table.pay{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.pay th{
+    text-align:left; font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--muted); font-weight:normal; padding:0 10px 6px 0; border-bottom:1px solid var(--rule);
+  }
+  table.pay th.num, table.pay td.num{ text-align:right; padding-right:0; }
+  table.pay td{ padding:9px 12px 9px 0; border-bottom:1px solid #EEF1F5; vertical-align:top; color:var(--navy); }
+  table.pay td .sub{ display:block; font-size:10.5px; color:var(--muted); font-weight:normal; margin-top:1px; }
+  table.pay td.num.big{ font-variant-numeric:tabular-nums; font-size:15px; font-weight:bold; white-space:nowrap; }
+  table.pay td.num .per{ display:block; font-family:inherit; font-size:9.5px; font-weight:normal;
+                         letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+  table.pay tr.alt td{ background:#FFF8EC; }
+  /* The workings, so the client can check the instalment themselves. */
+  table.paywork{ width:100%; border-collapse:collapse; font-size:11.5px; margin-top:9px; }
+  table.paywork td{ padding:4px 0; color:#3B4654; }
+  table.paywork td.num{ text-align:right; font-variant-numeric:tabular-nums; color:var(--navy); white-space:nowrap; }
+  table.paywork tr.tot td{ border-top:1px solid var(--rule); font-weight:bold; color:var(--navy); padding-top:6px; }
+  table.paywork tr.over td{ color:var(--muted); }
+  .paynote{ font-size:10.5px; color:var(--muted); line-height:1.5; margin:8px 0 0; }
+  .verify{
+    width:168px; text-align:center; border:1px solid var(--rule); border-radius:2px;
+    padding:12px 12px 10px; background:#fff;
+  }
+  .verify .k{ font-size:9px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .verify img{ display:block; margin:0 auto; }
+  .verify p{ font-size:9.5px; color:var(--muted); line-height:1.45; margin:8px 0 0; }
+
+  /* ── Print-safety: keep long (fleet / big all-risks) quotes clean over pages ──
+     NO @page margin rule here. An author @page margin OVERRIDES the margins the
+     PDF engine is given, so `margin:0` told Chromium to lay content over the
+     FULL page height — and the per-page footer then printed straight across the
+     schedule rows ("Licensed by NBFIRA" through the middle of a vehicle's
+     excess line; CFO, 11 Aug 2026, pages 3-4 of the LUCIENT print). The margins
+     in quote_render.render_quote_pdf are the one source of truth; content now
+     stops clear of the footer band on every page. */
+  @page{ size:A4; }
+  .page{ print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  table.cover thead{ display:table-header-group; }
+  table.cover tr{ break-inside:avoid; page-break-inside:avoid; }
+  table.cover tr.group{ break-after:avoid; page-break-after:avoid; }
+  /* The section-summary table is a long list — keeping it whole forced the whole
+     block onto the next page and cascaded everything down, adding a sheet (CFO
+     caught the near-empty last page). Let it split between rows instead; each ROW
+     stays intact, which is all the reader needs. */
+  .premium, .sign, .block.conditions, .block.notes, .facts, .bank, .payblock{ break-inside:avoid; page-break-inside:avoid; }
+  /* The section summary prints as ONE table on ONE page — the CFO caught it cut
+     in two with its header repeated (11 Aug 2026). Whole-block avoid moves it
+     to the next page intact; the row/header rules below only matter in the
+     fallback case of a quote with more sections than a page can hold, where a
+     break is unavoidable. */
+  .block.keep{ break-inside:avoid; page-break-inside:avoid; }
+  table.sumsec thead{ display:table-header-group; }
+  table.sumsec tr{ break-inside:avoid; page-break-inside:avoid; }
+  table.cover tr.grand{ break-before:avoid; page-break-before:avoid; }
+</style>
+
+<div class="page">
+
+{% if not_approved %}  <!-- Draft (unissued) watermark — clears on issue. -->
+  <div class="draft-mark">Not&nbsp;Approved</div>
+{% endif %}
+  <!-- MASTHEAD — system-printed, cannot be typed over. NAVY band, the WHITE
+       monotone mark reversed out of it, then a full-width ORANGE title bar
+       (CFO 2026-08-13 — the earlier signed navy-band format). -->
+  <div class="masthead">
+    <div class="masthead-top">
+      <div>
+{% if logo_white %}        <img class="brand-logo" src="{{ logo_white }}" alt="Alpha Direct Insurance">
+{% else %}        <div class="brand-name">Alpha Direct Insurance Company (Pty) Ltd</div>
+{% endif %}        <div class="brand-rule"></div>
+        <div class="brand-licence">
+          Alpha Direct Insurance Company (Pty) Ltd &middot; licensed short-term insurer,
+          registered and supervised by NBFIRA.<br>
+          Floor 2, Bar 2, Botswana Innovation Hub Icon Building, Plot 69184,
+          Block 8 Industrial, Gaborone · P.O. Box 26ADC<br>
+          0800 601 029 · +267 392 8264 · www.alphadirect.co.bw
+        </div>
+      </div>
+      <div class="quote-badge">
+        <div class="label">Quotation No.</div>
+        <div class="number">{{ q.quote_number }}</div>
+        <div class="meta">
+          Issued&nbsp;&nbsp;{{ issued_on }}<br>
+          Version&nbsp;&nbsp;{{ q.version }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="doc-title">Insurance Quotation</div>
+
+  <div class="body">
+
+    <!-- WHO AND WHAT — one panel. Two clients cannot share a file. -->
+    <div class="facts">
+      <div class="client">
+        <div class="to">Prepared for</div>
+        <div class="name">{{ q.client_name }}</div>
+        {% if q.client_attn %}<div class="sub">{{ q.client_attn }}</div>{% endif %}
+      </div>
+      <div class="fact"><div class="k">Class</div><div class="v">{{ q.class_of_business|default:"—" }}</div></div>
+      <div class="fact"><div class="k">Period of insurance</div><div class="v">{{ q.period|default:"—" }}</div></div>
+      <!-- A dash against Broker reads as "not filled in". Say what it means:
+           there is no broker, we are dealing with the client (CFO 2026-08-11). -->
+      <div class="fact" style="grid-column:1 / -1"><div class="k">Broker</div><div class="v">{{ q.broker|default:"None — direct client" }}</div></div>
+      <!-- Agent and Underwriter side by side: the producer who brought the
+           business AND our staffer who priced it — both names, both accountable
+           (CFO 2026-08-12, Motlatsi item 6). -->
+      <div class="fact"><div class="k">Agent</div><div class="v">{% if q.agent %}{{ q.agent }}{% if q.agent_email %}<span class="sub">{{ q.agent_email }}</span>{% endif %}{% else %}None — direct{% endif %}</div></div>
+      <div class="fact"><div class="k">Underwriter</div><div class="v">{{ underwriter|default:"—" }}{% if underwriter_email %}<span class="sub">{{ underwriter_email }}</span>{% endif %}</div></div>
+    </div>
+
+    <!-- AT A GLANCE — the four figures a client and a broker look for first, so a
+         long quote does not open on a wall of vehicle rows (CFO 2026-08-10). -->
+    <div class="glance">
+{% if total_sum_insured %}      <div class="g">
+        <div class="k">Total sums insured &amp; limits</div>
+        <div class="v">BWP {{ total_sum_insured }}</div>
+      </div>
+{% endif %}      <div class="g">
+        <div class="k">{% if prorata %}Premium for {{ prorata.months }} months{% else %}Annual premium (excl VAT){% endif %}</div>
+        <div class="v">BWP {{ money.premium }}</div>
+      </div>
+      <div class="g hi">
+        <div class="k">Total payable (incl VAT)</div>
+        <div class="v">BWP {{ money.total }}</div>
+      </div>
+{% if plan %}      <div class="g">
+        <div class="k">Monthly option</div>
+        <div class="v">BWP {{ plan.monthly_instalment_f }}</div>
+        <div class="sub">{{ plan.months }} instalments &middot; BWP {{ plan.total_over_term_f }} over the year</div>
+      </div>
+{% endif %}    </div>
+
+    <!-- COVER — the table absorbs single risk, group and fleet alike -->
+{% if not simple %}    <div class="block">
+      <h2 class="sec">Cover Offered</h2>
+      <!-- Said once, at the top, instead of a currency and an excess repeated on
+           every row of a five-page schedule (CFO 2026-08-11). -->
+      <p class="leadin">All amounts in Botswana Pula (BWP). Premiums shown exclude VAT. Each
+        section's excess is stated once on its heading and applies to every item in that section.</p>
+      <table class="cover">
+        <thead>
+          <tr>
+            <th style="width:{% if breakdown %}44%{% else %}70%{% endif %}">Section / item</th>
+            <th style="width:{% if breakdown %}20%{% else %}30%{% endif %}">Sum insured (BWP)</th>
+{% if breakdown %}            <!-- Says whether the rate carries VAT, so a client checking a line on a
+                 calculator can reach our figure (CFO 2026-08-11). -->
+            <th style="width:14%">Rate %{% if q.rate_incl_vat %}<br>(incl VAT){% endif %}</th>
+            <th style="width:22%">Premium (BWP)</th>
+{% endif %}          </tr>
+        </thead>
+        <tbody>
+{% for row in rows %}{% if row.group %}          <tr class="group"><td colspan="{% if breakdown %}4{% else %}2{% endif %}"><div class="bar"><span class="bar-name">{{ row.group }}</span>{% if row.group_info %}<span class="bar-exc">{{ row.group_info }}</span>{% endif %}</div></td></tr>
+{% endif %}          <tr>
+            <td class="sec-name{% if row.is_sub %} sub{% endif %}">{{ row.name }}{% if row.origin %}<span class="note">{{ row.origin }} vehicle</span>{% endif %}{% if row.sub %}<span class="note">{{ row.sub }}</span>{% endif %}{% if row.row_excess %}<span class="note">Excess: {{ row.row_excess }}</span>{% endif %}</td>
+            <td class="num{% if row.sum_insured_is_text %} text{% endif %}">{{ row.sum_insured|default:"—" }}</td>
+{% if breakdown %}            <td class="num rate">{% if not row.is_sub %}{{ row.rate_display|default:"—" }}{% endif %}</td>
+            <td class="num">{% if not row.is_sub %}{{ row.premium_display|default:"—" }}{% endif %}</td>
+{% endif %}          </tr>
+{% if row.section_note %}          <tr class="section-note"><td colspan="{% if breakdown %}4{% else %}2{% endif %}"><div class="sn"><span class="sn-k">Section notes</span><span class="sn-b">{{ row.section_note }}</span></div></td></tr>
+{% endif %}{% empty %}          <tr><td colspan="{% if breakdown %}4{% else %}2{% endif %}" class="sec-name">Cover as per the attached schedule.</td></tr>
+{% endfor %}{% if breakdown %}          <tr class="grand">
+            <td>Totals</td>
+            <td class="num">{{ total_sum_insured|default:"" }}</td>
+            <!-- Says WHAT the sum-insured total is. It mixes asset values,
+                 liability limits and declared earnings, so it is not one
+                 insurable value and must never be read as one (CFO 2026-08-11). -->
+            <td class="num rate">sums insured &amp; limits</td>
+            <td class="num">{{ breakdown.net }}</td>
+          </tr>
+{% endif %}        </tbody>
+      </table>
+{% if breakdown %}      <p class="tblnote">{% if q.rate_incl_vat %}Rates include VAT: each premium is the rate applied
+        to the sum insured, with the VAT then taken out. {% endif %}The sum-insured column totals asset
+        sums insured, liability limits and declared annual earnings together; it is not a single
+        insurable value. The premium total is the annual premium excluding VAT.</p>
+{% endif %}    </div>
+{% endif %}{% if breakdown and breakdown.groups|length > 1 %}    <div class="block keep">
+      <h2 class="sec">Summary of premiums by section</h2>
+      <p class="leadin">The section premiums from the schedule{% if simple %}{% else %} above{% endif %} (BWP, excluding VAT),
+        largest first. The bar shows each section's share of the total premium.</p>
+      <table class="sumsec">
+        <thead>
+          <tr>
+            <th style="width:36%">Section</th>
+            <th style="width:36%">Share of total</th>
+            <th style="width:10%">%</th>
+            <th style="width:18%">Premium (BWP)</th>
+          </tr>
+        </thead>
+        <tbody>
+{% for g in breakdown.groups %}          <tr>
+            <td class="n">{{ g.group|default:"Cover" }}</td>
+            <td><div class="track"><div class="fill" style="width:{{ g.bar }}%"></div></div></td>
+            <td class="p">{{ g.pct }}</td>
+            <td class="v">{{ g.net }}</td>
+          </tr>
+{% endfor %}          <tr class="tot">
+            <td>Total annual premium (excluding VAT)</td>
+            <td></td>
+            <td class="p">100</td>
+            <td class="v">{{ breakdown.net }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+{% endif %}
+
+    <!-- PREMIUM — one rule, three lines, always this order -->
+    <div class="premium">
+      <div class="premium-table">
+        <h2 class="sec">Premium</h2>
+        <table>
+{% if prorata %}          <tr>
+            <td>Annual premium (excluding VAT)</td>
+            <td class="num">{{ prorata.annual }}</td>
+          </tr>
+          <tr>
+            <td>Charged for {{ prorata.months }} months &mdash; {{ prorata.fraction }} of the year</td>
+            <td class="num">{{ prorata.charged }}</td>
+          </tr>
+{% else %}          <tr>
+            <td>Total annual premium{% if breakdown %} (excluding VAT){% endif %}</td>
+            <td class="num">{{ money.premium }}</td>
+          </tr>
+{% endif %}
+          <tr class="vat">
+            <td>Value Added Tax at {{ money.vat_rate_pct }}%</td>
+            <td class="num">{{ money.vat }}</td>
+          </tr>
+          <tr class="total">
+            <td>Total payable</td>
+            <td class="num">BWP {{ money.total }}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="validity">
+        <div class="k">Quotation valid until</div>
+        <div class="v">{{ valid_until }}</div>
+        <p>Terms are held until the date above. After that date the risk is
+           re-rated and this quotation lapses.</p>
+      </div>
+    </div>
+
+    <!-- BANKING — ADIC premium-receiving account, locked (CFO 2026-08-10) -->
+    <div class="bank">
+      <h2 class="sec" style="border:none; margin:0; padding:0;">Premium Payable To</h2>
+      <div class="grid">
+        <div><div class="k">Bank</div><div class="v">First National Bank of Botswana</div></div>
+        <div><div class="k">Account name</div><div class="v">Alpha Direct Insurance Company (Pty) Ltd</div></div>
+        <div><div class="k">Account number</div><div class="v mono">62403392335</div></div>
+        <div><div class="k">Branch</div><div class="v">FNB Corporate</div></div>
+        <div><div class="k">VAT number</div><div class="v mono">BW00000123907</div></div>
+        <div><div class="k">Payment reference</div><div class="v mono">{{ q.quote_number }}</div></div>
+      </div>
+      <p class="pay">Please use the quotation number as your payment reference. Cover incepts only once
+        the premium reflects in this account and we have confirmed acceptance in writing.</p>
+    </div>
+
+    <!-- PAYMENT OPTIONS + SCAN TO VERIFY — beside the money, straight after the
+         bank details. It used to sit last and pagination stranded it alone on a
+         final page (CFO fix list, 11 Aug 2026 #7). -->
+    <div class="payblock">
+{% if plan %}      <div class="payopts">
+        <h2 class="sec">Payment Options</h2>
+        <table class="pay">
+          <thead>
+            <tr><th>Option</th><th class="num">Amount (BWP)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Annual</strong><span class="sub">One payment, in advance</span></td>
+              <td class="num big">{{ money.total }}</td>
+            </tr>
+            <tr class="alt">
+              <td><strong>Monthly &mdash; {{ plan.months }} instalments</strong>
+                  <span class="sub">Includes the payment plan charge below</span></td>
+              <td class="num big">{{ plan.monthly_instalment_f }}<span class="per">per month</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="paywork">
+          <tbody>
+            <tr><td>Total payable &divide; {{ plan.months }}</td><td class="num">{{ plan.monthly_premium_f }}</td></tr>
+            <tr><td>Payment plan charge ({{ plan.charge_pct }}% of the monthly premium)</td><td class="num">{{ plan.plan_charge_f }}</td></tr>
+            <tr class="tot"><td>Monthly instalment</td><td class="num">{{ plan.monthly_instalment_f }}</td></tr>
+            <tr class="over"><td>Total over {{ plan.months }} months</td><td class="num">{{ plan.total_over_term_f }}</td></tr>
+          </tbody>
+        </table>
+        <p class="paynote">Choosing the monthly option carries the payment plan charge shown, so the
+          amount paid over the year is higher than the annual figure. Instalments are collected on the
+          same day each month and cover must be paid up for a claim to be met.</p>
+      </div>
+{% endif %}
+{% if verify_qr %}      <div class="verify">
+        <div class="k">Scan to verify</div>
+        <img src="{{ verify_qr }}" alt="Scan to verify this quotation" width="118" height="118">
+        <p>Confirms with Alpha Direct that this quotation is genuine and that these are our figures.</p>
+      </div>
+{% endif %}    </div>
+
+    <!-- CONDITIONS — locked wording -->
+{% if not simple %}    <div class="block conditions">
+      <h2 class="sec">Conditions</h2>
+      <ol>
+        <li>This quotation is an offer of terms only. No cover is in force until
+            we have accepted the risk in writing and the premium has been received.</li>
+        <li>Terms are based solely on the information supplied to us. Any change to
+            that information may alter the premium or withdraw these terms.</li>
+        <li>Cover is subject to the policy wording, which prevails over any summary
+            in this document.</li>
+        <li>Premium is payable annually in advance unless a payment arrangement is
+            agreed in writing.</li>
+      </ol>
+    </div>
+{% endif %}
+
+    <!-- DUTY OF DISCLOSURE — locked legal wording, on every client quotation -->
+    <div class="block conditions">
+      <h2 class="sec">Duty of Disclosure</h2>
+      <p style="margin:0; font-size:11.5px; color:#3B4654;">
+        This document is subject to the terms and conditions of the Insurance Policy.
+        Failure to comply with your Duty of Disclosure may entitle the Insurer to reduce
+        liability regarding a claim or cancel the Contract. If non-disclosure is
+        fraudulent, the Insurer may void the Contract from inception.
+      </p>
+    </div>
+
+    <!-- WHAT IS NOT COVERED — the underwriter's class-specific list, plus a
+         locked pointer to the policy wording. The list is DATA (typed per quote):
+         the document must never invent an exclusion, and an empty list still
+         leaves the pointer sentence standing. -->
+{% if not simple %}    <div class="block conditions">
+      <h2 class="sec">What is not covered</h2>
+{% if q.exclusions %}      <ul class="excl">
+{% for x in q.exclusions %}        <li>{{ x }}</li>
+{% endfor %}      </ul>
+{% endif %}      <p style="margin:0; font-size:11.5px; color:#3B4654;">
+        This is a summary. The policy wording sets out the full exclusions, conditions and
+        warranties that apply, and it prevails over anything summarised here. Ask us for the
+        wording before you accept these terms if you have not seen it.
+      </p>
+    </div>
+{% endif %}
+
+    <!-- NOTES — free text typed by the underwriter, e.g. the Motor Excess
+         Conditions block. Printed exactly as entered, line for line. The
+         document invents nothing: an empty notes field prints nothing. Shown on
+         both the full and the simple quote because excess conditions are part of
+         the offer (Gomolemo Sebudula, 14 Aug 2026). -->
+{% if q.notes %}    <div class="block notes">
+      <h2 class="sec">Notes</h2>
+      <div class="notes-body">{{ q.notes }}</div>
+    </div>
+{% endif %}
+
+    <div class="sign">
+      <div class="col">
+{% if stamp %}        <img class="stamp" src="{{ stamp }}" alt="">
+{% endif %}        <div class="line"></div>
+        <div class="k">For and on behalf of Alpha Direct</div>
+      </div>
+      <div class="col">
+        <div class="line"></div>
+        <div class="k">Accepted by the client · date</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- No in-page footer: the PDF renderer prints the licence line, the quote
+       number and "page N of M" at the foot of EVERY page. Repeating it in the
+       flow only duplicated it under the signatures and cost a page of height. -->
+
+</div>

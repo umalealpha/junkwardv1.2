@@ -1,0 +1,18 @@
+# Frozen-screen / weight-on-a-key fraud detector — SHADOW MODE.
+#
+# 2-week quiet trial from 2026-09-01 (CFO decision, on Fable 5's advice). Runs the
+# whole-company screenshot sweep ONCE a day for the previous Botswana day and
+# appends the flags to a log. It touches NO staff: no email, no "explain your day",
+# no leave docking — nothing leaves the box. The point of the trial is to (a) tune
+# the thresholds on real data, (b) confirm it never accuses a genuine worker, and
+# (c) verify Time Doctor captures every monitor, BEFORE anyone is actioned.
+#
+# Read the accumulated log any time:
+#   docker exec alpha-finance-backend true; sudo tail -n 200 /var/log/frozen-screen-shadow.log
+# Remove after the trial:  sudo rm /etc/cron.d/frozen-screen-shadow
+#
+# 07:00 UTC = 09:00 SAST — after the 08:30 SAST final Time Doctor settle pull, so a
+# full day's screenshots have arrived. The command defaults to "yesterday".
+# Drop into /etc/cron.d/ (sudo cp + chmod 644). Clock is UTC.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 7 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py detect_frozen_screen >> /var/log/frozen-screen-shadow.log 2>&1

@@ -1,0 +1,13 @@
+# Aware canned reports — weekly Excel snapshots.
+# Runs the Django management command inside the running backend container.
+# Drop this file into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644).
+#
+# Schedule: every Sunday 06:00 SAST  (SAST = UTC+02 -> 04:00 UTC).
+#
+# Writes <MEDIA_ROOT>/aware_reports/<key>_<date>.xlsx (persistent media volume);
+# staff download them from Graphite Aware. Output -> /var/log/aware-reports.log.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 * * 0 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py generate_aware_reports >> /var/log/aware-reports.log 2>&1

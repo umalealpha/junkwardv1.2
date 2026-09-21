@@ -1,0 +1,23 @@
+# Finance monitoring scheduled sends (UniCoin Finance & Debtors pack, Task 2).
+# Runs the Django management command inside the running backend container.
+# Drop into /etc/cron.d/ on the omni EC2 (install-crons.sh / deploy sync does this).
+#
+# Emails carry counts, totals and a link into /banking/realpay/monitoring —
+# never a customer list (pack 3.6). A dead replica sends an error notice, not a
+# silent "all clear" (pack 3.7). admin@ is hard-blocked by _NEVER_CC.
+#
+# Schedule (SAST = UTC+02), all at 06:00 SAST -> 04:00 UTC:
+#   daily       — every day     : failed-debits (A3) — earliest honest cadence,
+#                 RealPay reports a daily batch so a per-txn alert is impossible.
+#   weekly      — Monday        : policy-status integrity, collections-vs-graphite
+#   fortnightly — 1st & 15th    : payment-status reader (#4)
+#   monthly     — 1st           : contract-expiry
+# Output -> /var/log/alpha-finance/finance-monitoring.log.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 * * * root /usr/local/bin/omni-manage send_finance_monitoring --frequency daily >> /var/log/alpha-finance/finance-monitoring.log 2>&1
+0 4 * * 1 root /usr/local/bin/omni-manage send_finance_monitoring --frequency weekly >> /var/log/alpha-finance/finance-monitoring.log 2>&1
+0 4 1,15 * * root /usr/local/bin/omni-manage send_finance_monitoring --frequency fortnightly >> /var/log/alpha-finance/finance-monitoring.log 2>&1
+0 4 1 * * root /usr/local/bin/omni-manage send_finance_monitoring --frequency monthly >> /var/log/alpha-finance/finance-monitoring.log 2>&1

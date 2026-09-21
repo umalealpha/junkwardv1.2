@@ -1,0 +1,26 @@
+# Weekly FAILED DEBITS report to the Debtors recipient list.
+#
+# WHY (CFO 2026-09-11): an Accounts Assistant exported the failed debit orders by
+# hand, pasted them into a spreadsheet and emailed Underwriting and the agents to
+# chase the clients. The export and the email are mechanical; the chasing is not.
+# Omni now reads the failures live from Graphite and sends the same email, to a
+# recipient list Finance maintain themselves on screen.
+#
+# 12:00 UTC FRIDAY = 14:00 Friday in Gaborone (Botswana never observes DST, so
+# this offset is fixed year-round) — CFO 2026-09-12, moved off Monday so
+# Bokani's broker chase list lands before the weekend, not at the start of the
+# following week. Day-of-week 5 is Friday.
+#
+# omni-manage, NOT `docker compose exec`: the raw form was retired on 2026-09-04
+# after a cron ran mid blue/green flip and the company lost a day's attendance
+# record. The wrapper waits for a healthy container instead of writing into a
+# dying one.
+#
+# Read-only. It SELECTs through integrations.graphite_ro and sends an email. It
+# raises no payment, changes no policy and moves no money. It exits NON-ZERO when
+# Graphite is unreachable or the recipient list is empty, so a broken Monday
+# never looks like a quiet one.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 12 * * 5 root /usr/local/bin/omni-manage send_failed_debits_report >> /var/log/alpha-finance/failed-debits-report.log 2>&1

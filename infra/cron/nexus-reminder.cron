@@ -1,0 +1,7 @@
+# Alpha Nexus tester reminder — Monday 06:00 UTC (08:00 CAT).
+# Emails install/sign-in reminders to invited testers who haven't signed up yet.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 6 * * 1 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py nexus_signup_reminder >> /var/log/alpha-finance/nexus-reminder.log 2>&1

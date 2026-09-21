@@ -1,0 +1,3 @@
+# IT Help Desk pending-ticket reminder - 08:00 + 16:00 CAT (06:00 + 14:00 UTC). CFO 2026-06-29.
+0 6 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job helpdesk-reminder -- helpdesk_pending_reminder >> /var/log/alpha-finance/helpdesk-reminder.log 2>&1
+0 14 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job helpdesk-reminder -- helpdesk_pending_reminder >> /var/log/alpha-finance/helpdesk-reminder.log 2>&1

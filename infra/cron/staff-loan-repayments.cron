@@ -1,0 +1,10 @@
+# Staff-loan monthly salary deductions — materialise each active loan's
+# repayment line on the current OPEN payroll period (idempotent; safe to
+# re-run). The GL credit to the staff-loan receivable then flows through the
+# normal payroll period posting. Skips cleanly if no period is Open.
+# Runs 20th of each month 04:00 UTC (mid-cycle, before payroll is calculated).
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 20 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_staff_loan_repayments >> /var/log/alpha-finance/staff-loan-repayments.log 2>&1

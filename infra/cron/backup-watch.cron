@@ -1,0 +1,15 @@
+# Off-site backup watcher — 02:00 UTC, after the 00:00 backup window.
+#
+# WHY (2026-08-25): the off-site copy of the omni database stopped landing on
+# 7 July 2026 and nobody knew for seven weeks. The job ran nightly, produced its
+# artifact, and had its final push refused by GitHub's 100MB file limit — a
+# failure in the last step that nothing ever looked at. A backup nobody checks
+# is not a backup.
+#
+# Runs on the HOST (it needs the AWS CLI, same as the backup itself). Silent when
+# the copy is current; emails the CFO when it is not. Repairs nothing.
+# Drop into /etc/cron.d via infra/install-crons.sh (chmod 644).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 2 * * * root /opt/alpha-finance/ops/backup_watch.sh >> /var/log/alpha-finance/backup-watch.log 2>&1

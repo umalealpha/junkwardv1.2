@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CODEOWNERS — Alpha Direct Finance
+#
+# Lines map a path glob to a list of GitHub users / teams who become the
+# default reviewers for any PR that touches matching files.
+#
+# When branch protection on `main` is enabled with "Require review from
+# Code Owners", these mappings become enforcing rather than advisory.
+# Until then they auto-assign and document ownership.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Fixed Assets module — CFO-authored, CFO-approved ──────────────────────
+# The Fixed Assets register, depreciation engine, Odoo importer, and the
+# Asset Register report are owned directly by the CFO (Alpha Direct
+# Insurance). Changes require @Prathap-Alpha approval — not contracted
+# vendor sign-off.
+
+assets/                                                  @Prathap-Alpha
+frontend/src/app/(dashboard)/assets/                     @Prathap-Alpha
+frontend/src/app/(dashboard)/reports/asset-register/     @Prathap-Alpha
+.github/CODEOWNERS                                       @Prathap-Alpha

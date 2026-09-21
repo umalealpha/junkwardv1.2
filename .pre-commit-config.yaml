@@ -1,0 +1,50 @@
+# Standard tools instead of hand-rolled greps.
+#
+# On 9-Aug-2026 I wrote bash greps for things mature tools already do properly
+# with real parsing. This replaces them. Keep the greps only where a rule is
+# OURS and no public tool knows it — those live in .semgrep/alpha-rules.yml.
+#
+#   pre-commit install          # once per clone
+#   pre-commit run --all-files  # check everything now
+repos:
+  # Secrets. Replaces my regex — this is a purpose-built scanner.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # Python correctness. S110 = try/except/pass, BLE001 = blind except — the exact
+  # fault I shipped into a test. Real AST analysis, not a grep.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        args: [--select, "E722,S110,S112,BLE001,F", --fix]
+      - id: ruff-format
+
+  # Django/Python security patterns.
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml", "-q"]
+        additional_dependencies: ["bandit[toml]"]
+
+  # OUR rules — the ones no public tool can know. H33 (a write that stamps a
+  # company without clamping it) and H6 (an error dropped with no trace).
+  - repo: https://github.com/semgrep/semgrep
+    rev: v1.172.0
+    hooks:
+      - id: semgrep
+        args: ["--config", ".semgrep/alpha-rules.yml", "--error", "--quiet", "--skip-unknown-extensions"]
+
+  # The boring ones that still catch real damage.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

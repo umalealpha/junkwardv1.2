@@ -1,0 +1,37 @@
+# Blue/green second backend slot (CFO decision 2026-07-31).
+#
+# WHY: a backend restart takes ~66s (the entrypoint runs migrations + the CoA seed
+# before gunicorn boots). Until now that was 66s of hard failures for whoever was
+# clicking — 2,717 of them in July. With a second slot, the OLD backend keeps
+# serving for the whole 66s while the new one boots, and traffic only moves once
+# the new one is proven healthy.
+#
+# Only the backend gets this. The frontend restarts in ~8s, which the Caddy
+# lb_try_duration already rides over invisibly, so a second frontend would be
+# complexity for nothing.
+#
+# `extends` reuses the real backend definition so its ~200 env vars are never
+# duplicated — duplicating them guarantees drift the day someone edits one.
+#
+# `!override` on ports is REQUIRED: without it Compose MERGES the inherited ports
+# list, so green tries to bind blue's 8000 as well as its own 8001 and dies with
+# "port is already allocated" (hit 2026-07-31 building this).
+#
+# Green carries BOTH aliases. `backend-green` is how the deploy script talks to it
+# specifically; `backend` is what the frontend's server-side calls resolve, so
+# green can take over when blue stops. During the ~66s both are up, Docker DNS
+# round-robins `backend` between the two versions — a brief server-side skew that
+# is a far smaller problem than 66s of outage. Blue is stopped promptly after.
+services:
+  backend_green:
+    extends:
+      file: docker-compose.yml
+      service: backend
+    container_name: alpha-finance-backend-green
+    ports: !override
+      - "127.0.0.1:8001:8000"
+    networks: !override
+      alpha_internal:
+        aliases:
+          - backend
+          - backend-green

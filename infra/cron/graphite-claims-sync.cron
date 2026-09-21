@@ -1,0 +1,22 @@
+# Graphite claims register — keep omni's read-only claims mirror fresh.
+# Without this the feed was manual-only: a one-shot detail backfill stalled at
+# ~30% (1230/4065), so most claims showed P0 reserve/payment in the register
+# report (Bokani 2026-06-25). These crons make the amounts self-heal.
+#
+# Drop this file into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644).
+# System clock is UTC (SAST = UTC+02).
+#
+#   :17 hourly  -> list sweep (new claims + status) THEN enrich only the
+#                  not-yet-synced claims' amounts. Light, resumable.
+#   01:15 UTC   -> full detail re-enrich (reserves/payments change as a claim
+#   (03:15 SAST)   is worked), off-peak.
+#
+# Read-only mirror — no GL posting. Idempotent (upsert on graphite_id). Exits
+# SKIPPED if GRAPHITE_FINANCE_API_* unset, so it never crashes the cron.
+# Output -> /var/log/alpha-finance/claims-sync.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+17 * * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py pull_graphite_claims --details --missing-only --detail-delay 0.25 >> /var/log/alpha-finance/claims-sync.log 2>&1
+15 1 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py pull_graphite_claims --detail-only --detail-delay 0.25 >> /var/log/alpha-finance/claims-sync.log 2>&1

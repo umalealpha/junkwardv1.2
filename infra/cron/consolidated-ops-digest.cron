@@ -1,0 +1,10 @@
+# Consolidated Ops & System digest — CFO/EXCO only, 04:30 UTC (06:30 SAST).
+# CFO 2026-08-05: bundles the daily outbound-email digest + the Time Doctor
+# health heartbeat into ONE morning email. The TD-health section is SILENT on a
+# PASS and only appears on WARN/FAIL. Only sends when CONSOLIDATED_EMAILS_ENABLED
+# is ON (the command self-guards to a no-op when OFF); the old
+# omni-outbound-digest / timedoctor-healthcheck jobs self-skip when the flag is on
+# so nothing double-sends. Drop into /etc/cron.d/ (sudo cp + chmod 644). Clock UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 4 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py send_ops_digest >> /var/log/alpha-finance/ops-digest.log 2>&1

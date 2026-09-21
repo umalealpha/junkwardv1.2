@@ -1,0 +1,23 @@
+# HR contract reminders, new-Microsoft-account alert, Group Payroll Report.
+# CFO HR plan + Group Payroll plan, approved 19-Sep-2026.
+#
+# Botswana is UTC+2 — times below are UTC.
+#   Weekdays 05:00 UTC = 07:00 local  contract reminders (weekly repeat per contract is
+#                                      enforced inside the command, so a daily run is safe)
+#   Hourly  :25, 05-17 UTC            new Microsoft 365 accounts -> Dorothy + Unami
+#   28th    03:00 UTC = 05:00 local   Group Payroll Report snapshot + email to the 5 viewers
+#
+# Drop into /etc/cron.d/ via infra/install-crons.sh (editing this file alone
+# schedules nothing on the host).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 5 * * 1-5  root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py send_contract_reminders --commit >> /var/log/alpha-finance/hr-contracts.log 2>&1
+25 5-17 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py alert_new_m365_accounts --commit >> /var/log/alpha-finance/m365-new-accounts.log 2>&1
+0 3 28 * *   root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py generate_group_payroll_report --commit --notify >> /var/log/alpha-finance/group-payroll.log 2>&1
+# HR batch 2 (CFO 19-Sep-2026): joiner sign-off / document reminders weekdays 07:15 local;
+# Monday HR digest 06:30 local. (Probation reminders ride on send_contract_reminders.)
+15 5 * * 1-5 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py send_joiner_reminders --commit >> /var/log/alpha-finance/hr-contracts.log 2>&1
+30 4 * * 1   root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py hr_monday_digest --commit >> /var/log/alpha-finance/hr-contracts.log 2>&1
+# Leaver Microsoft 365 switch-off (CFO 19-Sep-2026): daily 05:30 local, the day after the last
+# working day. Acts only when M365_LEAVER_DISABLE=enforce; 'report' emails HR + IT what it would do.
+30 3 * * *   root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py disable_leaver_m365 --commit >> /var/log/alpha-finance/hr-contracts.log 2>&1

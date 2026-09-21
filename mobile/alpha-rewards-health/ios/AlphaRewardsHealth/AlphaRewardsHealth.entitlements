@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- HealthKit read access. Without this entitlement HKHealthStore raises an
+	     uncatchable exception, so the consent screen would crash on iOS even
+	     with the JS fixed. Signing under team 3KXFUVSXG7 must include a
+	     provisioning profile with the HealthKit capability enabled. -->
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array/>
+</dict>
+</plist>

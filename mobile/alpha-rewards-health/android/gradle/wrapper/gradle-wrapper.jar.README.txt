@@ -1,0 +1,15 @@
+This scaffold cannot include the binary gradle-wrapper.jar.
+
+Before the first build, generate the wrapper jar + scripts so the pinned
+Gradle 8.10.2 (see gradle-wrapper.properties) is used:
+
+    cd android
+    gradle wrapper --gradle-version 8.10.2
+
+If you do not have a system `gradle`, copy the wrapper jar from any
+RN 0.74+ template:
+
+    cp node_modules/react-native/template/android/gradle/wrapper/gradle-wrapper.jar \
+       android/gradle/wrapper/gradle-wrapper.jar
+
+Then `./gradlew assembleDebug` will work.

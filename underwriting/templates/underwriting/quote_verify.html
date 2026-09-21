@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Verify quotation · Alpha Direct Insurance</title>
+<style>
+  :root{ --navy:#1D3270; --orange:#F47C20; --ink:#1A1A1A; --muted:#6B7280;
+         --rule:#E4E8EF; --ok:#0F7B4F; --okbg:#EAF7F0; --warn:#9A6B00; --warnbg:#FFF8EC; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#F3F5F9; color:var(--ink);
+        font-family:'Montserrat','Segoe UI',Arial,Helvetica,sans-serif; line-height:1.55; }
+  .wrap{ max-width:560px; margin:0 auto; padding:22px 16px 40px; }
+  .card{ background:#fff; border:1px solid var(--rule); border-radius:14px; overflow:hidden;
+         box-shadow:0 1px 3px rgba(29,50,112,.07); }
+  .head{ background:var(--navy); color:#fff; padding:20px 22px 17px; }
+  .head .brand{ display:flex; align-items:center; gap:11px; }
+  .head img{ width:34px; height:34px; border-radius:50%; background:#fff; }
+  .head .name{ font-size:15px; font-weight:700; letter-spacing:.2px; }
+  .head .sub{ font-size:10.5px; color:#AFC0D2; margin-top:1px; }
+  .rule{ height:3px; background:var(--orange); }
+  .body{ padding:20px 22px 22px; }
+  .badge{ display:inline-block; border-radius:999px; padding:7px 15px; font-size:13px; font-weight:700; }
+  .badge.ok{ background:var(--okbg); color:var(--ok); }
+  .badge.no{ background:var(--warnbg); color:var(--warn); }
+  h1{ font-size:17px; color:var(--navy); margin:14px 0 4px; }
+  p.lead{ margin:0 0 16px; font-size:13.5px; color:var(--muted); }
+  dl{ margin:0; border-top:1px solid var(--rule); }
+  .row{ display:flex; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px solid var(--rule); }
+  dt{ font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); }
+  dd{ margin:0; font-size:13.5px; color:var(--navy); text-align:right; font-weight:600; }
+  dd.mono{ font-family:Consolas,Menlo,monospace; }
+  .total dd{ font-size:17px; }
+  .note{ margin:16px 0 0; font-size:11.5px; color:var(--muted); line-height:1.5; }
+  .foot{ text-align:center; font-size:10.5px; color:var(--muted); margin-top:16px; }
+  a{ color:var(--navy); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="head">
+      <div class="brand">
+        {% if logo %}<img src="{{ logo }}" alt="">{% endif %}
+        <div>
+          <div class="name">Alpha Direct Insurance Company (Pty) Ltd</div>
+          <div class="sub">Licensed short-term insurer · supervised by NBFIRA</div>
+        </div>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="body">
+      {% if ok %}
+        <span class="badge ok">&#10003; Genuine quotation</span>
+        <h1>{{ number }}</h1>
+        <p class="lead">This quotation was issued by Alpha Direct. The details below are what we hold
+          on our records — check them against the document in your hand.</p>
+        <dl>
+          <div class="row"><dt>Client</dt><dd>{{ client }}</dd></div>
+          <div class="row"><dt>Class of business</dt><dd>{{ class_of_business }}</dd></div>
+          <div class="row"><dt>Period of insurance</dt><dd>{{ period }}</dd></div>
+          <div class="row total"><dt>Total payable</dt><dd class="mono">BWP {{ total }}</dd></div>
+          <div class="row"><dt>Issued</dt><dd>{{ issued }}</dd></div>
+          <div class="row"><dt>Valid until</dt><dd>{{ valid_until }}</dd></div>
+          <div class="row"><dt>Status</dt><dd>{% if expired %}Lapsed — past its validity date{% else %}{{ status }}{% endif %}</dd></div>
+        </dl>
+        <p class="note">If anything here differs from your copy, do not act on that document —
+          contact us on 0800 601 029 or +267 392 8264 before paying anything. No cover is in force
+          until we have accepted the risk in writing and the premium has been received.</p>
+      {% else %}
+        <span class="badge no">Not recognised</span>
+        <h1>We cannot find this quotation</h1>
+        <p class="lead">This code does not match any quotation on our records. It may have been mistyped,
+          or the document may not have come from Alpha Direct.</p>
+        <p class="note">Please do not pay anything against that document. Contact us on
+          0800 601 029 or +267 392 8264 and we will confirm what is genuine.</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="foot">alphadirect.co.bw · This page confirms a quotation only; it is not a policy document.</div>
+</div>
+</body>
+</html>

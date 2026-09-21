@@ -1,0 +1,22 @@
+# Release drift — say out loud when production is not running main.
+#
+# On 2026-09-10 a fix was merged, CI went green, and production kept serving the
+# previous build. A page in the menu stayed broken for hours and nothing
+# anywhere said so: a deploy that silently never happened looks exactly like a
+# deploy that did. Deploys here are manual and CFO-authorised on purpose, so the
+# answer is not to automate them — it is to make the gap visible and named.
+#
+# Schedule: hourly at :20, 07:00-18:00 SAST (05:00-16:00 UTC), Monday to Friday.
+# Business hours only: nobody is going to deploy at 03:00, and an alert nobody
+# can act on is an alert people learn to ignore.
+#
+# Exit 0 = current (or inside the 120-minute grace period, so a fix merged
+# minutes ago is not an incident). Exit 1 = behind, alert sent. Exit 2 = cannot
+# tell, which is reported as UNKNOWN and never as fine.
+#
+# Output -> /var/log/release-drift.log
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+20 5-16 * * 1-5 root . /etc/alpha-finance/.env 2>/dev/null; cd /opt/alpha-finance && bash infra/host/check-release-drift.sh >> /var/log/release-drift.log 2>&1

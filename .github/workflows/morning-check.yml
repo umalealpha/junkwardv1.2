@@ -1,0 +1,262 @@
+name: Morning Health Check
+
+# Daily 03:00 UTC = 05:00 Africa/Gaborone (SAST, no DST).
+# CFO directive 2026-05-21: by 05:00 the system must be tested; by 08:00
+# staff must be able to use it without trouble.
+#
+# Architecture:
+#   - External probe job: curls every public + auth-gated endpoint Manus
+#     tested. Captures status code + latency.
+#   - Prod-checks job: SSH via EC2 Instance Connect; runs
+#     `python manage.py morning_check --auto-fix` (mgmt cmd in
+#     core/management/commands/morning_check.py).
+#   - Commits ops/morning-checks/YYYY-MM-DD.md.
+#   - Opens an Issue tagged morning-check if anything red.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues:   write
+  pull-requests: write
+
+concurrency:
+  group: morning-check
+  cancel-in-progress: false
+
+env:
+  PROD_HOST:       omni.alphadirect.co.bw
+  PROD_BACKEND_IP: 15.240.20.178
+  EC2_INSTANCE_ID: i-02a5d76a61f4f09a5
+  AWS_REGION:      af-south-1
+
+jobs:
+  probe:
+    name: External probe
+    runs-on: ubuntu-latest
+    outputs:
+      red: ${{ steps.probe.outputs.red }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe endpoints
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          REPORT="ops/morning-checks/${DATE}.md"
+          mkdir -p "$(dirname "$REPORT")"
+
+          {
+            echo "# Morning Health Check — ${DATE}"
+            echo
+            echo "Run: $(date -u +%FT%TZ) UTC"
+            echo
+            echo "## External probes"
+            echo
+            echo "| Endpoint | Status | Latency (ms) | Expect |"
+            echo "|---|---:|---:|---|"
+          } > "$REPORT"
+
+          red=0
+          probe() {
+            local path="$1" expect="$2"
+            local out code lat lat_ms ok
+            out=$(curl -sk -o /dev/null -w "%{http_code}|%{time_total}" "https://${PROD_HOST}${path}" || echo "000|0")
+            code=${out%|*}
+            lat=${out#*|}
+            lat_ms=$(awk "BEGIN{printf \"%.0f\", ${lat}*1000}")
+            ok="✅"
+            if ! echo " $expect " | grep -q " $code "; then
+              ok="❌"; red=$((red+1))
+            fi
+            printf '| `%s` | %s %s | %s | %s |\n' "$path" "$ok" "$code" "$lat_ms" "$expect" >> "$REPORT"
+          }
+
+          probe "/accounts/login/"          "200"
+          probe "/login/"                   "200"
+          probe "/api/auth/login/"          "200 405"
+          probe "/"                         "200 301 302"
+
+          for ep in \
+              /api/v1/reports/trial-balance/ \
+              /api/v1/reports/profit-loss/ \
+              /api/v1/reports/balance-sheet/ \
+              /api/v1/reports/ar-aging/ \
+              /api/v1/reports/ap-aging/ \
+              /api/v1/reports/cash-position/ \
+              /api/v1/reports/general-ledger/ \
+              /api/v1/reports/budget-vs-actual/ \
+              /api/v1/reports/vat-return/ \
+              /api/v1/reports/expense-analysis/ \
+              /api/v1/reports/management-pack/ \
+              /api/v1/reports/audit-pack/ \
+              /api/v1/reports/asset-register/ \
+              /api/v1/reports/related-party-transactions/ \
+              /api/v1/reports/ma-profit-loss/ \
+              /api/v1/reports/po-outstanding/ \
+              /api/v1/reports/po-commitment/ \
+              /api/v1/reports/gr-ir-reconciliation/ \
+              /api/v1/reports/asset-movement/ \
+              /api/v1/journal-entries/ \
+              /api/v1/contacts/ \
+              /api/v1/assets/ \
+              /api/v1/bank-accounts/ \
+              /api/v1/purchase-orders/ \
+              /api/v1/employees/ \
+              /api/v1/payslips/ \
+              /api/v1/tax-brackets/ \
+              /api/v1/companies/ \
+              /hris/api/employees/ \
+              /hris/api/me/ \
+              /hris/api/my-payslips/ \
+              /hris/api/kudos/ \
+              /hris/api/inbox/ \
+              /hris/api/onboarding/ \
+              /hris/api/leave-requests/queue/ \
+              ; do
+            probe "$ep" "401"
+          done
+
+          echo >> "$REPORT"
+          echo "**Probe red:** ${red}" >> "$REPORT"
+          echo "red=${red}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: ops/morning-checks/
+
+  prod_checks:
+    name: Prod checks + autofix
+    needs: probe
+    runs-on: ubuntu-latest
+    outputs:
+      red: ${{ steps.deep.outputs.red }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Push ephemeral SSH key via EC2 Instance Connect
+        run: |
+          set -euo pipefail
+          ssh-keygen -t ed25519 -N "" -f /tmp/eic_key -C "morning-check@${GITHUB_RUN_ID}"
+          aws ec2-instance-connect send-ssh-public-key \
+            --region "$AWS_REGION" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --instance-os-user ubuntu \
+            --ssh-public-key file:///tmp/eic_key.pub
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$PROD_BACKEND_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: report
+          path: ops/morning-checks/
+
+      - name: Run prod morning_check
+        id: deep
+        env:
+          SSHOPTS: "-i /tmp/eic_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          REPORT="ops/morning-checks/${DATE}.md"
+
+          ssh $SSHOPTS "ubuntu@${PROD_BACKEND_IP}" \
+            "sudo docker exec alpha-finance-backend python manage.py morning_check --auto-fix" \
+            >> "$REPORT" 2>&1 || true
+
+          {
+            echo
+            echo "## Container + infra"
+            echo '```'
+            ssh $SSHOPTS "ubuntu@${PROD_BACKEND_IP}" \
+              "cd /opt/alpha-finance && sudo git log --oneline -3 && echo --- && \
+               sudo docker compose --env-file /etc/alpha-finance/.env ps && echo --- && \
+               df -h / | tail -1 && echo --- && free -h | head -3"
+            echo '```'
+
+            echo
+            echo "## Last 24h ERROR/CRITICAL"
+            echo '```'
+            ssh $SSHOPTS "ubuntu@${PROD_BACKEND_IP}" \
+              "sudo docker logs --since 24h alpha-finance-backend 2>&1 | grep -iE 'error|critical|traceback' | tail -20 || echo 'no errors'"
+            echo '```'
+          } >> "$REPORT"
+
+          red=$(grep -c '^### .* — ❌' "$REPORT" || true)
+          echo "red=${red}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit report
+        # main has been protected since the CI gate rebuild (2026-09-09): a direct
+        # `git push origin HEAD:main` from this bot now gets GH006-rejected because
+        # the pushed commit carries no "test" status check. Two runs (09-09 21:24,
+        # 09-10 03:20) failed here and the day's report was never saved anywhere.
+        # Fix: push to a dated branch and open a PR instead — it goes through the
+        # same gate as everything else and someone (or auto-merge, once wired)
+        # lands it.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          REPORT="ops/morning-checks/${DATE}.md"
+          BRANCH="ops/morning-check-${DATE}"
+          git config user.name  "alpha-finance-bot"
+          git config user.email "alpha-finance-bot@users.noreply.github.com"
+          git fetch origin main
+          git add "$REPORT"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git checkout -b "$BRANCH" origin/main
+          git commit -m "ops(morning-check): ${DATE}"
+          git push origin "HEAD:${BRANCH}"
+          gh pr create --base main --head "$BRANCH" \
+            --title "ops(morning-check): ${DATE}" \
+            --body "Automated daily health-check report. main is protected, so this bot opens a PR instead of pushing directly." \
+            || echo "PR create failed or already exists for ${BRANCH} — branch is pushed either way."
+
+      - name: Email report (no-op until omni SMTP is up)
+        env:
+          SSHOPTS: "-i /tmp/eic_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          TO:      ${{ vars.MORNING_REPORT_TO || 'excoboard@alphadirect.co.bw' }}
+        run: |
+          set +e
+          DATE=$(date -u +%Y-%m-%d)
+          # ship the markdown into the container then send from there so the
+          # Django mail backend (auto-flips to SMTP when EMAIL_HOST_PASSWORD
+          # is set on prod) is used; if not set the backend stays console and
+          # this step is a no-op aside from the log line.
+          scp $SSHOPTS "ops/morning-checks/${DATE}.md" \
+              "ubuntu@${PROD_BACKEND_IP}:/tmp/morning-${DATE}.md"
+          ssh $SSHOPTS "ubuntu@${PROD_BACKEND_IP}" \
+              "sudo docker cp /tmp/morning-${DATE}.md alpha-finance-backend:/tmp/morning-${DATE}.md && \
+               sudo docker exec alpha-finance-backend python manage.py email_morning_report \
+                   --to '${TO}' \
+                   --report-path /tmp/morning-${DATE}.md"
+          true   # never fail the workflow on email problems
+
+      - name: Open incident issue if red
+        if: needs.probe.outputs.red != '0' || steps.deep.outputs.red != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          BODY=$(cat "ops/morning-checks/${DATE}.md")
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Morning check ${DATE} — ${{ needs.probe.outputs.red }} probe + ${{ steps.deep.outputs.red }} deep red" \
+            --label "morning-check,bug" \
+            --body "$BODY" || true

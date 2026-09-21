@@ -1,0 +1,27 @@
+# Morning Bank Balances (CFO 2026-09-20): "what is actually in the bank this
+# morning". Three reads a day — 06:00 before the team starts, 12:00 after the
+# morning's payments have cleared, 17:00 as a close-of-day position.
+#
+# Times are UTC, as everywhere in this directory: the omni EC2 clock is
+# Etc/UTC and Botswana (CAT) is UTC+2 all year with no DST, so 06:00 / 12:00 /
+# 17:00 Gaborone are written below as 04:00 / 10:00 / 15:00. Do NOT "correct"
+# them to 6/12/17 — that would read the balances two hours late, on a screen
+# whose entire job is saying how old the figure is.
+#
+# This job writes ONE banking.BankBalanceSnapshot per watched account per run
+# and creates NO BankStatement rows: it asks FNB for a one-day window
+# (fromDate == toDate == today), which returns the balance block without a
+# transaction list. Three pulls a day must not multiply statement rows — a
+# seven-day window re-saved every morning is what put 20,779 duplicate lines
+# into BankStatementLine (cleaned 2026-09-20).
+#
+# Slow on purpose: FNB rate-limits 10 requests a minute per endpoint and a
+# statement call takes 20-90 seconds, so six accounts take several minutes.
+# flock stops a slow 06:00 run and the 12:00 run overlapping and stacking
+# `docker compose exec` processes — the same guard fnb-sync.cron needs.
+#
+# ⚠ infra/install-crons.sh must LIST this file or nothing is scheduled. A cron
+# file sitting in infra/cron/ that the installer does not name is a job that
+# has never once run, and looks exactly like a job that runs fine.
+SHELL=/bin/bash
+0 4,10,15 * * * root flock -n /var/lock/fnb-balances.lock -c 'cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py pull_fnb_balances' >> /var/log/fnb-balances.log 2>&1

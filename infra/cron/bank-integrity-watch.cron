@@ -1,0 +1,44 @@
+# Bank data integrity watch — CFO 2026-09-20.
+#
+# Does Omni's copy of the bank still agree with the bank? Emails Kago, Pako and
+# Keetile (CFO cc'd) only when it does not.
+#
+# WHY IT EXISTS. From June to 11-Sep-2026 the daily statement pull re-imported
+# the same seven-day window every morning into a NEW statement row. One day's
+# transactions ended up stored up to seven times; by 20-Sep, 20,779 of 25,871
+# bank lines (80.4%) were copies. Reconciliation showed 25,870 unmatched lines
+# because six in every seven were ghosts with no payment to match to, and with
+# the bank data untrustworthy nobody could say whether BWP 1.83M of unconfirmed
+# payment batches had actually left the account. The import guard that stopped
+# it (fnb/statements.py, existing_keys) landed 12-Sep. Nothing told anyone the
+# damage was already there, and nothing would have told anyone if it restarted.
+#
+# So this job never judges Omni against Omni. It asks FNB, one day at a time,
+# how many transactions the bank holds, and compares. That check would have
+# caught this on day one.
+#
+# WHEN IT RUNS. 🔴 THIS BOX KEEPS ITS CLOCK IN UTC (`timedatectl` -> Etc/UTC),
+# so every time in this file is UTC and Botswana is UTC+2:
+#
+#     0 7 UTC  =  09:00 Gaborone   <- this job
+#     0 6 UTC  =  08:00 Gaborone   <- the statement pull, fnb-sync.cron
+#
+# So the finance team gets this at 09:00 their time, an hour after the pull
+# that it checks. Do NOT "correct" it to 0 5 to make it 07:00 CAT — that would
+# put it BEFORE the pull and it would report yesterday's gap every morning.
+#
+# WHY IT ONLY EMAILS ON A FAILURE. The last watcher that emailed daily was
+# switched off as noise within a fortnight (see fnb-health-watch.cron). An
+# all-clear becomes an Outlook rule; a message that only ever arrives when
+# something is wrong stays read.
+#
+# RUNTIME. The bank tie makes one API call per account per day, and FNB rate
+# limits to 10 calls a minute per endpoint, so a full run takes several
+# minutes. That is why it is scheduled and not on a screen.
+#
+# Reminder: installing this file does NOT schedule it. infra/install-crons.sh
+# must run on the box, and bank-integrity-watch must be in its ENABLED list.
+# flock: the bank tie sleeps in FNB's rate limiter (10 req/min/endpoint) and a
+# run can take several minutes. Without -n a slow run and the next one would
+# overlap and double the calls. Same guard fnb-sync.cron uses.
+0 7 * * * root /usr/bin/flock -n /var/lock/bank-integrity-watch.lock -c 'cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py bank_integrity_watch' >> /var/log/bank-integrity-watch.log 2>&1

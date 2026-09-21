@@ -1,0 +1,8 @@
+# Daily ADH provider-network snapshot — every day 16:15 UTC (18:15 CAT / Botswana).
+# Runs 15 min AFTER the evening dashboard send so the snapshot records the same
+# day's data. Idempotent: safe to run twice.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+15 16 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py snapshot_provider_counts >> /var/log/alpha-finance/snapshot-provider-counts.log 2>&1

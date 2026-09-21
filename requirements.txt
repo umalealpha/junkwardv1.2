@@ -1,0 +1,96 @@
+# Alpha Direct Financial Management System — Python Dependencies
+
+# Core framework
+Django==5.2
+djangorestframework==3.16.0
+
+# Brute-force lockout for Django auth (admin + DRF)
+django-axes==7.0.2
+
+# Database
+psycopg2-binary==2.9.10
+# Read-only MySQL client for the Graphite V2 replica (age analysis) — pure Python
+PyMySQL>=1.1.0
+
+# CORS
+django-cors-headers==4.7.0
+
+# Environment variable management
+python-decouple==3.8
+
+# Production WSGI server
+gunicorn==23.0.0
+
+# Static files for production (no nginx needed in MVP)
+whitenoise==6.8.2
+
+# Image handling (for attachments/logos)
+Pillow==11.2.1
+
+# PDF generation
+reportlab>=4.0.0
+
+# Document processing
+pdfplumber>=0.11.0
+python-docx>=1.1.0
+python-dateutil>=2.9.0
+
+# Spreadsheet processing — XLSX read/write for the Odoo importer + payroll uploads
+openpyxl>=3.1.0
+
+# Local-first document parsing (CFO 2026-06-21 — core/doc_parse). Keep customer
+# PII local + cut DeepSeek/Gemini cost: parse locally first, escalate only on a
+# low-confidence gate. All import-guarded — the code degrades to the old path if
+# a wheel is missing. Lean set (NO torch); Docling is M4-local/optional for now.
+python-calamine>=0.7.0      # xlsx/xlsb/xls/ods in one fast Rust path (supersedes openpyxl+pyxlsb)
+pyxlsb>=1.0.10              # defensive secondary for malformed .xlsb calamine chokes on
+tabulate>=0.9.0            # table -> Markdown rendering
+rapidocr>=3.0.0            # ONNX OCR — offline, per-line confidence, CPU on EC2 / CoreML on M4
+onnxruntime>=1.17.0        # RapidOCR inference backend
+# (image preprocessing is done in PIL — no OpenCV, to avoid X11/libGL on the server)
+
+# HTTP client — used by core/ai_assist.py to call the DeepSeek API.
+# (Already present transitively via anthropic/pdfplumber, made explicit here.)
+requests>=2.31.0
+
+# Defuse XML parsing in the Odoo XML-RPC client and the ARIA news RSS fetch
+# (security audit 2026-06-09 — bandit B411 + ruff S314). defusedxml protects
+# against billion-laughs / XXE on untrusted feeds.
+defusedxml>=0.7.1
+
+# MSAL — used by the licensing app to acquire a Graph app-only token for
+# the weekly M365 active-user sync.
+msal>=1.31.0
+
+# AI-assisted document processing (optional — system works without it)
+anthropic>=0.40.0
+
+# Azure AD SSO (P4 — dormant until AZURE_SSO_ENABLED=True). PyJWT verifies
+# Microsoft-issued JWTs against the tenant's JWKS; cryptography is the
+# RS256 backend PyJWT delegates to.
+PyJWT[crypto]>=2.8.0
+cryptography>=42.0.0
+
+# OCR (optional — requires Tesseract binary installed separately)
+# pytesseract>=0.3.13
+
+# Headless Chromium PDF render for Underwriting docs (CFO 2026-07-08).
+# Browser binary installed in the Dockerfile; render degrades to 503 if absent.
+playwright>=1.40.0
+
+# Web push for the approvals nudge (CFO 2026-07-23 wow-feature). Degrades to a
+# no-op if WEBPUSH_VAPID_PRIVATE_KEY is unset — the app never hard-depends on it.
+pywebpush>=2.0.0
+# Measures the printed quotation before it is issued (underwriting/quote_doc_gate.py):
+# reopens the rendered PDF and checks text-on-text overlap, footer-band intrusion and
+# stranded pages. Self-contained wheel, no system dependencies.
+pypdfium2>=5,<6
+
+# Makes tracebacks picklable so `manage.py test --parallel` can ship a failing
+# test's traceback from a worker process back to the parent. Without it ANY
+# failing test in a parallel run can crash the whole shard with
+# "TypeError: cannot pickle 'traceback' object" — hiding the real failure
+# behind a pickling error. CI runs `--parallel auto`, so this is effectively a
+# hard dependency of the gate, not an optional extra. Django imports it
+# automatically when present. (Shard 4 flake, 2026-09-10.)
+tblib>=3.0,<4

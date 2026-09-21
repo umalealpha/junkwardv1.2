@@ -1,0 +1,27 @@
+# Monthly payroll orchestration (Build Spec B13 — Payroll 08). 06:00 CAT on the
+# 20th, ahead of the close and well clear of the 09:00 payment cut-off window.
+#
+# The host clock is UTC and CAT is UTC+2, so 06:00 Botswana time is 04:00 here.
+#
+# What it does: runs the month's feeds in the configured order (leavers,
+# recurring incentives, staff loans, salary advances, incentive/commission/leave
+# feeds), verifies the commission population, then re-totals every payslip so no
+# stale net survives to the close.
+#
+# What it does NOT do: it never LOCKs, never POSTs and never moves money. The
+# dual HR + Finance sign-off is what pays. It REFUSES a period that is already
+# signed off, and it exits non-zero if it refuses, if a step fails, or if the
+# run did nothing at all — so cron mails a human instead of looking clean.
+#
+# Wrapped in `run_job` so it sits under the CFO's on/off switch and its runs
+# land on the jobs dashboard. run_job re-raises a CommandError, so the non-zero
+# exit that makes a refusal or an empty run LOUD is preserved.
+#
+# Also held behind the payroll.monthly_orchestration flag, which ships OFF:
+# until Finance switch it on per entity, every run refuses and says so.
+#
+# This file schedules NOTHING until infra/install-crons.sh is run on the box.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 20 * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job payroll-monthly-orchestration -- run_monthly_payroll_orchestration --trigger cron >> /var/log/alpha-finance/payroll-monthly-orchestration.log 2>&1

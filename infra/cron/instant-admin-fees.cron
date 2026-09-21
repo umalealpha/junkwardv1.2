@@ -1,0 +1,29 @@
+# Monthly INSTANT INSURANCE ADMIN FEES to the Finance recipient list.
+#
+# WHY (spec B5, 13 September 2026, requested by Bokani Makosha): the admin fee due
+# to the four Instant Insurance retail partners — Choppies, Sefalana, Trans and
+# Yash Cell — is worked out by hand every month off a Graphite export. The export
+# and the arithmetic are mechanical; the review and the GL posting are not, and
+# stay with Finance.
+#
+# 16:00 UTC on the 26th = 18:00 on the 26th in Gaborone (Botswana never observes
+# DST, so this offset is fixed year-round). Late in the day on purpose: the period
+# ENDS on the 26th, so a morning run would miss the 26th's own business and the
+# partner would be short-paid for a day every single month.
+#
+# The period is the 27th of the previous month to the 26th of this one. The command
+# works that out itself from Botswana time; --month YYYY-MM overrides it.
+#
+# omni-manage, NOT `docker compose exec`: the raw form was retired on 2026-09-04
+# after a cron ran mid blue/green flip and the company lost a day's attendance
+# record. The wrapper waits for a healthy container instead of writing into a
+# dying one.
+#
+# Read-only. It SELECTs through integrations.graphite_ro and sends an email. It
+# posts NO journal, raises no payment and moves no money — the fee goes to Finance
+# for review and posting by hand. It exits NON-ZERO when Graphite is unreachable or
+# the recipient list is empty, so a broken month never looks like a quiet one.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 16 26 * * root /usr/local/bin/omni-manage send_instant_admin_fees >> /var/log/alpha-finance/instant-admin-fees.log 2>&1

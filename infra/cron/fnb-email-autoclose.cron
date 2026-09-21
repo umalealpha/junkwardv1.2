@@ -1,0 +1,16 @@
+# FNB email auto-reconcile — HOURLY (CFO 2026-09-04: twice a day "did not feel
+# automatic" — a payment FNB confirmed at 12:55 sat in his queue until 16:30).
+# Was 07:00 & 14:30 UTC (CFO 2026-08-23); now every hour, on the hour, UTC.
+# Reads FNB's "Fully Processed" confirmation emails from the CFO mailbox and
+# closes the payment requests they prove paid (exact amount + reference/batch
+# match). Re-run safe by design (36h look-back; an already-PAID match is seen as
+# "already reconciled" and never falls through to an open sibling), so running
+# it hourly closes nothing extra — it just closes the same things sooner.
+# Does NOTHING until FNB_EMAIL_AUTOCLOSE_ENABLED is ON — the command self-guards
+# to a no-op when the flag is off, so installing the cron is safe. Clock UTC.
+# Drop into /etc/cron.d/ via infra/install-crons.sh (editing this file alone
+# schedules nothing on the host).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 * * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py fnb_email_autoclose >> /var/log/alpha-finance/fnb-email-autoclose.log 2>&1

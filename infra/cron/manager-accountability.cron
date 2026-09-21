@@ -1,0 +1,10 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Manager Accountability (CFO 2026-07-25).
+# Send after the morning brief, once yesterday's data is FINAL. CFO 2026-08-27:
+# moved 05:10 -> 07:05 UTC (09:05 SAST), just after the 09:00 brief and the
+# 08:30 SAST final Time Doctor pull, so it never reads a half-uploaded day.
+5 7 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job manager-accountability -- send_manager_accountability >> /var/log/alpha-finance/manager-accountability.log 2>&1
+# Escalate silence just after the 17:00 Botswana (UTC+2 = 15:00 UTC) deadline.
+10 15 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job manager-accountability -- escalate_manager_accountability >> /var/log/alpha-finance/manager-accountability.log 2>&1

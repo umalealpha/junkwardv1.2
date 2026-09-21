@@ -1,0 +1,24 @@
+# Does the money RealPay says it collected reach Omni's payment ledger?
+#
+# WHY (8-Sep-2026): roughly 22,500 successful RealPay collections from July and August
+# never reached payment_transactions — 86.7% of July and 46.5% of August, matched
+# contract by contract — while RealPay itself kept delivering normally. Nobody noticed
+# for two months, because nothing was watching. This watches.
+#
+# It cannot mend the import (that sits with TheRiskCo). It ends the silence: the
+# morning after the gap opens again, the CFO is told.
+#
+# 04:00 UTC = 06:00 SAST — after the overnight paygate loads, before the finance day,
+# the same slot finance-monitoring.cron uses.
+#
+# omni-manage, NOT `docker compose exec`: the raw form was retired on 2026-09-04 after
+# a cron ran mid blue/green flip and the company lost a day's attendance record. The
+# wrapper waits for a healthy container instead of writing into a dying one.
+#
+# Read-only. The command SELECTs through integrations.graphite_ro, prints months and
+# counts only, and exits NON-ZERO on an outage so a failure is never logged as a clean
+# night.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 * * * root /usr/local/bin/omni-manage realpay_ledger_reconcile --email >> /var/log/alpha-finance/realpay-reconcile.log 2>&1

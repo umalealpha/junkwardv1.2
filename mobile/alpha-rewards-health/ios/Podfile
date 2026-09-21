@@ -1,0 +1,77 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+target 'AlphaRewardsHealth' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      # :ccache_enabled => true
+    )
+
+    # fmt 11.0.2 (pinned by React Native 0.81) does not compile under Xcode 26's
+    # clang: its consteval format-string checks are rejected as "not a constant
+    # expression" (~40 errors in format-inl.h). FMT_USE_CONSTEVAL=0 is fmt's own
+    # documented escape hatch and only turns OFF compile-time format checking
+    # inside fmt itself — no behaviour change in our code. Remove this when React
+    # Native ships a newer fmt.
+    # The define has to go into fmt's generated xcconfig files: a
+    # GCC_PREPROCESSOR_DEFINITIONS set on the target alone is overridden by the
+    # pod's own xcconfig, so the flag never reaches clang (verified — the compile
+    # line had no -DFMT_USE_CONSTEVAL=0 and the build still failed).
+    # BOTH levels are needed and they win in opposite directions: the -std flag
+    # comes from the TARGET build settings (react_native_post_install forces
+    # c++20 there, which beats any xcconfig), while the -D define only lands via
+    # the pod's XCCONFIG (a target-level define is overridden). Verified by
+    # reading the compiler response file both ways.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'fmt'
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = ['$(inherited)', 'FMT_USE_CONSTEVAL=0']
+      end
+      Pod::UI.puts '[alpha] fmt target forced to c++17 (Xcode 26 consteval build break)'
+    end
+
+    Dir.glob(File.join(installer.sandbox.root, 'Target Support Files', 'fmt', 'fmt.*.xcconfig')).each do |path|
+      body = File.read(path)
+      next if body.include?('FMT_USE_CONSTEVAL=0')
+      if body =~ /^GCC_PREPROCESSOR_DEFINITIONS = (.*)$/
+        body = body.sub(/^GCC_PREPROCESSOR_DEFINITIONS = (.*)$/, 'GCC_PREPROCESSOR_DEFINITIONS = \\1 FMT_USE_CONSTEVAL=0')
+      else
+        body += "\nGCC_PREPROCESSOR_DEFINITIONS = $(inherited) FMT_USE_CONSTEVAL=0\n"
+      end
+      # FMT_USE_CONSTEVAL=0 alone is NOT enough: fmt 11.0.2 selects its consteval
+      # format-string path on FMT_CPLUSPLUS >= 202002L, and CocoaPods compiles the
+      # pods at c++20. Compiling fmt itself as c++17 takes that path out of the
+      # build entirely. fmt supports c++17 fully; nothing else in the app changes.
+      body = body.gsub(/^CLANG_CXX_LANGUAGE_STANDARD = .*$/, '')
+      body += "\nCLANG_CXX_LANGUAGE_STANDARD = c++17\n"
+      File.write(path, body)
+      Pod::UI.puts "[alpha] fmt pinned to c++17 + FMT_USE_CONSTEVAL=0 in #{File.basename(path)}"
+    end
+  end
+end

@@ -1,0 +1,29 @@
+# Intraday Time Doctor hours reminders (CFO-approved 2026-08-17). Weekday nudges
+# to staff who are behind on today's hours + a Friday weekly catch-up review.
+#
+# REMINDERS ONLY — these never dock pay. Every send is gated by the DEDICATED
+# HOURS_REMINDERS_ENABLED setting (default OFF) — deliberately NOT the shared
+# morning-brief switch (which is already ON). This file is also held in the
+# install-crons DISABLED list until the CFO approves go-live, so it does NOTHING
+# until BOTH the setting is turned on AND the cron is enabled.
+#
+# The two --intraday pulls fetch TODAY so far (00:00 SAST -> now) into the same
+# TimeDoctorDailySnapshot the reminders read; the later full pull for the day
+# overwrites it cleanly. Times below are UTC; SAST = UTC+2. Mon-Fri only for the
+# daily sends; the review runs Friday.
+#
+#   11:40 SAST (09:40 UTC)  intraday pull  slot 1140
+#   11:45 SAST (09:45 UTC)  morning reminder   — staff, under 2h, arrived>08:15 line
+#   15:55 SAST (13:55 UTC)  intraday pull  slot 1555
+#   16:00 SAST (14:00 UTC)  afternoon reminder — staff + managers, under 4h
+#   15:00 SAST (13:00 UTC)  FRIDAY weekly hours review (Mon-Fri table + catch-up plan)
+#
+# Drop into /etc/cron.d/ (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+40 9  * * 1-5 root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py pull_timedoctor --intraday --slot 1140 >> /var/log/hours-reminders.log 2>&1
+45 9  * * 1-5 root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job hours-reminders -- send_hours_reminder --slot morning --send >> /var/log/hours-reminders.log 2>&1
+55 13 * * 1-5 root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py pull_timedoctor --intraday --slot 1555 >> /var/log/hours-reminders.log 2>&1
+0 14  * * 1-5 root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job hours-reminders -- send_hours_reminder --slot afternoon --send >> /var/log/hours-reminders.log 2>&1
+0 13  * * 5   root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job hours-reminders -- send_weekly_hours_review --send >> /var/log/hours-reminders.log 2>&1

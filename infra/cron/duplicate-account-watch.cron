@@ -1,0 +1,8 @@
+# omni duplicate-account watchdog - emails the CFO ONLY when a person has 2+
+# active accounts or payslips stranded on a dead login. Read-only, silent when clean.
+# Dotless filename ON PURPOSE: cron's run-parts ignores files with a dot, which is
+# how staff-loan-rate and staff-loan-repayments silently never fired for a month.
+# Midnight Botswana (SAST=UTC+2) = 22:00 UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+0 22 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py duplicate_account_watch >> /var/log/alpha-finance/duplicate-account-watch.log 2>&1

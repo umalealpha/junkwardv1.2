@@ -1,0 +1,12 @@
+# M365 active-user weekly refresh.
+# Runs the Django management command inside the running backend container.
+# Drop this file into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644).
+#
+# Schedule: every Friday 06:00 SAST  (SAST = UTC+02 → 04:00 UTC).
+#
+# Output is captured to /var/log/m365-license-sync.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 4 * * 5 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py sync_m365_active_users --triggered-by cron >> /var/log/m365-license-sync.log 2>&1

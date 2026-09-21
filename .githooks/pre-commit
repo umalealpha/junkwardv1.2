@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Runs before every commit in this repo, on every machine. Versioned on purpose:
+# .git/hooks is per-clone and does not travel, which is why the checks kept being
+# "available" but not actually running.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip in a genuine emergency:  PREFLIGHT_SKIP=1 git commit ...   (say so in the message)
+#
+# WHY: on 9-Aug-2026 six of eight mistakes in one day were already written on a
+# checklist nobody read. A control enforced by memory is a wish. This is the same
+# list, executed, with no way to forget it.
+set -uo pipefail
+
+[ "${PREFLIGHT_SKIP:-0}" = "1" ] && { echo "preflight: SKIPPED by request"; exit 0; }
+
+PF="$HOME/.claude/skills/prat-skill/e2e/preflight.sh"
+if [ ! -x "$PF" ]; then
+  echo "preflight: NOT FOUND at $PF"
+  echo "  This repo expects it. Install prat-skill, or commit with PREFLIGHT_SKIP=1"
+  echo "  and say in the message that the checks did not run."
+  exit 1                    # fail loudly, never silently skip
+fi
+
+PREFLIGHT_STAGED=1 "$PF" "$(git rev-parse --show-toplevel)" --base HEAD

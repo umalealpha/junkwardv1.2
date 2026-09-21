@@ -1,0 +1,30 @@
+# FNB health watch — CFO 2026-08-04, switched OFF 2026-08-23, back ON 2026-09-13.
+#
+#   1. Bank link up<->down: email CFO + Kago + Pako on a state change.
+#   2. Stuck EFT batches: email when a batch has sat unconfirmed too long.
+#
+# WHY IT WAS TURNED OFF, AND WHAT CHANGED. On 2026-08-23 the CFO switched this
+# off because both alerts were noise. He was right, and for a reason worth
+# keeping: FNB answers `425 Too Early` to a poll it has not processed yet, Omni
+# recorded every one of those as a FAILURE, and a healthy batch waiting on the
+# bank looked exactly like a broken one. 52,617 "failures" in seven days, every
+# single one false.
+#
+# Two things changed before it came back:
+#   * A 425 is now recorded as WAITING, not FAILED (PR #949), so the link
+#     verdict is no longer computed from tens of thousands of phantom failures.
+#   * It runs ONCE A DAY, not hourly, with a 48-hour stuck threshold instead of
+#     two hours. A dry run against production on 13-Sep-2026 showed the old
+#     settings would have emailed all 46 open batches — some 500 hours old —
+#     every single run. An alert that fires every hour about the same 46 things
+#     is not an alert, it is a filter people build in Outlook. Once a day, only
+#     for a batch genuinely older than two days, is something a person can act
+#     on.
+#
+# The detail belongs to the daily three-way check (fnb-three-way-check.cron),
+# which reports WHICH payments disagree with the bank. This job answers only
+# "is the link up, and is anything badly stuck".
+#
+# Reminder: installing this file does NOT schedule it. infra/install-crons.sh
+# must run on the box, and fnb-health-watch must be in its ENABLED list.
+30 6 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py fnb_health_watch --stuck-hours 48 >> /var/log/fnb-health-watch.log 2>&1

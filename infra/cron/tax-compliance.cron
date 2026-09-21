@@ -1,0 +1,26 @@
+# Statutory tax compliance sweep — VAT / PAYE / OWHT / SAT.
+# (Oprah Mogomotsi feature request, 2026-09-11; CFO-approved.)
+#
+# `tax_compliance_sweep` does two things in one run:
+#   1. generates any missing obligations for the next 18 months
+#   2. advances the state machine and sends the day's reminders
+#
+# A filing is reminded daily from 10 days before its due date. The CFO is copied
+# only from 3 days out, and a missed statutory date raises its own one-off breach
+# alert to him. Marking a filing complete does NOT stop the reminder — only CFO
+# verification does.
+#
+# Runs at 04:30 UTC = 06:30 Africa/Gaborone, so the reminder is already in the
+# preparer's inbox when they sit down. The server clock is UTC; the command
+# itself works in Gaborone time via timezone.localdate().
+#
+# Idempotent: a second run on the same day generates nothing and sends nothing.
+# Output -> /var/log/alpha-finance/tax-compliance.log (root-owned).
+#
+# Install: sudo cp infra/cron/tax-compliance.cron /etc/cron.d/tax-compliance
+#          sudo chmod 644 /etc/cron.d/tax-compliance
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 4 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py tax_compliance_sweep >> /var/log/alpha-finance/tax-compliance.log 2>&1

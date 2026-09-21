@@ -1,0 +1,13 @@
+# Runs through /usr/local/bin/omni-manage (infra/host/omni-manage.sh), which waits out a
+# blue/green deploy window instead of failing with "backend is not running" (2026-09-04).
+# Time Doctor 4pm deduction enforcement (TD-ENFORCE-01, audit 2026-09-03 finding 2).
+# Replaces the hand-run /etc/alpha-finance/td_enforce_20260903.py. Considers ONLY
+# the people the morning report PUBLISHED as did-not-track for yesterday, and only
+# creates a PENDING unpaid td_deduct request when all 7 guards pass (settled,
+# still dark, record unjustified, not held, no other leave, not already docked).
+# The manager's Approve is the human stamp on the money. Weekdays 16:25 SAST,
+# after the 16:10 reconcile. Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+25 14 * * 1-5 root cd /opt/alpha-finance && /usr/local/bin/omni-manage enforce_td_deductions --apply >> /var/log/alpha-finance/td-enforce.log 2>&1

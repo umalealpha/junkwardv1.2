@@ -1,0 +1,2 @@
+# Recurring incentives — monthly on the 15th, 05:10 UTC. Drop into /etc/cron.d/ (0644).
+10 5 15 * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py generate_recurring_incentives >> /var/log/alpha-finance/recurring-incentives.log 2>&1

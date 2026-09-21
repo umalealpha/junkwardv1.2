@@ -1,0 +1,11 @@
+# BUG-6 fix (CFO 2026-06-10): FNB bank-feed was 7 days stale — no automation existed.
+# Daily 06:00 statement pull (7-day window, idempotent upsert) + notifications poll every 30 min.
+SHELL=/bin/bash
+0 6 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py pull_fnb_statements --all --days 7 >> /var/log/fnb-sync.log 2>&1
+*/30 * * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py poll_fnb_notifications >> /var/log/fnb-poll.log 2>&1
+# 2026-08-20: nothing polled batch status, so FNB's RR10 reject of the 19-Aug
+# penny test sat unread for a day while the batch showed 'Submitted to FNB'.
+# flock: the sweep can outrun its own 5-minute interval (FNB answers 425 for
+# a while after a submit, and an unknown reject code may wait on the AI
+# chain). Without it, overlapping `docker compose exec` runs stack up.
+*/5 * * * * root flock -n /var/lock/fnb-batch-poll.lock -c 'cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py poll_fnb_batches' >> /var/log/fnb-batch-poll.log 2>&1

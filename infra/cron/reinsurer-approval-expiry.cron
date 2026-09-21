@@ -1,0 +1,22 @@
+# Daily reinsurer approval expiry — reinsurance control QC, 16-Sep-2026.
+#
+# onboarding.expire_due() existed and was unit-tested since the module was
+# built, and nothing ever called it, so a counterparty whose approval ran out
+# last month still read as approved and still passed assert_placeable(). Same
+# failure as the Monday failed-debits job: merged, deployed, never scheduled.
+#
+# Botswana is UTC+2, so subtract 2 hours from local time.
+#   02:30 UTC = 04:30 local — before anyone is at a desk (the staff day starts
+#   07:45), so nobody is mid-placement when a row flips to EXPIRED, and well
+#   clear of the nightly backup window.
+#
+# Idempotent and date-driven: it re-checks the status inside a row lock, so a
+# re-run, an overlap or a manual run can never double-record.
+#
+# Drop into /etc/cron.d/ via infra/install-crons.sh, and note that the name
+# must ALSO be in that script's ENABLED list — editing this file alone
+# schedules nothing on the host, which is the whole reason this job was
+# missing in the first place. Clock UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 2 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py expire_reinsurer_approvals >> /var/log/alpha-finance/reinsurer-approval-expiry.log 2>&1

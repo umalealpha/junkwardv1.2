@@ -1,0 +1,476 @@
+# Alpha Direct Finance — Local stack
+#
+# Security posture (matches AWS deployment shape):
+#   - Postgres listens only on the internal docker network — NOT exposed to host
+#   - Backend & frontend run as non-root (configured in their Dockerfiles)
+#   - Secrets read from .env (never commit it)
+#   - Health checks on every service so Compose starts them in dependency order
+#   - Named volume for Postgres data so DB survives `docker compose down`
+#
+# Usage:
+#   cp .env.example .env       # then fill in real values
+#   docker compose up -d --build
+#   docker compose logs -f backend
+#
+# To wipe local DB:
+#   docker compose down -v     # WARNING: drops the volume
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: alpha-finance-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-alpha_finance}
+      POSTGRES_USER: ${DB_USER:-alpha_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      # Force scram-sha-256 password hashing (Postgres 14+ default, but be explicit)
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - alpha_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-alpha_admin} -d ${DB_NAME:-alpha_finance}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    # NOTE: no `ports:` — DB is only reachable from other compose services.
+    # If you need a local SQL client, uncomment the next two lines.
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: alpha-finance-backend:local
+    container_name: alpha-finance-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      ELRA_PERF_ENABLED: ${ELRA_PERF_ENABLED:-False}
+      HRIS_OVERDUE_BLOCK_DAYS: ${HRIS_OVERDUE_BLOCK_DAYS:-2}
+      OMNI_ENTITY_SCOPE_STRICT: ${OMNI_ENTITY_SCOPE_STRICT:-True}
+      COMPANY_CARD_HOLDERS: ${COMPANY_CARD_HOLDERS:-}
+      # BONU no-deploy access lists — without these in the container the code
+      # constants are empty and the "add a member/agent with no deploy" grant
+      # reaches NOBODY (H24). BONU_TEAM_EMAILS = BONU viewers; BONU_INTAKE_EMAILS
+      # = call-centre agents who open claims but see no financials.
+      BONU_TEAM_EMAILS: ${BONU_TEAM_EMAILS:-}
+      BONU_INTAKE_EMAILS: ${BONU_INTAKE_EMAILS:-}
+      # Consolidated daily-email layout master switch (CFO 2026-08-05). MUST be
+      # listed here — compose only injects vars named in this block, not the whole
+      # --env-file, so without this line the container never sees the flag and the
+      # consolidation stays off no matter what /etc/alpha-finance/.env says.
+      CONSOLIDATED_EMAILS_ENABLED: ${CONSOLIDATED_EMAILS_ENABLED:-False}
+      # Claims automation (19-Sep-2026): client letters are never emailed until the
+      # Claims Manager signs the wording off and this is set True in .env.
+      CLAIMS_LETTER_WORDING_APPROVED: ${CLAIMS_LETTER_WORDING_APPROVED:-False}
+      CLAIMS_VERITAS_SALVAGE_RECEIVABLE_ACCOUNT: ${CLAIMS_VERITAS_SALVAGE_RECEIVABLE_ACCOUNT:-260001}
+      CLAIMS_VERITAS_SALVAGE_INCOME_ACCOUNT: ${CLAIMS_VERITAS_SALVAGE_INCOME_ACCOUNT:-}
+
+      # Transformation Board (CFO 2026-09-20). Compose injects ONLY named
+      # variables — a var read from os.environ but missing here is simply
+      # never set, and "change it without a deploy" quietly does nothing.
+      # Empty = fall back to the four viewers named in permissions.py.
+      TRANSFORMATION_VIEWERS: ${TRANSFORMATION_VIEWERS:-}
+      # Hours-reminders master switch (CFO GO-LIVE 2026-08-27). Same rule as the
+      # line above: must be named here or the container never sees it. Reminders
+      # only (never dock pay). Once on, the cron drops its --force fallback.
+      HOURS_REMINDERS_ENABLED: ${HOURS_REMINDERS_ENABLED:-False}
+      BREAK_GLASS_EMAILS: ${BREAK_GLASS_EMAILS:-}
+      # App-store reviewer demo account (CFO 2026-09-06). Same rule as the
+      # switches above: compose only injects vars NAMED here, not the whole
+      # --env-file, so without these four lines the container never sees them
+      # and review mode stays off no matter what /etc/alpha-finance/.env says.
+      # OMNI_REVIEW_MODE is the kill switch — turn it off once the listing is
+      # approved. OMNI_REVIEW_PASSWORD is read by `manage.py ensure_review_account`.
+      OMNI_REVIEW_MODE: ${OMNI_REVIEW_MODE:-False}
+      OMNI_REVIEW_EMAIL: ${OMNI_REVIEW_EMAIL:-}
+      OMNI_REVIEW_CODE: ${OMNI_REVIEW_CODE:-}
+      OMNI_REVIEW_PASSWORD: ${OMNI_REVIEW_PASSWORD:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      DB_NAME: ${DB_NAME:-alpha_finance}
+      DB_USER: ${DB_USER:-alpha_admin}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+      DJANGO_SEED_INITIAL: ${DJANGO_SEED_INITIAL:-1}
+      DJANGO_CREATE_SUPERUSER: ${DJANGO_CREATE_SUPERUSER:-1}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@example.com}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:?set DJANGO_SUPERUSER_PASSWORD in .env}
+      DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-BWP}
+      SUPPORTED_CURRENCIES: ${SUPPORTED_CURRENCIES:-BWP,USD,ZAR}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # DeepSeek — variance commentary, AI account suggestion, etc.
+      DEEPSEEK_API_KEY:  ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      DEEPSEEK_MODEL:    ${DEEPSEEK_MODEL:-deepseek-chat}
+      # PII firewall + DeepSeek kill-switch (CFO 2026-07-19). tokenize = the DPA
+      # fix: personal data becomes reversible tokens before any external-LLM call.
+      PII_FIREWALL_MODE: ${PII_FIREWALL_MODE:-tokenize}
+      # Naming HR when a ghost-payroll task passes its deadline. Its own switch
+      # since 2026-08-09 — it used to ride on the ghost-list flag, so turning
+      # the ghost list off silently stopped HR being chased. Default on.
+      WORKFORCE_HR_OVERDUE_IN_EMAIL: ${WORKFORCE_HR_OVERDUE_IN_EMAIL:-True}
+      DEEPSEEK_ENABLED:  ${DEEPSEEK_ENABLED:-True}
+      GEMINI_API_KEY:    ${GEMINI_API_KEY:-}
+      # Recruitment CV screening (CFO 2026-08-25). OFF by default; True enables
+      # identity-redacted, PII-firewalled AI screening in the recruitment module.
+      RECRUITMENT_EXTERNAL_AI: ${RECRUITMENT_EXTERNAL_AI:-False}
+      # Commission approval-chain rosters + notify recipients (comma-separated
+      # emails). 1st review / 2nd review / final / payroll. Unset = that stage
+      # relies on the code name-fallback (stage-1 + final only) or is disabled.
+      COMMISSIONS_STAGE1_EMAILS:  ${COMMISSIONS_STAGE1_EMAILS:-}
+      COMMISSIONS_STAGE2_EMAILS:  ${COMMISSIONS_STAGE2_EMAILS:-}
+      COMMISSIONS_FINAL_EMAILS:   ${COMMISSIONS_FINAL_EMAILS:-}
+      COMMISSIONS_PAYROLL_EMAILS: ${COMMISSIONS_PAYROLL_EMAILS:-}
+      # Extra people allowed to DOWNLOAD the payout/statement export (not review,
+      # not approve). Unset = only the CFO / superuser can export.
+      COMMISSIONS_EXPORT_EMAILS:  ${COMMISSIONS_EXPORT_EMAILS:-}
+      # Staff mail auto-reply (CFO 2026-07-31) — nudges anyone who emails
+      # excoboard@ / omni@ towards /report-bug. Reader app needs Mail.Read.
+      # Do-not-reply banner: which domains count as internal (CFO 2026-08-07).
+      INTERNAL_EMAIL_DOMAINS:       ${INTERNAL_EMAIL_DOMAINS:-alphadirect.co.bw,alphadirect.co.za,alphadirect.co.zm,insurance.co.bw,motorliquidators.co.bw,cuberoute.co.bw}
+      AUTO_REPLY_ENABLED:           ${AUTO_REPLY_ENABLED:-False}
+      AUTO_REPLY_READ_MAILBOX:      ${AUTO_REPLY_READ_MAILBOX:-pganesharajah@alphadirect.co.bw}
+      # NB: defaults are repeated here on purpose — compose passes an empty string
+      # for an unset var, which decouple sees as "present but empty" (Csv -> []),
+      # so a settings.py default would never win. Same trap as GEMINI_* in 2026-06.
+      AUTO_REPLY_WATCH_ADDRESSES:   ${AUTO_REPLY_WATCH_ADDRESSES:-excoboard@alphadirect.co.bw,omni@alphadirect.co.bw}
+      AUTO_REPLY_INTERNAL_DOMAINS:  ${AUTO_REPLY_INTERNAL_DOMAINS:-alphadirect.co.bw,alphadirect.co.za,alphadirect.co.zm,insurance.co.bw,motorliquidators.co.bw,cuberoute.co.bw}
+      AUTO_REPLY_EXCLUDE_EMAILS:    ${AUTO_REPLY_EXCLUDE_EMAILS:-pganesharajah@alphadirect.co.bw}
+      AUTO_REPLY_COOLOFF_DAYS:      ${AUTO_REPLY_COOLOFF_DAYS:-14}
+      AUTO_REPLY_LOOKBACK_MINUTES:  ${AUTO_REPLY_LOOKBACK_MINUTES:-120}
+      GRAPH_READER_TENANT_ID:       ${GRAPH_READER_TENANT_ID:-}
+      GRAPH_READER_CLIENT_ID:       ${GRAPH_READER_CLIENT_ID:-}
+      GRAPH_READER_CLIENT_SECRET:   ${GRAPH_READER_CLIENT_SECRET:-}
+      # UniCoin Agent Portal — extra portal managers beyond the code constant
+      # (comma-separated emails). Now that this is wired in, adding/removing a
+      # manager is a true no-deploy change: edit .env + recreate backend.
+      AGENT_PORTAL_MANAGER_EMAILS: ${AGENT_PORTAL_MANAGER_EMAILS:-}
+      # Intelligence Summary machine feed (GET /api/v1/intel/summary/) — the
+      # bearer token Alpha Brain calls with. settings.py reads these three, but
+      # they were never passed through here, so INTEL_SUMMARY_TOKEN was always
+      # '' in prod and token_ok() fails CLOSED — the feed 401'd every caller
+      # since it shipped. ALLOWED_IPS stays empty until the Brain has a stable
+      # egress address (it currently runs with an ephemeral public IP, so an
+      # exact-IP allowlist would break on every task restart).
+      INTEL_SUMMARY_TOKEN:       ${INTEL_SUMMARY_TOKEN:-}
+      INTEL_SUMMARY_ALLOWED_IPS: ${INTEL_SUMMARY_ALLOWED_IPS:-}
+      INTEL_SUMMARY_COMPANY:     ${INTEL_SUMMARY_COMPANY:-ADIC}
+      SUBMISSION_DEADLINE_ENFORCED: ${SUBMISSION_DEADLINE_ENFORCED:-False}
+      # Graphite -> Omni analytics push (POST /api/v1/graphite-ingest/). Listed
+      # here for the reason spelled out three lines above: a token that settings.py
+      # reads but compose never passes through arrives as '' in the container, and
+      # this endpoint fails CLOSED on an empty token — so the feed would have 401'd
+      # Pramod forever while the .env looked correctly configured. Exactly how the
+      # intel feed silently 401'd every caller from the day it shipped.
+      GRAPHITE_INGEST_TOKEN:     ${GRAPHITE_INGEST_TOKEN:-}
+      # The return leg: core/compliance_brain.py reads these from os.environ to
+      # GET Alpha Brain's PII-free aggregate, so the Intelligence Summary can
+      # show our book beside the Brain's. Also never passed through, so the
+      # comparison traffic light reads "not activated" no matter what is put in
+      # .env. Empty until ADRisk supplies the Brain's summary URL.
+      ALPHA_BRAIN_SUMMARY_URL: ${ALPHA_BRAIN_SUMMARY_URL:-}
+      ALPHA_BRAIN_TOKEN:       ${ALPHA_BRAIN_TOKEN:-}
+      GEMINI_API_BASE:   ${GEMINI_API_BASE:-https://generativelanguage.googleapis.com/v1beta/openai}
+      GEMINI_MODEL:      ${GEMINI_MODEL:-gemini-2.5-flash}
+      GROK_API_KEY:      ${GROK_API_KEY:-}
+      GROK_API_BASE:     ${GROK_API_BASE:-https://api.x.ai/v1}
+      GROK_MODEL:        ${GROK_MODEL:-grok-2-latest}
+      ANTHROPIC_MODEL:   ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      # Outbound email — SMTP path
+      EMAIL_BACKEND:        ${EMAIL_BACKEND:-}
+      EMAIL_HOST:           ${EMAIL_HOST:-smtp.office365.com}
+      EMAIL_PORT:           ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS:        ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER:      ${EMAIL_HOST_USER:-omni@alphadirect.co.bw}
+      EMAIL_HOST_PASSWORD:  ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL:   ${DEFAULT_FROM_EMAIL:-Omni ERP <omni@alphadirect.co.bw>}
+      # Microsoft Graph email (preferred — OAuth2 client_credentials)
+      MICROSOFT_TENANT_ID:     ${MICROSOFT_TENANT_ID:-}
+      MICROSOFT_CLIENT_ID:     ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_SENDER_UPN:    ${MICROSOFT_SENDER_UPN:-omni@alphadirect.co.bw}
+      # Omni Calendar — separate app registration for calendar invites.
+      # Checklist H24: a var in .env but absent here arrives EMPTY.
+      OMNI_CALENDAR_TENANT_ID:         ${OMNI_CALENDAR_TENANT_ID:-}
+      OMNI_CALENDAR_CLIENT_ID:         ${OMNI_CALENDAR_CLIENT_ID:-}
+      OMNI_CALENDAR_CLIENT_SECRET:     ${OMNI_CALENDAR_CLIENT_SECRET:-}
+      OMNI_CALENDAR_ALLOWED_MAILBOXES: ${OMNI_CALENDAR_ALLOWED_MAILBOXES:-}
+      # RealPay-vs-ledger daily check. Checklist H24: a var in .env but absent
+      # here arrives EMPTY.
+      REALPAY_RECONCILE_MIN_ROWS: ${REALPAY_RECONCILE_MIN_ROWS:-}
+      REALPAY_RECONCILE_MIN_PCT:  ${REALPAY_RECONCILE_MIN_PCT:-}
+      REALPAY_RECONCILE_EMAIL:    ${REALPAY_RECONCILE_EMAIL:-}
+      # M365 active-user weekly sync (Settings > M365 Active Users, Friday cron)
+      M365_TENANT_ID:            ${M365_TENANT_ID:-}
+      M365_CLIENT_ID:            ${M365_CLIENT_ID:-}
+      M365_CLIENT_SECRET:        ${M365_CLIENT_SECRET:-}
+      M365_ACTIVE_CUTOFF_MONTHS: ${M365_ACTIVE_CUTOFF_MONTHS:-6}
+      M365_NOTIFY_EMAILS:        ${M365_NOTIFY_EMAILS:-hr@alphadirect.co.bw,ubutale@alphadirect.co.bw}
+      # off | report | enforce — leaver Microsoft 365 switch-off (hris/m365_offboarding.py)
+      M365_LEAVER_DISABLE:       ${M365_LEAVER_DISABLE:-off}
+      # RealPay debit-order collections (UAT sandbox 2026-05-25)
+      REALPAY_BASE_URL:         ${REALPAY_BASE_URL:-}
+      REALPAY_CLIENT_ID:        ${REALPAY_CLIENT_ID:-}
+      REALPAY_CLIENT_SECRET:    ${REALPAY_CLIENT_SECRET:-}
+      REALPAY_BENEFICIARY_USER: ${REALPAY_BENEFICIARY_USER:-}
+      REALPAY_PRODUCT_CODES:    ${REALPAY_PRODUCT_CODES:-}
+      REALPAY_ENV:              ${REALPAY_ENV:-uat}
+      REALPAY_VAULT_NAME:       ${REALPAY_VAULT_NAME:-RealPay API}
+      REALPAY_LIVE_BOOKS:       ${REALPAY_LIVE_BOOKS:-}
+      # Web Push for the approvals nudge (CFO 2026-07-23). Absent -> push is a
+      # no-op (the "Turn on alerts" button hides itself). Set in .env to activate.
+      WEBPUSH_VAPID_PUBLIC_KEY:   ${WEBPUSH_VAPID_PUBLIC_KEY:-}
+      WEBPUSH_VAPID_PRIVATE_KEY:  ${WEBPUSH_VAPID_PRIVATE_KEY:-}
+      WEBPUSH_VAPID_CLAIMS_EMAIL: ${WEBPUSH_VAPID_CLAIMS_EMAIL:-}
+      # Graphite V2 Finance API — payment-transactions feed (read-only finance:read)
+      GRAPHITE_FINANCE_API_BASE:        ${GRAPHITE_FINANCE_API_BASE:-}
+      GRAPHITE_FINANCE_API_TOKEN:       ${GRAPHITE_FINANCE_API_TOKEN:-}
+      GRAPHITE_FINANCE_TIMEOUT_SECONDS: ${GRAPHITE_FINANCE_TIMEOUT_SECONDS:-30}
+      # Graphite V2 read-only replica — age analysis (SELECT-only)
+      GRAPHITE_RO_DB_HOST:     ${GRAPHITE_RO_DB_HOST:-}
+      GRAPHITE_RO_DB_PORT:     ${GRAPHITE_RO_DB_PORT:-3306}
+      GRAPHITE_RO_DB_NAME:     ${GRAPHITE_RO_DB_NAME:-Graphite_live}
+      GRAPHITE_RO_DB_USER:     ${GRAPHITE_RO_DB_USER:-}
+      GRAPHITE_RO_DB_PASSWORD: ${GRAPHITE_RO_DB_PASSWORD:-}
+      GRAPHITE_AGE_TABLE:      ${GRAPHITE_AGE_TABLE:-summary_age_analyst_report_dom_com_2025}
+      # ADH -> AFA load file. Checklist H24: a var in .env but absent from
+      # THIS list arrives EMPTY in the container and fails silently forever.
+      AFA_ON_COVER_STATUSES:          ${AFA_ON_COVER_STATUSES:-0,1}
+      AFA_LOADFILE_MODE:              ${AFA_LOADFILE_MODE:-full}
+      GRAPHITE_RO_DB_TIMEOUT:         ${GRAPHITE_RO_DB_TIMEOUT:-20}
+      # Single-URL form of the same read-only credential (SSM: /graphite/GRAPHITE_RO_DSN).
+      # Must be in this block or it arrives EMPTY inside the container (H24).
+      GRAPHITE_RO_DSN:                ${GRAPHITE_RO_DSN:-}
+      AFA_REGION_NAME:                ${AFA_REGION_NAME:-}
+      AFA_DEFAULT_RESIGNATION_REASON: ${AFA_DEFAULT_RESIGNATION_REASON:-}
+      AFA_LOADFILE_ALLOWED_LOCALPARTS: ${AFA_LOADFILE_ALLOWED_LOCALPARTS:-rtonkope,mtlagae,lkeotlhoboge,pganesharajah,kmokhendo}
+      AFA_LOADFILE_AUTOSEND:          ${AFA_LOADFILE_AUTOSEND:-False}
+      AFA_SFTP_HOST:                  ${AFA_SFTP_HOST:-}
+      AFA_SFTP_PORT:                  ${AFA_SFTP_PORT:-22}
+      AFA_SFTP_USERNAME:              ${AFA_SFTP_USERNAME:-}
+      AFA_SFTP_PASSWORD:              ${AFA_SFTP_PASSWORD:-}
+      AFA_SFTP_PRIVATE_KEY_PATH:      ${AFA_SFTP_PRIVATE_KEY_PATH:-}
+      AFA_SFTP_REMOTE_DIR:            ${AFA_SFTP_REMOTE_DIR:-.}
+      # Where AFA drop the Saturday settlement zip. A variable that is in
+      # /etc/alpha-finance/.env but NOT here arrives EMPTY in the container -
+      # compose only passes what this block names. The loader would then look
+      # in the wrong folder, find nothing, and report a quiet "no file this
+      # week", which is indistinguishable from AFA not having sent one.
+      AFA_SFTP_INBOUND_DIR:           ${AFA_SFTP_INBOUND_DIR:-inbound}
+      WEBFLEET_ACCOUNT:                 ${WEBFLEET_ACCOUNT:-}
+      WEBFLEET_USERNAME:                ${WEBFLEET_USERNAME:-}
+      WEBFLEET_PASSWORD:                ${WEBFLEET_PASSWORD:-}
+      WEBFLEET_APIKEY:                  ${WEBFLEET_APIKEY:-}
+      CARTRACK_USERNAME:                ${CARTRACK_USERNAME:-}
+      CARTRACK_PASSWORD:                ${CARTRACK_PASSWORD:-}
+      CARTRACK_REGION:                  ${CARTRACK_REGION:-bw}
+      NEXUS_PHONE_TOKEN:                ${NEXUS_PHONE_TOKEN:-}
+      # Alpha Nexus: typed steps / one-tap workouts earn points? OFF (CFO 7-Sep-2026)
+      NEXUS_MANUAL_STEP_POINTS_ENABLED: ${NEXUS_MANUAL_STEP_POINTS_ENABLED:-False}
+      # Alpha Nexus App Store / Play review demo login (fixed OTP for one email)
+      NEXUS_REVIEW_EMAIL:               ${NEXUS_REVIEW_EMAIL:-}
+      NEXUS_REVIEW_OTP:                 ${NEXUS_REVIEW_OTP:-}
+      # Time Doctor workforce report — daily pull / n8n ingest (read-only)
+      TIMEDOCTOR_API_BASE:        ${TIMEDOCTOR_API_BASE:-https://api2.timedoctor.com}
+      TIMEDOCTOR_TOKEN:           ${TIMEDOCTOR_TOKEN:-}
+      TIMEDOCTOR_COMPANY_ID:      ${TIMEDOCTOR_COMPANY_ID:-}
+      TIMEDOCTOR_TIMEOUT_SECONDS: ${TIMEDOCTOR_TIMEOUT_SECONDS:-45}
+      TIMEDOCTOR_EMAIL_TO:        ${TIMEDOCTOR_EMAIL_TO:-}
+      TIMEDOCTOR_INGEST_KEY:      ${TIMEDOCTOR_INGEST_KEY:-}
+      # Azure AD SSO — dormant unless AZURE_SSO_ENABLED=True
+      AZURE_SSO_ENABLED:    ${AZURE_SSO_ENABLED:-False}
+      AZURE_TENANT_ID:      ${AZURE_TENANT_ID:-}
+      AZURE_API_CLIENT_ID:  ${AZURE_API_CLIENT_ID:-}
+      AZURE_API_AUDIENCE:   ${AZURE_API_AUDIENCE:-}
+      AZURE_ADMIN_GROUP_ID: ${AZURE_ADMIN_GROUP_ID:-}
+      # 'report' until 27-Sep-2026, then 'enforce' (core/login_gate.py — no payroll, no Omni)
+      SSO_NEW_LOGIN_POLICY: ${SSO_NEW_LOGIN_POLICY:-report}
+      # Odoo migration (one-shot pull) — see ops/migrations/odoo/README.md
+      ODOO_URL:      ${ODOO_URL:-}
+      ODOO_DB:       ${ODOO_DB:-}
+      ODOO_USER:     ${ODOO_USER:-}
+      ODOO_PASSWORD: ${ODOO_PASSWORD:-}
+      # Financial lock override (CFO directive 2026-05-19).
+      # OMNI_FINANCIAL_LOCK_OVERRIDE — rotates the upload password.
+      # OMNI_FINANCIAL_LOCK_BYPASS=1 — skips the check entirely; set
+      # ONLY during a Manus AI re-import window, then revert to ''.
+      OMNI_FINANCIAL_LOCK_OVERRIDE: ${OMNI_FINANCIAL_LOCK_OVERRIDE:-}
+      OMNI_FINANCIAL_LOCK_BYPASS:   ${OMNI_FINANCIAL_LOCK_BYPASS:-}
+      # HRIS unlock password (CFO directive 2026-05-18, security audit
+      # 2026-06-09 — removed hardcoded literal fallback). Source of truth
+      # is .env. Empty == HRIS locked for everyone (fail-closed).
+      OMNI_HRIS_PASSWORD:           ${OMNI_HRIS_PASSWORD:-}
+      OMNI_HRIS_UNLOCK_HOURS:       ${OMNI_HRIS_UNLOCK_HOURS:-8}
+      # Access key for the no-sign-in READ-ONLY quality-check view at /qa
+      # (core.qa_view_login). Source of truth is .env. Empty == the view is
+      # switched off entirely (fail-closed), which is the default.
+      OMNI_QA_VIEW_KEY:             ${OMNI_QA_VIEW_KEY:-}
+      # RealPay TLS verification (security audit 2026-06-09). Default True
+      # (prod). Set false ONLY for UAT self-signed endpoint.
+      REALPAY_TLS_VERIFY:           ${REALPAY_TLS_VERIFY:-true}
+      # FNB Botswana / RMB-SA bank integration (CFO directive 2026-05-21).
+      # See fnb/client.py for the consumer. All blank by default so the
+      # client raises FNBNotConfigured cleanly until env is populated.
+      FNB_API_BASE:               ${FNB_API_BASE:-}
+      FNB_AUTH_MODE:              ${FNB_AUTH_MODE:-oauth2_client_credentials}
+      FNB_AUTH_URL:               ${FNB_AUTH_URL:-}
+      FNB_OAUTH_SCOPE:            ${FNB_OAUTH_SCOPE:-i_can}
+      FNB_CLIENT_ID:              ${FNB_CLIENT_ID:-}
+      FNB_CLIENT_SECRET:          ${FNB_CLIENT_SECRET:-}
+      FNB_API_KEY:                ${FNB_API_KEY:-}
+      FNB_TLS_CERT_PATH:          ${FNB_TLS_CERT_PATH:-}
+      FNB_TLS_KEY_PATH:           ${FNB_TLS_KEY_PATH:-}
+      FNB_WEBHOOK_SECRET:         ${FNB_WEBHOOK_SECRET:-}
+      # The gate board's shared secret with GitHub. Compose does NOT pass the
+      # env file through to the container — only what is named here reaches the
+      # app, so adding it to /etc/alpha-finance/.env alone leaves the webhook
+      # refusing every delivery (it fails closed) and the board silently empty.
+      CI_WEBHOOK_SECRET:          ${CI_WEBHOOK_SECRET:-}
+      FNB_BATCH_MAX_BWP:          ${FNB_BATCH_MAX_BWP:-2000000}
+      REFUND_AUTOLOAD_MAX_BWP:    ${REFUND_AUTOLOAD_MAX_BWP:-5000}
+      PAYMENT_REQUEST_AUTO_FNB:   ${PAYMENT_REQUEST_AUTO_FNB:-True}
+      PAYMENT_REQUEST_FNB_SOURCE_ACCOUNTS: ${PAYMENT_REQUEST_FNB_SOURCE_ACCOUNTS:-}
+      PAYMENT_REQUEST_ENTITY_ALIASES: ${PAYMENT_REQUEST_ENTITY_ALIASES:-}
+      FNB_INITIATING_PARTY_NAME:  ${FNB_INITIATING_PARTY_NAME:-Alpha Direct Insurance}
+      FNB_DEBTOR_BIC:             ${FNB_DEBTOR_BIC:-FIRNBWGX}
+      FNB_DEBTOR_BRANCH_ID:       ${FNB_DEBTOR_BRANCH_ID:-}
+      FNB_DEBTOR_ACCOUNT_TYPE:    ${FNB_DEBTOR_ACCOUNT_TYPE:-CACC}
+      FNB_DEBTOR_ACCOUNT_NUMBER:  ${FNB_DEBTOR_ACCOUNT_NUMBER:-}
+      FNB_QUICK_TRANSFER_ENABLED: ${FNB_QUICK_TRANSFER_ENABLED:-False}
+      REFUND_FNB_SEND_ENABLED:    ${REFUND_FNB_SEND_ENABLED:-False}
+      REFUND_FNB_DEBIT_ACCOUNT_NUMBER: ${REFUND_FNB_DEBIT_ACCOUNT_NUMBER:-}
+      FNB_WEBHOOK_HEADER:         ${FNB_WEBHOOK_HEADER:-X-FNB-Signature}
+      FNB_TIMEOUT_SECONDS:        ${FNB_TIMEOUT_SECONDS:-15}
+      # Auto-close paid payment requests from FNB "Fully Processed" emails
+      # (fnb_email_autoclose). Ships OFF; flip to true in /etc/alpha-finance/.env.
+      FNB_EMAIL_AUTOCLOSE_ENABLED: ${FNB_EMAIL_AUTOCLOSE_ENABLED:-False}
+      # CFO directive 2026-05-20 (post-TB-incident): TB write-blocker. When
+      # OMNI_TEST_MODE=1, smart-upload TB commits targeting any company in
+      # OMNI_TEST_MODE_PROTECTED_COMPANIES (default 'ADIC') return HTTP 423.
+      # Unset OMNI_TEST_MODE (or remove the company from the list) to allow
+      # real uploads. Reload backend after env change.
+      OMNI_TEST_MODE:                     ${OMNI_TEST_MODE:-}
+      OMNI_TEST_MODE_PROTECTED_COMPANIES: ${OMNI_TEST_MODE_PROTECTED_COMPANIES:-ADIC}
+    volumes:
+      - media_data:/app/media
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - alpha_internal
+
+  # CFO Telegram bot — long-polls Telegram, read-only ERP queries.
+  # Wired since 2026-05 (token + password in .env) but never had a process to
+  # live in: compose didn't pass TELEGRAM_* into any container and nothing ran
+  # `manage.py run_telegram_bot`. This sidecar reuses the backend image (no
+  # extra build) and restarts on failure/reboot. CFO directive 2026-06-10.
+  telegrambot:
+    image: alpha-finance-backend:local
+    container_name: alpha-finance-telegrambot
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started   # backend owns migrations; start after it
+    # Guard instead of a hard `:?` requirement: the prod .env shipped with
+    # TELEGRAM_BOT_TOKEN present but EMPTY (discovered 2026-06-10), and
+    # run_loop() raises on an empty token — a bare command would crash-loop
+    # and a `:?` interpolation error blocks EVERY `docker compose up` on the
+    # box. Idle politely until the token lands, then next `up -d` starts it.
+    command:
+      - sh
+      - -c
+      - >
+        if [ -z "$$TELEGRAM_BOT_TOKEN" ]; then
+        echo '[telegram-bot] TELEGRAM_BOT_TOKEN is empty in the env file - bot idle until it is set; then: docker compose up -d telegrambot';
+        exec sleep infinity;
+        fi;
+        exec python manage.py run_telegram_bot
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env}
+      DEBUG: "False"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      DB_NAME: ${DB_NAME:-alpha_finance}
+      DB_USER: ${DB_USER:-alpha_admin}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: 5432
+      DEFAULT_CURRENCY: ${DEFAULT_CURRENCY:-BWP}
+      SUPPORTED_CURRENCIES: ${SUPPORTED_CURRENCIES:-BWP,USD,ZAR}
+      # Sidecar must NOT repeat the backend's boot work.
+      DJANGO_RUN_MIGRATIONS: "0"
+      DJANGO_COLLECTSTATIC: "0"
+      DJANGO_SEED_INITIAL: "0"
+      DJANGO_CREATE_SUPERUSER: "0"
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_PASSWORD: ${TELEGRAM_BOT_PASSWORD:-}
+      TELEGRAM_BOT_AUTHORIZED_USERS: ${TELEGRAM_BOT_AUTHORIZED_USERS:-}
+      TELEGRAM_BOT_SESSION_MINUTES: ${TELEGRAM_BOT_SESSION_MINUTES:-60}
+      TELEGRAM_BOT_AI_ANSWER: ${TELEGRAM_BOT_AI_ANSWER:-True}
+      # Name that resolves "my leave/salary/hours" to the sender (CFO's own record).
+      TELEGRAM_BOT_SELF_NAME: ${TELEGRAM_BOT_SELF_NAME:-}
+      # The intent router + ai_answer() fallback call DeepSeek. Without these
+      # the sidecar has no key and returns "AI unavailable" (backend has them).
+      DEEPSEEK_API_KEY:  ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_BASE: ${DEEPSEEK_API_BASE:-https://api.deepseek.com}
+      DEEPSEEK_MODEL:    ${DEEPSEEK_MODEL:-deepseek-chat}
+      PII_FIREWALL_MODE: ${PII_FIREWALL_MODE:-tokenize}
+      # Naming HR when a ghost-payroll task passes its deadline. Its own switch
+      # since 2026-08-09 — it used to ride on the ghost-list flag, so turning
+      # the ghost list off silently stopped HR being chased. Default on.
+      WORKFORCE_HR_OVERDUE_IN_EMAIL: ${WORKFORCE_HR_OVERDUE_IN_EMAIL:-True}
+      DEEPSEEK_ENABLED:  ${DEEPSEEK_ENABLED:-True}
+    healthcheck:
+      # The backend image's HEALTHCHECK curls :8000, which this sidecar never
+      # serves — disable it so the bot doesn't sit permanently "unhealthy".
+      disable: true
+    networks:
+      - alpha_internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* values are baked into the client bundle at build time.
+        # Empty = SSO disabled in the UI; password login still works.
+        NEXT_PUBLIC_AZURE_TENANT_ID: ${NEXT_PUBLIC_AZURE_TENANT_ID:-}
+        NEXT_PUBLIC_AZURE_CLIENT_ID: ${NEXT_PUBLIC_AZURE_CLIENT_ID:-}
+        NEXT_PUBLIC_AZURE_API_SCOPE: ${NEXT_PUBLIC_AZURE_API_SCOPE:-}
+    image: alpha-finance-frontend:local
+    container_name: alpha-finance-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      BACKEND_INTERNAL_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - alpha_internal
+
+volumes:
+  postgres_data:
+    name: alpha_finance_pgdata
+  media_data:
+    name: alpha_finance_media
+
+networks:
+  alpha_internal:
+    name: alpha_finance_internal
+    driver: bridge

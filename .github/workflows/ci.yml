@@ -1,0 +1,337 @@
+name: CI — guardrails
+
+# Runs on every push and PR. The WHOLE Django test suite is the HARD GATE: if a
+# change reopens an unbalanced-JE / editable-posted-entry / cross-entity-leak
+# hole — or breaks anything else — the build fails before it can be deployed.
+# Added 2026-06-11 after the forensic audit (ledger had no tests). Widened from
+# an app allow-list to the full suite 2026-07-26 (CFO) — see the note on the
+# test step.
+
+on:
+  push:
+    branches: [main]
+    # MACHINE-TALK.md is the Mac↔Windows chat log: a one-line append, pushed to
+    # main every few minutes by whichever machine is working. Combined with
+    # `cancel-in-progress: true` below, that meant the guardrail almost never
+    # finished — each run was cancelled by the next chat line before the suite
+    # (~6 min) could complete. Measured 2026-07-30: 29 such commits in one day at
+    # 2–7 minute intervals, and SIX consecutive runs on main ended `cancelled`,
+    # including a real feature merge. The hard gate was not gating anything.
+    #
+    # Skipping pushes that touch ONLY this file fixes it without weakening the
+    # gate: `paths-ignore` skips a push only when EVERY changed file matches, so
+    # a commit carrying code plus a chat line still runs the full suite.
+    paths-ignore:
+      - 'MACHINE-TALK.md'
+      - 'MACHINE-SYNC.md'
+      - '.claude/**'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Cancel superseded runs on PR branches (fast feedback, saves minutes) but
+  # NEVER on main. Every push to main must run the full suite to completion —
+  # that is the whole point of the hard gate. The machine-talk chat noise that
+  # caused this in Jul-2026 is already handled by paths-ignore above; but code
+  # merges now land minutes apart and were cancelling EACH OTHER — measured
+  # 2026-09-07: 6 of the last 8 main runs ended `cancelled`, so most merges
+  # shipped with the guardrail never finishing. Not cancelling on main queues
+  # the ~6-min suite serially per real code merge (1–2 at a time; machine-talk
+  # no longer triggers CI so there is no chat pile-up).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ── Does this change touch anything the suite protects? ────────────────────
+  # The `paths-ignore` above has skipped MACHINE-TALK-only PUSHES since Jul-2026.
+  # It stopped working on 2026-09-09, silently: main became a protected branch,
+  # so every chat line now arrives as a PULL REQUEST, and `paths-ignore` does not
+  # apply to the `pull_request` event. Measured 2026-09-11: five runs in flight
+  # at once, ~25 jobs competing, a real change waiting 20+ minutes for an 8-minute
+  # suite — and half the queue was one-line log entries running 2,700 insurance
+  # tests four times each.
+  #
+  # Only these three paths qualify: the two cross-machine chat logs and the tracked
+  # Django's test suite: the two cross-machine chat logs and the Claude skills
+  # folder. Anything else — any .py, any template, any migration, any other
+  # markdown — runs the full gate. The filter is an ALL test, exactly like
+  # paths-ignore: a commit carrying a log line PLUS code still runs everything.
+  #
+  # It FAILS SAFE. Anything unexpected — no base SHA, a git error, an empty
+  # diff — reports code=true and the whole suite runs. The gate is never skipped
+  # because something could not be determined.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        run: bash .github/ci-touches-code.sh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+  shard:
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    # 2026-09-09: the suite is split across runners instead of queuing on
+    # one. It was 29 of the job's 31 minutes; --parallel on the runner's own
+    # cores only reached 20 (GitHub's standard runner is small), and a
+    # 30-minute gate is what drove sessions to push straight to main rather
+    # than wait for it. Shard membership is DISCOVERED from Django's app
+    # registry by ops/ci_shard.py — never a hand-written list, which is the
+    # allow-list hole the CFO closed on 2026-07-26. core/tests/test_ci_shards.py
+    # fails if any installed app stops being covered.
+    # fail-fast off: one shard going red must not hide a second failure in
+    # another, or a fix lands and the next run reveals the one it masked.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: alpha_finance
+          POSTGRES_USER: alpha_admin
+          POSTGRES_PASSWORD: ci_test_password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U alpha_admin"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # settings.py requires these with no fallback — CI-only throwaway values.
+      SECRET_KEY: ci-only-not-a-real-secret-key-do-not-reuse
+      DEBUG: 'False'
+      DB_ENGINE: postgresql
+      DB_NAME: alpha_finance
+      DB_USER: alpha_admin
+      DB_PASSWORD: ci_test_password
+      DB_HOST: localhost
+      DB_PORT: '5432'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff bandit
+
+      - name: Django system check (config / import sanity)
+        run: python manage.py check
+
+      - name: Model drift (HARD GATE)
+        if: matrix.shard == 1
+        # Was advisory while ~123 pre-existing drift operations sat unmigrated
+        # across 17 apps. Cleared 2026-07-26 by the 0*_sync_model_state_2026_07_26
+        # migrations, so this is now a hard gate: a model edit that ships without
+        # its migration fails CI instead of quietly widening the gap between the
+        # deployed schema and the model definitions.
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Model drift with system checks skipped (HARD GATE)
+        if: matrix.shard == 1
+        # The gate above runs WITH system checks, and Django imports the URLconf
+        # while checking it. That silently registers any model whose module is
+        # only imported by a view, so the gate above cannot see a model missing
+        # from its own app's models.py. call_command() skips system checks by
+        # default and that is exactly how the test runner invokes migrate: on
+        # 2026-08-20 that path reported 'hris' as drifted (49 of 52 models
+        # registered) while the gate above said "No changes detected", and
+        # `makemigrations hris --skip-checks` would have written a migration
+        # DELETING the live disciplinary and employee-transfer tables. Green
+        # across every app when added, so this starts as a hard gate.
+        run: python manage.py makemigrations --check --dry-run --skip-checks
+
+      # The 537 migrations are ~290s of every shard's 352s setup, and all four
+      # shards replay the same history the previous run already replayed — ~19
+      # minutes of machine time per run. Skipping them was tried and is a dead
+      # end (PR #792): 42 carry RunPython, and a third of the suite builds on the
+      # reference data they seed. So the migrated database is REUSED rather than
+      # skipped — the seeded rows ride inside the dump, and nothing is proved
+      # less.
+      #
+      # Keyed on every migration file, so the moment anyone adds one the key
+      # misses and the database is rebuilt from scratch. A stale schema is not
+      # reachable: it would need a migration to change without its file changing.
+      - name: Cache the migrated test database
+        id: testdb
+        uses: actions/cache@v4
+        with:
+          path: .ci-testdb.sql
+          key: testdb-v1-${{ hashFiles('**/migrations/[0-9]*.py') }}
+
+      - name: Build or restore the test database
+        env:
+          PGPASSWORD: ci_test_password
+        run: |
+          set -euo pipefail
+          PSQL="psql -h localhost -U alpha_admin -v ON_ERROR_STOP=1"
+          $PSQL -d alpha_finance -q -c 'CREATE DATABASE test_alpha_finance'
+          if [ -s .ci-testdb.sql ]; then
+            echo "cache HIT — restoring the migrated database"
+            $PSQL -d test_alpha_finance -q -f .ci-testdb.sql
+          else
+            echo "cache MISS — applying the migrations once, then saving them"
+            DB_NAME=test_alpha_finance python manage.py migrate --noinput
+            pg_dump -h localhost -U alpha_admin -d test_alpha_finance > .ci-testdb.sql
+            test -s .ci-testdb.sql || { echo 'the dump is empty — refusing to cache it'; exit 1; }
+          fi
+          # Prove the reference data the suite depends on actually arrived. PR #792
+          # failed with 653 DoesNotExist errors on exactly this; a silent empty
+          # restore would look identical, so it is checked here rather than
+          # discovered 600 test failures later.
+          $PSQL -d test_alpha_finance -tAc "select count(*) from django_migrations"             | awk '{ if ($1 < 500) { print "only " $1 " migrations recorded — the database did not restore"; exit 1 } else print $1 " migrations present" }'
+
+      - name: Full test suite (HARD GATE)
+        # CFO 2026-07-26: this step used to name an explicit app allow-list, and
+        # anything off that line never ran in CI. 437 of 1370 tests sat outside
+        # it across 19 apps — procurement 122 (the PO half of the
+        # Supplier→PO→Payables→Age-Analysis chain the steering doc calls
+        # invariant), commissions 45, billing 34, staff_loans 33, reporting 27,
+        # taskboard 21 (only test_payment_two_stage was listed), claims 11 …
+        # That is how 11 tests stayed red on main unnoticed for weeks, including
+        # the balance-sheet-balances regression test and a staff-loan
+        # disbursement crash that made the feature unusable on Postgres (#504).
+        # So the gate is now the WHOLE suite: a new app with tests can no longer
+        # fall silently outside the net by not being added to a list. Costs
+        # ~2 min more (1370 tests vs 933).
+        # The historical per-app notes are kept below for provenance.
+        #
+        # HRIS-006 (2026-06-18): added `hris core` so the entity-scope isolation
+        # of the employee directory (and the HRIS/M365 scoping) is regression-
+        # gated — the cross-entity leak fixed in HRIS-006 can never silently
+        # return. Both apps were already green when added (82 tests, 24s).
+        # Alpha Nexus (2026-06-28): added `rewards` so the streak-reward engine
+        # (multiplier + freeze-token forgiveness) stays regression-gated.
+        # Budgets (2026-06-27): added so the Budget Library (BudgetPack) API stays gated.
+        # Payment authorisation (2026-07-25): added the two-stage payment module
+        # so the sign-off routing, SoD guards AND the terminal paid/cleared
+        # states (bug ktshutlhedi — a paid request stayed in the queue for ever)
+        # stay regression-gated.
+        # Internal Audit (2026-07-25): added so the independence rules (execs and
+        # superusers are read-only over audit content) and the fraud-flag path
+        # behind the Module 8 dashboard tile stay gated. Green when added (19 tests).
+        # Supplier recon (2026-07-25): added so the payables rules stay gated —
+        # the as-at-period-end paid arithmetic, the FX single-conversion
+        # invariant, draft bills keyed off the journal rather than the status,
+        # the reason/justification gate, segregation of duties and entity
+        # scoping. 73 tests.
+        run: |
+          LABELS=$(python ops/ci_shard.py --shard ${{ matrix.shard }} --of 4)
+          echo "shard ${{ matrix.shard }}/4 covers: $LABELS"
+          test -n "$LABELS" || { echo 'empty shard — ci_shard.py is broken'; exit 1; }
+          # --parallel auto stacks on top of the split: the shard is spread
+          # across ITS OWN runner's cores as well. Measured separately on the
+          # whole suite (run 34386025714, green): 29 min -> 20. The two are
+          # additive — different runners, then different cores on each.
+          # --keepdb: the database above is already migrated, so Django reuses
+          # it instead of building another. Without this the whole cache is
+          # wasted — Django would drop it and start again.
+          python manage.py test --noinput -v2 --keepdb --parallel auto $LABELS
+
+      - name: Company code-vs-UUID audit (HARD GATE)
+        if: matrix.shard == 1
+        # Added 2026-07-28 after the Intelligence Summary incident: the frontend
+        # injects the selected company as its UUID id, so any view that resolves
+        # the company by CODE only fails — loudly ("Unknown company code") or,
+        # worse, silently (the adoption scoreboard showed zero staff; the CoA
+        # label picker served ADIC's labels to every entity). CFO standing rule:
+        # this class must never ship again, so the checker gates the build.
+        run: PYTHONUTF8=1 python audit_company_param.py .
+
+      - name: Deploy disk guard + backup retention (HARD GATE)
+        if: matrix.shard == 1
+        # Added 2026-09-09 after a deploy half-landed: the backend cut over, then the
+        # frontend build died on "no space left on device" with the disk 98% full, so
+        # the site served new server code behind an old frontend. The space was 47 GB
+        # of pre-deploy database dumps, one per deploy, that nothing ever removed.
+        # Fully stubbed (no docker, no network) and runs in about a second.
+        run: bash infra/host/test-disk-guard.sh
+
+      - name: Lint (ruff) — advisory
+        if: matrix.shard == 1
+        run: ruff check . || true
+
+      - name: Security scan (bandit) — advisory
+        if: matrix.shard == 1
+        run: bandit -r . -ll -x ./node_modules,./frontend,*/migrations,*/tests || true
+
+  # ── Frontend guard: the sign-in design-freeze + every other vitest check ───
+  # Added 2026-09-17 (CFO). The Django suite above never ran the frontend vitest
+  # tests, so the sign-in DESIGN-FREEZE guard (frontend/src/app/__tests__/
+  # signinDesignFreeze.test.ts) — and every other vitest check — sat inert: the
+  # freeze test had drifted RED on main for days without CI noticing, because
+  # nothing here ran it (a freeze test that never runs is no guard). This job
+  # runs the whole `vitest run` suite and its result feeds the `test` gate below,
+  # so a broken or drifted frontend guard now blocks a merge. Runs whenever the
+  # change touches code (same gate as the shard job), skipped on log-only PRs.
+  frontend:
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    # A hung vitest run must not hold the required `test` check open for the
+    # 6-hour default; the suite finishes in ~1 min, so 15 is generous.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+      - name: Frontend tests (vitest) — HARD GATE
+        working-directory: frontend
+        run: npx vitest run
+
+  # The required status check KEEPS ITS NAME.
+  #
+  # A matrix reports "shard (1)" … "shard (4)", so pointing branch protection at
+  # those would have blocked every branch already in flight until each one pulled
+  # main in — six parallel sessions jammed at once, to install a speed-up. This
+  # one-line job depends on all four shards and reports a single check called
+  # `test`, exactly as before, so protection needs no change and nothing in
+  # flight breaks.
+  #
+  # `if: always()` so this still runs when a shard fails — otherwise the check
+  # would be skipped rather than red, and a skipped required check blocks a merge
+  # forever with no explanation on the page.
+  test:
+    needs: [shard, changes, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # The verdict lives in .github/ci-touches-code.sh beside its own tests
+      # (bash .github/ci-touches-code.sh --self-test), because this is the half
+      # that can wrongly go GREEN — and untestable YAML is how that happens.
+      - uses: actions/checkout@v4
+      - name: All four shards must be green
+        run: |
+          bash .github/ci-touches-code.sh --verdict             "${{ needs.shard.result }}" "${{ needs.changes.outputs.code }}"
+      # The frontend vitest job feeds this same required check, so a red or
+      # drifted frontend guard blocks the merge too. 'skipped' is allowed (a
+      # log-only PR where changes.code is false and this job never ran); any
+      # other non-success (failure/cancelled) is a hard fail.
+      - name: Frontend vitest must be green
+        run: |
+          r="${{ needs.frontend.result }}"
+          if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then
+            echo "frontend vitest job did not pass (result: $r)"; exit 1
+          fi
+          echo "frontend result: $r"

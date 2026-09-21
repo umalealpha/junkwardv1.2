@@ -1,0 +1,2 @@
+# Task reminders - daily 06:30 CAT (04:30 UTC). CFO 2026-07-13 (make omni send reminders).
+30 4 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py run_job task-reminders -- sweep_task_reminders >> /var/log/alpha-finance/task-reminders.log 2>&1

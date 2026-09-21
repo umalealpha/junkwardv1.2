@@ -1,0 +1,13 @@
+# BONU legal benefit — the Monday morning digest.
+#
+# Five things worth asking this week and the money at stake, emailed to the CFO. A dashboard
+# only works for the person who remembers to open it; this arrives.
+#
+# Kept in the repo on purpose: a cron that exists only on the box is a cron that disappears
+# with the box (project_cron_durability). Install with:
+#   sudo cp ops/cron/bonu-digest /etc/cron.d/bonu-digest && sudo chmod 644 /etc/cron.d/bonu-digest
+#
+# 07:30 every Monday, Botswana time (the server runs on Africa/Gaborone).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 7 * * 1 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py bonu_digest --send >> /var/log/alpha-finance/bonu-digest.log 2>&1

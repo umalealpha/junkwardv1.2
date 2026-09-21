@@ -1,0 +1,21 @@
+# 10am late-start nudge (CFO directive 2026-09-10: "these late starters who are
+# clocking in after 8.15am, by 10am send them just a reminder you started late
+# today"). The command shipped in PR #829 on 10-Sep but was never scheduled, so
+# not a single nudge went out — found 11-Sep when the CFO asked whether it had.
+#
+# Reads today's Time Doctor worklog, finds first activity after 08:15, and sends
+# each person a short private reminder. It NEVER docks pay and it never copies a
+# manager — the naming already happens in the daily workforce email. Excluded:
+# the C-suite, anyone on approved leave, and anyone carrying a
+# TrackingDirective(expected_to_track=False).
+#
+# 10:00 SAST = 08:00 UTC, Mon-Fri. This sits after the 09:40/09:45 intraday pull
+# in hours-reminders.cron only on paper — that pull is later in the day, so this
+# job reads the worklog live from Time Doctor itself.
+#
+# Runs through /usr/local/bin/omni-manage, which waits out a blue/green deploy
+# window instead of failing with "backend is not running". Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 8 * * 1-5 root cd /opt/alpha-finance && /usr/local/bin/omni-manage send_late_reminder --send >> /var/log/alpha-finance/late-reminder.log 2>&1

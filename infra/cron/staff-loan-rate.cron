@@ -1,0 +1,10 @@
+# Staff-loan scheme rate — refresh monthly from the Bank of Botswana MoPR.
+# rate = Bank of Botswana Monetary Policy Rate + spread (default 10%).
+# Fail-safe: if the BoB rate can't be read, the current rate is kept and
+# Finance is emailed to set it by hand.
+# Runs 05:30 UTC on the 1st of each month.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 5 1 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py refresh_staff_loan_rate >> /var/log/alpha-finance/staff-loan-rate.log 2>&1

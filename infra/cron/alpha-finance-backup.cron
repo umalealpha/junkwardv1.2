@@ -1,0 +1,6 @@
+# Nightly host backup — 00:00 UTC. Runs the host script (NOT in a container).
+# NOTE: /usr/local/bin/alpha-finance-backup.sh lives on the host, not in this
+# repo — its durability is a separate follow-up. Drop into /etc/cron.d/ (0644).
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+0 0 * * * root /usr/local/bin/alpha-finance-backup.sh >> /var/log/alpha-finance-backup.log 2>&1

@@ -1,0 +1,15 @@
+# gitleaks config — extends the default rules, allowlist Next.js build cache
+# (security audit 2026-06-09: 9 generic-api-key false-positives in
+# frontend/.next/* are manifest hash chunks, NOT real secrets).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build artefacts — never contain real secrets."
+paths = [
+    '''frontend/\.next/.*''',
+    '''node_modules/.*''',
+    '''.*\.lock$''',
+    '''package-lock\.json$''',
+]

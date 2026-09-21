@@ -1,0 +1,13 @@
+{
+  "name": "omni-qc-windows",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Omni QC agent (Windows port) — read-only page/button checker for omni.alphadirect.co.bw and the UniCoin portal.",
+  "scripts": {
+    "install:browser": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

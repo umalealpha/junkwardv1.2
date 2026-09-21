@@ -1,0 +1,16 @@
+# Discretionary leave — monthly repeat-user list to the CFO (CFO 2026-09-10).
+#
+# Compassionate / study / special are granted at the company's discretion and
+# were being used to preserve annual-leave days. One request proves nothing;
+# the pattern does. This lists everyone who used those types in the last 12
+# months, worst first, with the annual leave they still hold beside it.
+#
+# 1st of the month, 05:00 UTC = 07:00 Botswana. Sends nothing in a month with
+# no discretionary leave, so an empty mail never trains anyone to ignore it.
+#
+# Drop into /etc/cron.d/ via infra/install-crons.sh (editing this file alone
+# schedules nothing on the host). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 5 1 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py discretionary_leave_report >> /var/log/alpha-finance/discretionary-leave-report.log 2>&1

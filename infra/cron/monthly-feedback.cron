@@ -1,0 +1,28 @@
+# Monthly performance feedback — the 5th / 6th / 7th cycle. CFO 2026-08-26/27.
+#
+# Botswana is UTC+2, so subtract 2 hours from local time.
+#   5th 07:00 UTC = 09:00 local — ONE email per manager, the whole team's month
+#                                already written up. Confirm, edit, or ignore.
+#   6th 07:00 UTC = 09:00 local — last reminder.
+#   7th 15:00 UTC = 17:00 local — auto-post, end of day, unrated.
+#
+# The auto-post refuses to run for any manager who did not get BOTH the draft
+# AND the reminder (CFO 2026-08-27), so a failed mail run delays the post rather
+# than recording an innocent manager as silent. All three commands are
+# idempotent per (manager, period) — a double run cannot double-mail or
+# double-post. Clock UTC.
+#
+# Drop into /etc/cron.d/ via infra/install-crons.sh (editing this file alone
+# schedules nothing on the host).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# CFO 2026-09-09 moved the cycle. It used to be 5th / 6th / auto-post 7th, which
+# gave a manager barely a day between the reminder and the post. Now:
+#   2nd  the facts go to the manager  ("the facts about the staff who report to you")
+#   4th  reminder to the manager AND to the staff member it is about
+#   7th  second reminder to both
+#   10th auto-posted if nothing came back
+0 7 2 * *  root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py monthly_feedback_notice --commit >> /var/log/alpha-finance/monthly-feedback.log 2>&1
+0 7 4 * *  root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py monthly_feedback_notice --commit --reminder >> /var/log/alpha-finance/monthly-feedback.log 2>&1
+0 7 7 * *  root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py monthly_feedback_notice --commit --final >> /var/log/alpha-finance/monthly-feedback.log 2>&1
+0 15 10 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py monthly_feedback_autopost --commit >> /var/log/alpha-finance/monthly-feedback.log 2>&1

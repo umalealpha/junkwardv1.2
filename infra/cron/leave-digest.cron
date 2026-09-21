@@ -1,0 +1,8 @@
+# HR Daily Leave Digest — every day 05:15 UTC (07:15 SAST).
+# Emails the HR head (Unami) who is on leave today + who is going on leave in the
+# next 2 weeks (CFO 2026-07-27). Self-gates: skips weekends / public holidays and
+# sends nothing on a day with no leave. Drop into /etc/cron.d/ (sudo cp + chmod 644). UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+15 5 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job leave-digest -- send_leave_digest >> /var/log/alpha-finance/leave-digest.log 2>&1

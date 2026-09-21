@@ -1,0 +1,44 @@
+# OSX
+.DS_Store
+
+# node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Metro
+.metro-health-check*
+.haste_cache/
+
+# Android/IntelliJ
+build/
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+android/app/build/
+android/.gradle/
+
+# Bundle artifacts
+*.jsbundle
+
+# Ruby / CocoaPods (iOS — minimal)
+ios/Pods/
+ios/build/
+
+# Env
+.env
+*.keystore
+!android/app/debug.keystore
+
+# Upload-signing password — must never be committed.
+android/keystore.properties
+
+# Local build logs
+build-aab.log
+verify-build.log
+
+# IDE
+.idea/
+.vscode/

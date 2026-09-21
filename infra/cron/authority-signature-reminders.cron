@@ -1,0 +1,21 @@
+# Authority to Recruit — chase the outstanding signatories, daily 06:00 UTC (08:00 SAST).
+#
+# CFO directive 2026-08-11. The five-signature instrument shipped with no
+# notification at all: an authority was raised and sat there. On 11-Aug-2026 both
+# records on prod (ARG-2026-0001 Kago Tshutlhedi, ATR-2026-0001 Bokang Bobby
+# Mothibi) were still 0-of-5 signed for exactly that reason.
+#
+# Raising an authority now emails the signatories immediately (authority_views);
+# this is the recurring half. --min-age-days 2 keeps it from doubling up on the
+# raise email. Only PENDING authorities are chased, and only the signatories who
+# still owe a decision.
+#
+# Deliberately 08:00 SAST, not the 07:05 consolidated-brief slot: this goes to the
+# CEO, COO, both Human Capital signatories and the CFO, and must not be folded
+# into a staff-wide digest — the authorities carry individual pay structures.
+#
+# Drop into /etc/cron.d/ (sudo cp + chmod 644). Times are UTC; SAST = UTC+2.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 6 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job authority-signature-reminders -- authority_signature_reminders --min-age-days 2 >> /var/log/alpha-finance/authority-signature-reminders.log 2>&1

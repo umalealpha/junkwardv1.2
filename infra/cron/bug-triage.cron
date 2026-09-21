@@ -1,0 +1,16 @@
+# Omni bug-reports — hourly auto-triage of NEW reports.
+# `triage_bugs`: for every BugReport still in NEW status, AI-reasons a SAFE
+# action, sets the status, and emails the reporter once (the NEW->X feedback
+# email the triage board sends). It NEVER deploys code — real code fixes stay a
+# reviewed change (auto-pushing AI code to a live insurance ERP is out of scope).
+# This is the always-on, app-independent half of the agreed hourly bug loop;
+# code fixes are worked by the hourly scheduled agent / a human.
+#
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+# Idempotent; exits cleanly if there are 0 NEW reports.
+# Output -> /var/log/alpha-finance/bug-triage.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+2 * * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py triage_bugs >> /var/log/alpha-finance/bug-triage.log 2>&1

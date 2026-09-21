@@ -1,0 +1,513 @@
+[
+ {
+  "requirement_code": "S8",
+  "requirement_name": "Personal data shall be processed lawfully, fairly and in a transparent manner in relation to the data subject ('lawfulness, fairness and transparency').",
+  "plain_description": "Alpha Direct must have a valid legal reason to collect or use personal data, must be honest with customers about what it does with their data, and must not use it in ways that would surprise or mislead them.",
+  "category": "principles",
+  "policy_raw": "Processing Personal Information Policy; Data Protection Policy"
+ },
+ {
+  "requirement_code": "S9",
+  "requirement_name": "Personal data shall be collected for specified, explicit and legitimate purposes and not further processed in a manner that is incompatible with those purposes ('purpose limitation').",
+  "plain_description": "Alpha Direct must tell customers upfront exactly why their data is being collected and must not later use that data for a different purpose without a valid justification.",
+  "category": "principles",
+  "policy_raw": "Processing Personal Information Policy; Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S10",
+  "requirement_name": "Personal data shall be adequate, relevant and limited to what is necessary in relation to the purposes for which it is processed ('data minimisation').",
+  "plain_description": "Alpha Direct should only collect the minimum personal data needed. Collecting more information than is necessary for the stated purpose is a breach of this principle.",
+  "category": "principles",
+  "policy_raw": "Processing Personal Information Policy; AI Governance Policy (Section 9)"
+ },
+ {
+  "requirement_code": "S11",
+  "requirement_name": "Personal data shall be accurate and, where necessary, kept up to date; every reasonable step must be taken to ensure that personal data that are inaccurate are erased or rectified without delay ('accuracy').",
+  "plain_description": "Alpha Direct must keep customer records accurate and up to date. Where data is found to be wrong, it must be corrected or deleted promptly.",
+  "category": "principles",
+  "policy_raw": "Data Quality Policy"
+ },
+ {
+  "requirement_code": "S12",
+  "requirement_name": "Personal data shall be kept in a form which permits identification of data subjects for no longer than is necessary for the purposes for which the personal data is processed ('storage limitation').",
+  "plain_description": "Alpha Direct must not hold onto personal data indefinitely. Data should be deleted or anonymised once it is no longer needed for the purpose it was collected.",
+  "category": "principles",
+  "policy_raw": "Data Retention & Erasure Policy"
+ },
+ {
+  "requirement_code": "S13",
+  "requirement_name": "Personal data shall be processed in a manner that ensures appropriate security of the personal data, including protection against unauthorised or unlawful processing and against accidental loss, destruction or damage ('integrity and confidentiality').",
+  "plain_description": "Alpha Direct must protect personal data with appropriate security measures — both technical (e.g. access controls, encryption) and organisational (e.g. staff training, clean desk policy).",
+  "category": "principles",
+  "policy_raw": "Information Security Policy; Clean Desk Policy; Data Protection Policy"
+ },
+ {
+  "requirement_code": "S14",
+  "requirement_name": "The data controller shall be responsible for, and be able to demonstrate compliance with, the data protection principles ('accountability').",
+  "plain_description": "Alpha Direct must not only comply with data protection principles but must be able to prove it — through documented policies, staff training records, DPIAs, and incident logs.",
+  "category": "principles",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S15.1",
+  "requirement_name": "Processing of personal data shall be lawful only if at least one of the following conditions is met.",
+  "plain_description": "Every time Alpha Direct processes personal data, there must be a specific legal reason (lawful basis) for doing so. Processing without a valid basis is unlawful.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S15.1.a",
+  "requirement_name": "The data subject has given consent to the processing of his or her personal data for one or more specific purposes.",
+  "plain_description": "The customer has clearly agreed to their data being used for a specific reason — for example, signing a consent form before health data is used in underwriting.",
+  "category": "lawful_basis",
+  "policy_raw": "Health Data Privacy Consent Form 2025"
+ },
+ {
+  "requirement_code": "S15.1.b",
+  "requirement_name": "Processing is necessary for the performance of a contract to which the data subject is party or in order to take steps at the request of the data subject prior to entering into a contract.",
+  "plain_description": "Alpha Direct can process data where it is needed to fulfil an insurance policy — for example, processing claims data to settle a claim.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S15.1.c",
+  "requirement_name": "Processing is necessary for compliance with a legal obligation to which the data controller is subject.",
+  "plain_description": "Alpha Direct can process data where required by law — for example, retaining AML/CFT records under the Financial Intelligence Act or reporting to NBFIRA.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy; Data Retention & Erasure Policy"
+ },
+ {
+  "requirement_code": "S15.1.d",
+  "requirement_name": "Processing is necessary in order to protect the vital interests of the data subject or of another natural person.",
+  "plain_description": "Alpha Direct can process data in genuine emergency situations where someone's life may be at risk — a narrow and rarely used basis.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S15.1.e",
+  "requirement_name": "Processing is necessary for the performance of a task carried out in the public interest or in the exercise of official authority vested in the data controller.",
+  "plain_description": "Applicable where Alpha Direct processes data in connection with regulatory obligations or public interest functions.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S15.1.f",
+  "requirement_name": "Processing is necessary for the purposes of the legitimate interests pursued by the data controller or by a third party, except where such interests are overridden by the interests or fundamental rights and freedoms of the data subject.",
+  "plain_description": "Alpha Direct may rely on legitimate interests for certain business processing — but only after conducting a Legitimate Interests Assessment (LIA) to confirm the data subject's rights are not overridden.",
+  "category": "lawful_basis",
+  "policy_raw": "Processing Personal Information Policy — NOTE: LIA procedure not yet in place (gap)"
+ },
+ {
+  "requirement_code": "S16.1",
+  "requirement_name": "Where the processing is based on consent, the data controller shall be able to demonstrate that the data subject has consented to processing of his or her personal data.",
+  "plain_description": "Alpha Direct must keep evidence that consent was given — for example, a signed consent form or a digital record of when and how the customer agreed.",
+  "category": "consent",
+  "policy_raw": "Health Data Privacy Consent Form 2025"
+ },
+ {
+  "requirement_code": "S16.2",
+  "requirement_name": "The data subject shall have the right to withdraw his or her consent at any time. The withdrawal of consent shall not affect the lawfulness of processing based on consent before its withdrawal.",
+  "plain_description": "Customers can take back their consent at any time. Alpha Direct must have a process to record and action consent withdrawals. Withdrawing consent does not undo what was lawfully done before.",
+  "category": "consent",
+  "policy_raw": "Health Data Privacy Consent Form 2025; External DSAR Procedure"
+ },
+ {
+  "requirement_code": "S16.3",
+  "requirement_name": "When assessing whether consent is freely given, utmost account shall be taken of whether the performance of a contract is conditional on consent to the processing of personal data that is not necessary for the performance of that contract.",
+  "plain_description": "Alpha Direct cannot bundle unrelated consent into a contract — for example, requiring a customer to consent to marketing as a condition of getting insurance cover.",
+  "category": "consent",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.1",
+  "requirement_name": "Processing of personal data revealing racial or ethnic origin, political opinions, religious or philosophical beliefs, trade union membership, genetic data, biometric data, health data, or data concerning sex life or sexual orientation shall be prohibited unless a specific condition applies.",
+  "plain_description": "Sensitive personal data (called special categories) carries higher risk and is strictly regulated. Alpha Direct must have a specific and documented justification before processing any such data — particularly relevant for health data used in underwriting.",
+  "category": "special_categories",
+  "policy_raw": "Health Data Privacy Consent Form 2025; Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.2.a",
+  "requirement_name": "Processing of special categories of personal data shall be permitted where the data subject has given explicit consent for one or more specified purposes.",
+  "plain_description": "Explicit (not just implied) consent is required to process sensitive data. Alpha Direct's health consent form covers this for health-related underwriting.",
+  "category": "special_categories",
+  "policy_raw": "Health Data Privacy Consent Form 2025"
+ },
+ {
+  "requirement_code": "S17.2.b",
+  "requirement_name": "Processing is necessary for carrying out obligations and exercising rights in the field of employment and social security law.",
+  "plain_description": "Relevant to Alpha Direct's processing of employee health or disability data for HR purposes.",
+  "category": "special_categories",
+  "policy_raw": "Employee Data Privacy Policy"
+ },
+ {
+  "requirement_code": "S17.2.c",
+  "requirement_name": "Processing is necessary to protect the vital interests of the data subject or another person where the data subject cannot give consent.",
+  "plain_description": "Emergency situations only — for example, medical data shared to save a person's life when they cannot consent.",
+  "category": "special_categories",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.2.d",
+  "requirement_name": "Processing relates to personal data which are manifestly made public by the data subject.",
+  "plain_description": "Applies where the data subject has themselves made the sensitive data publicly available.",
+  "category": "special_categories",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.2.e",
+  "requirement_name": "Processing is necessary for the establishment, exercise or defence of legal claims.",
+  "plain_description": "Relevant when Alpha Direct needs to use health or other sensitive data in legal proceedings or dispute resolution.",
+  "category": "special_categories",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.2.f",
+  "requirement_name": "Processing is necessary for reasons of substantial public interest, on the basis of applicable law.",
+  "plain_description": "A narrow basis requiring a specific legal provision authorising the processing for public interest reasons.",
+  "category": "special_categories",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S17.2.g",
+  "requirement_name": "Processing is necessary for preventive or occupational medicine, medical diagnosis, health or social care, or management of health or social care systems.",
+  "plain_description": "Relevant where Alpha Direct shares health data with healthcare providers or assessors as part of claims management.",
+  "category": "special_categories",
+  "policy_raw": "Health Data Privacy Consent Form 2025"
+ },
+ {
+  "requirement_code": "S18",
+  "requirement_name": "Processing of personal data relating to criminal convictions and offences shall be carried out only under the control of official authority or when authorised by law providing for appropriate safeguards.",
+  "plain_description": "Alpha Direct may only process criminal conviction data where specifically permitted by law — for example, during underwriting where criminal history affects risk, or for AML/CFT purposes under the Financial Intelligence Act.",
+  "category": "special_categories",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S19.1",
+  "requirement_name": "Where the offer of information society services is directed to a child, the processing of the personal data of a child shall be lawful only where the child meets the prescribed age, or consent is given or authorised by a competent person.",
+  "plain_description": "Alpha Direct must obtain parental or guardian consent before collecting personal data from children — relevant where children are named beneficiaries or insured persons.",
+  "category": "childrens_data",
+  "policy_raw": "Processing Personal Information Policy — NOTE: Standalone children's data procedure needed (gap)"
+ },
+ {
+  "requirement_code": "S19.2",
+  "requirement_name": "The data controller shall make reasonable efforts to verify that consent is given or authorised by a competent person, taking into consideration available technology.",
+  "plain_description": "Alpha Direct must have a way to verify that consent for a child's data was given by a parent or guardian — for example, requiring a guardian's signature on forms.",
+  "category": "childrens_data",
+  "policy_raw": "Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S23.1",
+  "requirement_name": "The data controller shall take appropriate measures to provide information to the data subject in a concise, transparent, intelligible and easily accessible form, using clear and plain language.",
+  "plain_description": "Customers must be able to understand what Alpha Direct does with their data. Privacy notices and consent forms must be written in plain language — not legal jargon.",
+  "category": "data_subject_rights",
+  "policy_raw": "Privacy Policy; Health Data Privacy Consent Form 2025"
+ },
+ {
+  "requirement_code": "S23.2",
+  "requirement_name": "The data controller shall facilitate the exercise of data subject rights and may request additional information to confirm the identity of the data subject.",
+  "plain_description": "Alpha Direct must make it easy for customers to exercise their rights (access, correction, erasure etc.) and must verify their identity before releasing personal data.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; DSAR Form"
+ },
+ {
+  "requirement_code": "S24.1",
+  "requirement_name": "The data subject shall have the right to obtain confirmation as to whether personal data concerning him or her is being processed, and access to that data along with key processing information.",
+  "plain_description": "Customers have the right to ask Alpha Direct whether it holds their data, to see a copy of that data, and to know why it is being processed, who it is shared with, and how long it will be kept.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Internal DSAR Procedure; DSAR Form"
+ },
+ {
+  "requirement_code": "S25.1",
+  "requirement_name": "The data subject shall have the right to obtain rectification of inaccurate personal data without undue delay.",
+  "plain_description": "If a customer tells Alpha Direct their data is wrong, Alpha Direct must correct it promptly — for example, a wrong address or incorrect claims history.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Data Quality Policy"
+ },
+ {
+  "requirement_code": "S25.2",
+  "requirement_name": "The data subject shall have the right to have incomplete personal data completed, including by means of providing a supplementary statement.",
+  "plain_description": "Customers can ask Alpha Direct to fill in missing information in their records — for example, adding a middle name or updating a contact number.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Data Quality Policy"
+ },
+ {
+  "requirement_code": "S26.1",
+  "requirement_name": "The data subject shall have the right to obtain erasure of personal data without undue delay where: it is no longer necessary; consent is withdrawn; the data subject objects; it has been unlawfully processed; or erasure is required by law.",
+  "plain_description": "Customers can request that Alpha Direct delete their personal data. Alpha Direct must comply unless it has a legal obligation to retain the data (e.g. under the Financial Intelligence Act or Insurance Industry Act).",
+  "category": "data_subject_rights",
+  "policy_raw": "Data Retention & Erasure Policy; External DSAR Procedure"
+ },
+ {
+  "requirement_code": "S27.1",
+  "requirement_name": "The data subject shall have the right to obtain restriction of processing where accuracy is contested, processing is unlawful, or the data is needed for legal claims.",
+  "plain_description": "Customers can ask Alpha Direct to stop using their data temporarily — for example, while a dispute about accuracy is being resolved — without requiring full deletion.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure"
+ },
+ {
+  "requirement_code": "S28.1",
+  "requirement_name": "The data subject shall have the right to receive personal data in a structured, commonly used and machine-readable format and to transmit it to another controller.",
+  "plain_description": "Customers can ask Alpha Direct to provide their data in a format they can take elsewhere — for example, to another insurer. Relevant for policy data and claims history.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure"
+ },
+ {
+  "requirement_code": "S29.1",
+  "requirement_name": "The data subject shall have the right to object at any time to processing based on public interest or legitimate interests, including profiling.",
+  "plain_description": "Customers can object to Alpha Direct using their data for purposes based on legitimate interests or profiling. Alpha Direct must stop unless it can demonstrate compelling grounds.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Processing Personal Information Policy"
+ },
+ {
+  "requirement_code": "S29.2",
+  "requirement_name": "Where personal data is processed for direct marketing, the data subject shall have the right to object at any time, including profiling related to such marketing.",
+  "plain_description": "Customers can opt out of direct marketing at any time and Alpha Direct must stop immediately. There is no override for this right.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Privacy Policy"
+ },
+ {
+  "requirement_code": "S30.1",
+  "requirement_name": "The data subject shall have the right not to be subject to a decision based solely on automated processing that produces legal effects or similarly significantly affects him or her.",
+  "plain_description": "Where Alpha Direct uses automated systems to make decisions about customers — for example, automated underwriting or claims assessment — customers have the right to request human review.",
+  "category": "data_subject_rights",
+  "policy_raw": "Health Data Privacy Consent Form 2025; AI Governance Policy"
+ },
+ {
+  "requirement_code": "S31.1",
+  "requirement_name": "The data controller shall respond to a data subject request within one month of receipt, extendable by two further months for complex requests with notification to the data subject.",
+  "plain_description": "Alpha Direct must respond to all DSAR requests within 30 days. If the request is complex, the deadline can be extended to 90 days but the customer must be told within the first 30 days.",
+  "category": "data_subject_rights",
+  "policy_raw": "External DSAR Procedure; Privacy Policy (30-day window stated)"
+ },
+ {
+  "requirement_code": "S41.1",
+  "requirement_name": "The data controller shall implement appropriate technical and organisational measures to ensure and demonstrate that processing is performed in accordance with this Act, and shall review and update those measures where necessary.",
+  "plain_description": "Alpha Direct must put in place practical controls to protect personal data and keep records to prove it. This is the foundation of the accountability principle.",
+  "category": "controller_processor",
+  "policy_raw": "Data Protection Policy Framework v1.0; Data Protection Policy"
+ },
+ {
+  "requirement_code": "S42.1",
+  "requirement_name": "The data controller shall implement measures to integrate data protection principles such as data minimisation into processing from the outset ('data protection by design').",
+  "plain_description": "Data protection must be built into new systems, products, and processes from the start — not added on afterwards. Relevant when launching new products, technology platforms, or processing activities.",
+  "category": "controller_processor",
+  "policy_raw": "Data Protection Policy Framework v1.0 — NOTE: Standalone DPbD policy needed (gap)"
+ },
+ {
+  "requirement_code": "S42.2",
+  "requirement_name": "By default, only personal data necessary for each specific purpose shall be processed ('data protection by default').",
+  "plain_description": "Systems and processes must be configured to collect the minimum data by default. Staff should not be able to collect more data than necessary without a specific reason.",
+  "category": "controller_processor",
+  "policy_raw": "Data Protection Policy Framework v1.0; AI Governance Policy"
+ },
+ {
+  "requirement_code": "S43.1",
+  "requirement_name": "Where two or more controllers jointly determine the purposes and means of processing, they shall be joint controllers and must determine their respective responsibilities transparently.",
+  "plain_description": "Where Alpha Direct shares control of data with a partner organisation, both parties must document and agree who is responsible for what — particularly relevant in group insurance or shared platforms.",
+  "category": "controller_processor",
+  "policy_raw": "Supplier DPA Template; Partner DPA Declaration"
+ },
+ {
+  "requirement_code": "S44.1",
+  "requirement_name": "The data controller shall use only processors providing sufficient guarantees, such that processing will meet the requirements of this Act and protect the rights of the data subject.",
+  "plain_description": "Alpha Direct must assess all suppliers who process personal data on its behalf and ensure they have adequate data protection measures in place before engaging them.",
+  "category": "controller_processor",
+  "policy_raw": "Supplier DPA Template; Third Party Agreements Checklist; Data Security Outsourcing Guidelines"
+ },
+ {
+  "requirement_code": "S44.2",
+  "requirement_name": "Processing by a processor shall be governed by a binding contract setting out the subject-matter, duration, nature and purpose of the processing and the obligations and rights of the data controller.",
+  "plain_description": "Every supplier who processes Alpha Direct's customer data must sign a Data Processing Agreement (Supplier DPA). Verbal agreements are insufficient.",
+  "category": "controller_processor",
+  "policy_raw": "Supplier DPA Template"
+ },
+ {
+  "requirement_code": "S44.3",
+  "requirement_name": "The processor shall not engage another processor without prior specific or general written authorisation of the data controller.",
+  "plain_description": "Suppliers cannot sub-contract Alpha Direct's data to another company without Alpha Direct's written permission. Alpha Direct must be notified of any proposed changes.",
+  "category": "controller_processor",
+  "policy_raw": "Supplier DPA Template (Clause 3.7); Third Party Agreements Checklist"
+ },
+ {
+  "requirement_code": "S44.4",
+  "requirement_name": "The processor and any authorised person who has access to personal data shall not process that data except on instructions from the data controller, unless required by law.",
+  "plain_description": "Suppliers can only use Alpha Direct's customer data for the purpose Alpha Direct has authorised. They cannot use it for their own business purposes.",
+  "category": "controller_processor",
+  "policy_raw": "Supplier DPA Template; Confidentiality Acknowledgement Declaration"
+ },
+ {
+  "requirement_code": "S46.1",
+  "requirement_name": "Each data controller shall maintain a Record of Processing Activities (ROPA) covering: purposes; data categories; recipients; retention periods; and security measures.",
+  "plain_description": "Alpha Direct must maintain a live inventory of all personal data processing — what data is held, why, who it is shared with, and how long it is kept. This is a core accountability document.",
+  "category": "controller_processor",
+  "policy_raw": "ROPA (maintained separately — active document)"
+ },
+ {
+  "requirement_code": "S46.2",
+  "requirement_name": "Each processor shall maintain a record of all categories of processing activities carried out on behalf of each data controller.",
+  "plain_description": "Suppliers processing Alpha Direct's data must also keep their own ROPA. Alpha Direct should request evidence of this as part of supplier due diligence.",
+  "category": "controller_processor",
+  "policy_raw": "Third Party Agreements Checklist; Supplier DPA Template"
+ },
+ {
+  "requirement_code": "S48.1",
+  "requirement_name": "Any person acting under the authority of the data controller or data processor who has access to personal data shall not process it except on instructions from the data controller, unless required by law.",
+  "plain_description": "All Alpha Direct staff and supplier employees with access to personal data must only use it as directed. Unauthorised use — including uploading to unapproved AI tools — is a breach of this requirement.",
+  "category": "controller_processor",
+  "policy_raw": "Confidentiality Acknowledgement Declaration; AI Governance Policy (Section 6)"
+ },
+ {
+  "requirement_code": "S62.1",
+  "requirement_name": "A transfer of personal data to a third country may take place where the Commission has decided that the country ensures an adequate level of protection.",
+  "plain_description": "If Alpha Direct sends personal data to another country (e.g. to a South African processor), that country must have data protection laws that meet an adequate standard, or other safeguards must be in place.",
+  "category": "transfers",
+  "policy_raw": "Supplier DPA Template (Clause 3.7)"
+ },
+ {
+  "requirement_code": "S62.2",
+  "requirement_name": "In the absence of an adequacy decision, transfers may only take place if appropriate safeguards are in place and enforceable data subject rights are available.",
+  "plain_description": "Without an adequacy finding, Alpha Direct must use an approved mechanism — such as Standard Contractual Clauses (SCCs) or Binding Corporate Rules — before transferring data internationally.",
+  "category": "transfers",
+  "policy_raw": "Supplier DPA Template; BCR (in progress)"
+ },
+ {
+  "requirement_code": "S62.3",
+  "requirement_name": "Appropriate safeguards may be provided by: standard contractual clauses; binding corporate rules; approved codes of conduct; or approved certification mechanisms.",
+  "plain_description": "Standard Contractual Clauses (SCCs) are the most commonly used mechanism. Alpha Direct's Supplier DPA should include SCCs for all South Africa-based processors such as Graphite and Cloud Raptor.",
+  "category": "transfers",
+  "policy_raw": "Supplier DPA Template (Clause 3.7)"
+ },
+ {
+  "requirement_code": "S62.4",
+  "requirement_name": "A transfer based on binding corporate rules shall be authorised by the Commission prior to the transfer taking place.",
+  "plain_description": "If Alpha Direct uses Binding Corporate Rules for group-wide transfers, these must be approved by the IDPC before any transfers take place.",
+  "category": "transfers",
+  "policy_raw": "BCR (in progress — not yet approved)"
+ },
+ {
+  "requirement_code": "S63",
+  "requirement_name": "In the absence of an adequacy decision and appropriate safeguards, transfers may only take place on specific grounds including: explicit consent; contract necessity; public interest; or vital interests.",
+  "plain_description": "These are last-resort grounds for international transfers. Alpha Direct should not rely on these regularly — proper safeguards (SCCs or BCRs) should be the standard approach.",
+  "category": "transfers",
+  "policy_raw": "Health Data Privacy Consent Form 2025; Supplier DPA Template"
+ },
+ {
+  "requirement_code": "S64.1",
+  "requirement_name": "The data controller and processor shall implement technical and organisational measures to ensure security appropriate to the risk, including encryption, resilience, recovery capability, and regular testing.",
+  "plain_description": "Alpha Direct must have appropriate security controls in place proportionate to the sensitivity of the data processed — including for policyholder financial data, health data, and claims information.",
+  "category": "security_breach",
+  "policy_raw": "Information Security Policy; Clean Desk Policy; Data Protection Policy"
+ },
+ {
+  "requirement_code": "S65.1",
+  "requirement_name": "In the case of a personal data breach, the data controller shall notify the Commission within 72 hours of becoming aware, unless the breach is unlikely to result in a risk to the rights and freedoms of natural persons.",
+  "plain_description": "Alpha Direct must notify the IDPC within 72 hours of discovering a breach — if the breach is likely to pose a risk to data subjects. The clock starts when the DPO becomes aware, not when IT discovers it.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Management Policy; Data Breach Response Checklist"
+ },
+ {
+  "requirement_code": "S65.2",
+  "requirement_name": "The notification to the Commission shall describe: the nature of the breach; contact details of the DPO; likely consequences; and measures taken or proposed.",
+  "plain_description": "The IDPC notification form must include specific information. Alpha Direct's Data Breach Notification Forms template covers all required fields.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Notification Forms; Data Breach Assessment Report"
+ },
+ {
+  "requirement_code": "S65.3",
+  "requirement_name": "Where notification to the Commission is not made within 72 hours, it shall be accompanied by reasons for the delay.",
+  "plain_description": "If Alpha Direct notifies the IDPC late, it must explain why. The explanation must be documented in the assessment report and included with the notification submission.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Assessment Report; Data Breach Management Policy"
+ },
+ {
+  "requirement_code": "S65.4",
+  "requirement_name": "The processor shall notify the data controller without undue delay after becoming aware of a personal data breach.",
+  "plain_description": "All Alpha Direct suppliers must notify Alpha Direct immediately if they discover a breach involving Alpha Direct's data. This obligation must be written into every Supplier DPA.",
+  "category": "security_breach",
+  "policy_raw": "Supplier DPA Template"
+ },
+ {
+  "requirement_code": "S66.1",
+  "requirement_name": "When a breach is likely to result in a high risk to the rights and freedoms of natural persons, the data controller shall communicate the breach to the data subject without undue delay.",
+  "plain_description": "If a breach is serious enough to put customers at real risk — for example, financial data exposed to a third party — Alpha Direct must also notify the affected customers directly, not just the IDPC.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Management Policy; Data Breach Notification Forms"
+ },
+ {
+  "requirement_code": "S66.2",
+  "requirement_name": "The communication to the data subject shall describe the nature of the breach and contain the information and measures referred to in the IDPC notification.",
+  "plain_description": "Customer breach notifications must be written in plain language and include what happened, what data was affected, and what Alpha Direct is doing about it.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Notification Forms; Data Breach Management Policy"
+ },
+ {
+  "requirement_code": "S66.3",
+  "requirement_name": "Communication to the data subject is not required where: appropriate protection measures were applied; subsequent measures eliminate the high risk; or it would involve disproportionate effort (public communication instead).",
+  "plain_description": "Alpha Direct is not required to notify every individual customer if it can demonstrate the risk has been eliminated or the breach was contained before any harm could occur. This assessment must be documented.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Assessment Report; Data Breach Management Policy"
+ },
+ {
+  "requirement_code": "S67.1",
+  "requirement_name": "The data controller shall document all personal data breaches — the facts, effects and remedial action — to enable the Commission to verify compliance.",
+  "plain_description": "Alpha Direct must keep a complete record of every breach, however minor. The Data Incident Register and completed assessment reports serve as this documentation.",
+  "category": "security_breach",
+  "policy_raw": "Data Breach Assessment Report; Data Breach Incident Report; Data Incident Register"
+ },
+ {
+  "requirement_code": "S68.1",
+  "requirement_name": "Where processing is likely to result in a high risk to the rights and freedoms of natural persons, the data controller shall carry out a DPIA prior to the processing.",
+  "plain_description": "Before starting any new high-risk processing activity — for example, a new automated claims system, AI-driven underwriting, or processing health data at scale — Alpha Direct must complete a DPIA.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0; DPIA Register (maintained separately)"
+ },
+ {
+  "requirement_code": "S68.2",
+  "requirement_name": "The data controller shall seek the advice of the DPO, where designated, when carrying out a DPIA.",
+  "plain_description": "The DPO must be consulted on every DPIA. This is a mandatory step — not optional — even where the business unit initiates the DPIA.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S68.3",
+  "requirement_name": "The DPIA shall contain: a description of the processing; assessment of necessity and proportionality; assessment of risks to data subjects; and measures to address those risks.",
+  "plain_description": "Every DPIA must cover all four components. Alpha Direct's DPIA template (in the framework) should be used for every assessment.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0; DPIA Register"
+ },
+ {
+  "requirement_code": "S69.1",
+  "requirement_name": "Where a DPIA indicates a high residual risk that cannot be mitigated, the data controller shall consult the Commission before processing.",
+  "plain_description": "If a DPIA shows that a new processing activity carries unavoidable high risk to data subjects, Alpha Direct must seek guidance from the IDPC before going ahead. This is a mandatory pre-consultation requirement.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S72.1",
+  "requirement_name": "The data controller shall designate a DPO where: processing is carried out by a public authority; core activities require large-scale systematic monitoring; or core activities consist of large-scale processing of special categories of data.",
+  "plain_description": "Alpha Direct has designated a DPO (currently Oratile Tlhomelang). The DPO must be sufficiently resourced and must report directly to senior management.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S72.2",
+  "requirement_name": "The DPO shall have expert knowledge of data protection law and practices and be able to fulfil their tasks.",
+  "plain_description": "The DPO must have adequate knowledge of the DPA 2024, relevant sector regulations, and data protection best practice. Ongoing training and development must be supported.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S72.3",
+  "requirement_name": "The data controller and processor shall ensure that the DPO is involved, properly and in a timely manner, in all issues relating to the protection of personal data.",
+  "plain_description": "The DPO must be included in decisions about new systems, products, supplier contracts, and incidents from the start — not brought in after the fact.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0"
+ },
+ {
+  "requirement_code": "S72.4",
+  "requirement_name": "The DPO shall: advise on obligations; monitor compliance; provide advice on DPIAs; cooperate with the Commission; and act as contact point for the Commission.",
+  "plain_description": "These are the DPO's core statutory duties. All five tasks must be actively performed and documented as part of the DPO function at Alpha Direct.",
+  "category": "dpo_dpia",
+  "policy_raw": "Data Protection Policy Framework v1.0; DPO SOP v1.0"
+ }
+]

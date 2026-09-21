@@ -1,0 +1,21 @@
+# Omni staff-app push nudges + screen-usage telemetry retention (CFO 2026-09-03).
+#
+#   send_morning_push    07:30 Gaborone, Mon-Fri — ONE personalised brief per person:
+#                        payments to sign (count + amounts), other approvals, tasks due.
+#                        Folds the old 07:30 approvals push AND the 07:35 task push
+#                        into one message — one buzz a morning, not two.
+#   send_approval_push   15:00 Gaborone, Mon-Fri — afternoon "N approvals waiting on you" nudge
+#   prune_screen_views   Sunday 05:00 Gaborone   — drop ScreenView rows > 180 days
+#
+# All three are fail-soft: with no WEBPUSH_VAPID_PRIVATE_KEY the push commands
+# print "disabled" and exit 0; the prune is idempotent. Once a day per person is
+# the dedupe — there is no extra table.
+#
+# Drop into /etc/cron.d/ on the omni EC2 (install-crons.sh does this). Clock is
+# UTC; Gaborone = UTC+2 (no DST). Output -> /var/log/alpha-finance/omni-push.log.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 5 * * 1-5 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job omni-push -- send_morning_push >> /var/log/alpha-finance/omni-push.log 2>&1
+0 13 * * 1-5 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job omni-push -- send_approval_push >> /var/log/alpha-finance/omni-push.log 2>&1
+0 3 * * 0 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job omni-push -- prune_screen_views >> /var/log/alpha-finance/omni-push.log 2>&1

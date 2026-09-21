@@ -1,0 +1,14 @@
+# Runs through /usr/local/bin/omni-manage (infra/host/omni-manage.sh), which waits out a
+# blue/green deploy window instead of failing with "backend is not running" (2026-09-04).
+# Time Doctor record reconcile (TD-RECON-01, audit 2026-09-03 finding 1).
+# Corrects each person's permanent day-record (WorkdayJustification) against the
+# FINAL Time Doctor snapshot: a false zero that has become real hours flips to
+# "met", the person gets one line, the audit trail gets one row. Never convicts.
+# Runs twice: 09:35 SAST after the 08:30 final pull + the 09:05 daily brief, and
+# 16:10 SAST — BEFORE the 16:25 deduction enforcement — so no corrected day can
+# be docked. Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+35 7  * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage reconcile_workday_records --days 3 --apply >> /var/log/alpha-finance/td-reconcile.log 2>&1
+10 14 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage reconcile_workday_records --days 3 --apply --no-email >> /var/log/alpha-finance/td-reconcile.log 2>&1

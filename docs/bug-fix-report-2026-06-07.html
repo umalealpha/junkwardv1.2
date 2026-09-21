@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>omni — Bug Fix Report</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Georgia,'Book Antiqua',serif;color:#0D1B2A;">
+  <div style="max-width:680px;margin:0 auto;padding:24px;">
+    <div style="background:#0D1B2A;color:#ffffff;padding:20px 24px;border-radius:8px 8px 0 0;">
+      <h1 style="margin:0;font-size:20px;">omni ERP — Bug Fix Report</h1>
+      <p style="margin:6px 0 0;font-size:13px;color:#F4A623;">System-wide audit &amp; fixes · 7 June 2026</p>
+    </div>
+    <div style="background:#ffffff;padding:24px;border:1px solid #e3e6ea;border-top:none;border-radius:0 0 8px 8px;">
+      <p style="font-size:14px;line-height:1.6;">Dumelang,</p>
+      <p style="font-size:14px;line-height:1.6;">
+        Following the testing feedback, a full multi-perspective audit of omni / alpha-finance
+        was run (chartered-accountant, auditor, ISO and software-engineering lenses), exercising
+        the real code through the test suite, Django system checks and static analysis —
+        not just confirming that things compile.
+      </p>
+      <p style="font-size:14px;line-height:1.6;">
+        <strong>Headline:</strong> the system could not rebuild its database from scratch
+        (the test suite, CI and disaster-recovery rebuild were all broken; production survived
+        only because it was built up incrementally). That is now fixed. The full automated test
+        suite passes <strong>40/40</strong>, up from 17 errors with a database that would not even build.
+      </p>
+
+      <h2 style="font-size:16px;color:#0D1B2A;border-bottom:2px solid #F4A623;padding-bottom:6px;">Fixed</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.5;">
+        <thead>
+          <tr style="background:#0D1B2A;color:#fff;text-align:left;">
+            <th style="padding:8px;">Area</th><th style="padding:8px;">Issue</th><th style="padding:8px;">Severity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#fbfbfc;"><td style="padding:8px;">Database / migrations</td><td style="padding:8px;">Fresh database could not be built (asset-module migration collisions); test/CI/disaster-recovery all broken.</td><td style="padding:8px;color:#b00020;"><strong>Blocker</strong></td></tr>
+          <tr><td style="padding:8px;">Ledger</td><td style="padding:8px;">No migration ever created the base currency (BWP); first account insert on a new database failed.</td><td style="padding:8px;color:#b00020;"><strong>Blocker</strong></td></tr>
+          <tr style="background:#fbfbfc;"><td style="padding:8px;">Payroll</td><td style="padding:8px;">Employer contributions debited an expense with no matching liability — payroll with any employer contribution would not post (out of balance). New "Employer Contributions Payable" account added.</td><td style="padding:8px;color:#b00020;"><strong>Critical</strong></td></tr>
+          <tr><td style="padding:8px;">Payroll</td><td style="padding:8px;">Percentage-based salary formulas (e.g. 5% of gross) crashed on a decimal/float type error.</td><td style="padding:8px;color:#d17a00;">High</td></tr>
+          <tr style="background:#fbfbfc;"><td style="padding:8px;">Fixed Assets</td><td style="padding:8px;">Posting an asset <em>sale</em> disposal crashed on an undefined value; write-offs were unaffected.</td><td style="padding:8px;color:#d17a00;">High</td></tr>
+          <tr><td style="padding:8px;">Banking (FNB)</td><td style="padding:8px;">Beneficiary module could not be imported (missing endpoint constant).</td><td style="padding:8px;color:#d17a00;">High</td></tr>
+          <tr style="background:#fbfbfc;"><td style="padding:8px;">Tests</td><td style="padding:8px;">Five stale tests fixed (wrong expected values, a typo, a removed field, an outdated approval threshold).</td><td style="padding:8px;color:#6b7280;">Medium</td></tr>
+        </tbody>
+      </table>
+
+      <h2 style="font-size:16px;color:#0D1B2A;border-bottom:2px solid #F4A623;padding-bottom:6px;">Flagged for decision (not changed)</h2>
+      <ul style="font-size:13px;line-height:1.6;">
+        <li>Migration drift across 19 apps (142 uncaptured model changes) — needs a controlled clean-up.</li>
+        <li>The CFO bulk-upload tool balances journals within a 100 BWP tolerance using a rounding plug — recommend reviewing/capping.</li>
+        <li>CI does not run the tests or check for migration drift — recommend adding both gates.</li>
+        <li>Automated test coverage is thin (40 tests across ~40 modules).</li>
+      </ul>
+
+      <p style="font-size:13px;line-height:1.6;background:#eaf7ee;border-left:4px solid #2e7d32;padding:10px 12px;">
+        <strong>Status: LIVE.</strong> Deployed to production (omni.alphadirect.co.bw) on 8 June 2026 —
+        backend rebuilt, migrations applied, full test suite green (50/50), and the new endpoints
+        verified on the live server. A separate HR change (full HRIS access for the team, with
+        dual-approval on every amendment) went out in the same release.
+      </p>
+
+      <p style="font-size:14px;line-height:1.6;">Ke a leboga,<br>omni</p>
+    </div>
+    <p style="text-align:center;font-size:11px;color:#9aa0a6;margin-top:14px;">Alpha Direct Insurance · generated by omni</p>
+  </div>
+</body>
+</html>

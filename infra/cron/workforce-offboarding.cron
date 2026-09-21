@@ -1,0 +1,11 @@
+# Workforce offboarding INVESTIGATION-TICKET check — weekdays 05:30 UTC (07:30 SAST).
+# Raises an HR investigation ticket to Unami (CFO informed) when an employee who
+# is expected to track has NOT tracked for 5 working days and has no leave. It
+# NEVER disables an account, touches payroll, or terminates anyone — review only.
+# Does nothing until BOTH the Workforce switch AND WORKFORCE_OFFBOARDING_ENABLED
+# are on (the latter defaults OFF — enable after a clean run). Drop into
+# /etc/cron.d/ (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 5 * * 1-5 root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py workforce_offboarding_check >> /var/log/alpha-finance/workforce-offboarding.log 2>&1

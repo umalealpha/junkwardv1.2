@@ -1,0 +1,5 @@
+# Quotation expiry reminder — 06:10 UTC (08:10 SAST), daily.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+10 6 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py remind_expiring_quotes >> /var/log/alpha-finance/quote-expiry.log 2>&1

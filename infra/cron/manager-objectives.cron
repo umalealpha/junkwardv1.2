@@ -1,0 +1,32 @@
+# Manager objectives — raise and settle (CFO 2026-09-09).
+#
+#   "creating new tasks for them automatically system generated on Sunday
+#    midnight, and due on Wednesday"
+#   "...ensure board meeting information is send to EXCO 5th of every quarter
+#    ending"
+#
+# Clock is UTC on the box; Gaborone (SAST) is UTC+2.
+#
+#   Sat 22:00 UTC  = SUNDAY 00:00 Gaborone  -> raise the week's numbers
+#   Wed 14:05 UTC  = Wednesday 16:05 Gabs   -> settle, five minutes after the 4pm cut-off
+#   Daily 05:10 UTC                          -> the quarterly Board/EXCO pack
+#
+# WHY THE QUARTERLY LINE RUNS DAILY RATHER THAN ONCE A QUARTER
+# Raising is idempotent — a manager already holding this quarter's task is
+# skipped — so a daily run raises it exactly once, on the first morning of the
+# new quarter, and does nothing on the other 89 days. Settling daily is the
+# point: the task closes the moment the pack is actually uploaded and sent,
+# instead of leaving a discharged obligation sitting open until some later
+# sweep. It also means a single missed cron day cannot lose a whole quarter.
+#
+# WHY SETTLE IS NOT RUN MORE OFTEN FOR THE WEEKLY NUMBERS
+# The baseline is frozen at raise and the verdict is written once. Settling
+# early would judge a week that is still running.
+#
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 22 * * 6 root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py weekly_objectives_cycle --raise --cadence=weekly --commit >> /var/log/alpha-finance/manager-objectives.log 2>&1
+5 14 * * 3 root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py weekly_objectives_cycle --settle --cadence=weekly --commit >> /var/log/alpha-finance/manager-objectives.log 2>&1
+10 5 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py weekly_objectives_cycle --raise --settle --cadence=quarterly --commit >> /var/log/alpha-finance/manager-objectives.log 2>&1

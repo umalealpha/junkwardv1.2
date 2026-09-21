@@ -1,0 +1,12 @@
+# Monthly task incentive (CFO 2026-08-26). On the 1st, raise ONE IncentiveRequest
+# for the month that just ended: BWP 50 per manager-confirmed task above 30 per
+# person, capped at BWP 2,000, managers + ExCo excluded. It only REQUESTS —
+# routed to the CFO + HR to approve; Omni never moves money (payment via the bank
+# with the CFO's 2FA). Idempotent: one request per month.
+#
+# Drop into /etc/cron.d/ on the omni EC2 (installed by infra/install-crons.sh).
+# 06:00 UTC = 08:00 SAST on the 1st. Output -> /var/log/alpha-finance/task-incentive.log
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 6 1 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py generate_task_incentive --previous-month --commit >> /var/log/alpha-finance/task-incentive.log 2>&1

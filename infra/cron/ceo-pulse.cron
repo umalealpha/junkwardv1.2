@@ -1,0 +1,9 @@
+# CEO Sunday Workforce Pulse — sends at 18:00 Africa/Gaborone (16:00 UTC).
+# The real send is HELD while Time Doctor is stale (since 17-Sep) even though a
+# preview can still be built. Drop into /etc/cron.d/ on the omni EC2.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# CFO 19-Sep-2026: skip Sunday 20-Sep only (first Pulse after the Time Doctor
+# outage is held one more week). Self-expiring: from 27-Sep it runs as normal.
+0 16 * * 0 root if [ "$(date +\%F)" = "2026-09-20" ]; then echo "$(date -u) skipped by CFO for 20-Sep" >> /var/log/alpha-finance/ceo-pulse.log; else cd /opt/alpha-finance && /usr/local/bin/omni-manage run_job ceo-pulse -- send_ceo_pulse --send >> /var/log/alpha-finance/ceo-pulse.log 2>&1; fi

@@ -1,0 +1,28 @@
+# Weekly SALARY ADVANCE MISMATCH warning to the Finance recipient list.
+#
+# WHY (CFO decision 2026-09-13): Omni does NOT raise the payout for an early
+# salary advance — Finance raise the payment by hand. Omni records the advance
+# and the recovery, so the two can drift apart three ways: approved and never
+# paid out, a payout with no approved advance behind it, and a recovery
+# deducted from somebody Omni has no payout recorded for. The CFO asked for a
+# warning, not automation. This is the warning.
+#
+# 06:00 UTC MONDAY = 08:00 Monday in Gaborone (Botswana never observes DST, so
+# the offset is fixed year-round) — on the desk at the start of the week, with
+# the month's payroll close still far enough away to fix a row.
+#
+# omni-manage, NOT `docker compose exec`: the raw form was retired on 2026-09-04
+# after a cron ran mid blue/green flip. The wrapper waits for a healthy
+# container instead of writing into a dying one.
+#
+# Read-only. It SELECTs Omni's own records and sends an email. It raises no
+# payment, posts no journal and changes nothing. It sends NOTHING in a week with
+# no mismatches, so an empty mail never trains anyone to ignore it, and exits
+# non-zero when the recipient list is empty.
+#
+# Editing this file alone schedules nothing on the host — infra/install-crons.sh
+# lays it into /etc/cron.d. Clock on the box is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 6 * * 1 root /usr/local/bin/omni-manage send_advance_mismatch_report >> /var/log/alpha-finance/salary-advance-mismatch.log 2>&1

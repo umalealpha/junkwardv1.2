@@ -1,0 +1,41 @@
+# Dev override: bind-mounts the source so edits hot-reload without rebuilding.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# This file ONLY contains dev-only overrides. The base file stays prod-shaped.
+
+services:
+  backend:
+    environment:
+      DEBUG: "True"
+      DJANGO_COLLECTSTATIC: "0"
+    command:
+      - python
+      - manage.py
+      - runserver
+      - 0.0.0.0:8000
+    volumes:
+      - ./:/app
+      - media_data:/app/media
+
+  frontend:
+    image: node:22-bookworm-slim
+    user: "node"
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      BACKEND_INTERNAL_URL: http://backend:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    command: >
+      sh -c "npm install --no-audit --no-fund && npm run dev -- -H 0.0.0.0 -p 3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+  db:
+    # Expose only on dev to allow a local SQL client (still bound to localhost)
+    ports:
+      - "127.0.0.1:5432:5432"
+
+volumes:
+  frontend_node_modules:
+    name: alpha_finance_frontend_node_modules

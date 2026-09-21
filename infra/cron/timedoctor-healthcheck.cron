@@ -1,0 +1,9 @@
+# Time Doctor daily health check — 22:00 UTC (00:00 SAST, midnight).
+# Emails a PASS/WARN/FAIL heartbeat to excoboard@ so a silent breakage
+# (like a stale/empty pull) is caught the next morning. Runs after the day's
+# data has settled. Recipient default = excoboard@ (see the command).
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 22 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py timedoctor_healthcheck >> /var/log/alpha-finance/timedoctor-healthcheck.log 2>&1

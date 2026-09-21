@@ -1,0 +1,9 @@
+# Premium refunds: Graphite -> Omni payment requests. Midnight CAT (22:00 UTC).
+#
+# CFO 2026-08-11: "when they load those payments or refund details in graphite,
+# overnight cron at twelve midnight, we'll combine them all, and the new ones will
+# be created as a payment request in Omni automatically."
+#
+# CAT is UTC+2, so 00:00 local is 22:00 UTC the day before. Read-only on Graphite
+# and idempotent on graphite_ref, so a retry or a double-fire cannot double-pay.
+0 22 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py import_graphite_refunds --commit >> /var/log/alpha-finance/premium-refund-import.log 2>&1

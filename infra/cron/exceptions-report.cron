@@ -1,0 +1,16 @@
+# Runs through /usr/local/bin/omni-manage (infra/host/omni-manage.sh), which waits out a
+# blue/green deploy window instead of failing with "backend is not running" (2026-09-04).
+# Manager Daily Exceptions Report — 07:10 UTC (09:10 SAST).
+# CFO 2026-08-27: moved from 07:15 to 09:10 SAST, just after the 09:00 Morning
+# Brief and the 08:30 SAST final Time Doctor pull, so persist-reported-no-track
+# records the SAME names the brief published, off FINAL (not half-uploaded) data.
+# When CONSOLIDATED_EMAILS_ENABLED is ON, this command NO LONGER emails the
+# manager group (the scoreboard now rides inside the brief); it still runs for its
+# side-effects — ghost-payroll task raising, persist-reported-no-track, and the
+# late-correction email — which must fire exactly once a day.
+# When the flag is OFF it behaves exactly as before (sends to the manager group).
+# Gated by the Workforce switch (off = nothing). Drop into /etc/cron.d/ (chmod 644). UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+10 7 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage send_exceptions_report >> /var/log/alpha-finance/exceptions-report.log 2>&1

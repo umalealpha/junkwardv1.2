@@ -1,0 +1,71 @@
+# Keep build context small and prevent secrets/dev cruft from entering images.
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Virtualenvs
+venv/
+.venv/
+env/
+
+# Django runtime
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# Frontend (built inside its own Dockerfile)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Docs / scratch
+*.md
+!CLAUDE.md
+# ...and MACHINE-TALK.md, which watchdog.machine_talk reads at runtime
+# (BASE_DIR/MACHINE-TALK.md) to learn what changed today; it MUST ship in the image.
+!MACHINE-TALK.md
+*.docx
+# ...except the HR letterhead template, which the letters feature streams at
+# runtime (/hris/api/letters/letterhead/) and MUST ship inside the image.
+!hris/assets/letterhead_blank.docx
+prototype-*.jsx
+redesign-*.jsx
+image-data.js
+
+# Claude
+.claude/
+.claudeignore

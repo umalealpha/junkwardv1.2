@@ -1,0 +1,26 @@
+# ADH health claims EFT settlement loader (B4) - Keetile Mokhendo.
+#
+# AFA send FOUR near-identical emails every Friday night at about 23:20 UTC,
+# which is Saturday 01:20 in Gaborone. Exactly one of them carries the file
+# that is ours. This reads the settlement mailbox (ADH_SETTLEMENT_MAILBOX,
+# health@alphadirect.co.bw by default), picks that one email, opens its
+# attachment and raises ONE Omni payment request per claim line.
+#
+# It creates PAYMENT REQUESTS ONLY. Finance sign-off in Omni and CFO
+# authorisation in FNB stay manual - the automation never releases money.
+#
+# TIME: CAT is UTC+2 and this file is read as UTC, so 00:00 Saturday UTC is
+# 02:00 Saturday in Gaborone. That is forty minutes after the last email is
+# expected, and still the same Saturday on both clocks.
+#
+# The no-double-load guard is a UNIQUE column in the database keyed on the
+# ATTACHMENT BYTES, so a retry, a double fire, a forward or a re-sent copy of
+# the same file cannot raise the same settlement twice.
+#
+# READING THE MAILBOX NEEDS A PERMISSION OMNI DOES NOT HAVE YET (Mail.Read,
+# application permission, admin consent, scoped to the one mailbox). Until IT
+# grant it this job FAILS LOUDLY every Saturday and emails Keetile - by design.
+#
+# A cron file schedules nothing until infra/install-crons.sh is run on the box.
+# This job is in that script's ENABLED list.
+0 0 * * 6 root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py load_adh_settlements >> /var/log/alpha-finance/adh-settlement.log 2>&1

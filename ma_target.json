@@ -1,0 +1,1067 @@
+{
+  "100001": {
+    "ma_line": "Gross Written Premium",
+    "name": "Insurance in a box income",
+    "pl_bs": "PL"
+  },
+  "100002": {
+    "ma_line": "Gross Written Premium",
+    "name": "Written Premium - Portal",
+    "pl_bs": "PL"
+  },
+  "100003": {
+    "ma_line": "Gross Written Premium",
+    "name": "Revenue Graphite (COMG/DOMG)",
+    "pl_bs": "PL"
+  },
+  "100004": {
+    "ma_line": "Gross Written Premium",
+    "name": "Written Premium - BONU",
+    "pl_bs": "PL"
+  },
+  "100006": {
+    "ma_line": "Gross Written Premium",
+    "name": "Uncollected Premium",
+    "pl_bs": "PL"
+  },
+  "100009": {
+    "ma_line": "Gross Written Premium",
+    "name": "Revenue from Graphite policies",
+    "pl_bs": "PL"
+  },
+  "100010": {
+    "ma_line": "Gross Written Premium",
+    "name": "C.A.R Premium",
+    "pl_bs": "PL"
+  },
+  "100011": {
+    "ma_line": "Gross Written Premium",
+    "name": "Discount's  Issued",
+    "pl_bs": "PL"
+  },
+  "101502": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Outstanding Receipts",
+    "pl_bs": "BS"
+  },
+  "101503": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Outstanding Payments",
+    "pl_bs": "BS"
+  },
+  "102001": {
+    "ma_line": "Change in UPR",
+    "name": "Change in UPR",
+    "pl_bs": "PL"
+  },
+  "103000": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims Settlement - Instant Insurance Policies",
+    "pl_bs": "PL"
+  },
+  "103001": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims Discounts Received",
+    "pl_bs": "PL"
+  },
+  "103003": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Assessor salary expenses",
+    "pl_bs": "PL"
+  },
+  "103004": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Salvage Management Fees",
+    "pl_bs": "PL"
+  },
+  "103005": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims contact centre",
+    "pl_bs": "PL"
+  },
+  "103006": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims Settlement - Portal",
+    "pl_bs": "PL"
+  },
+  "103010": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims Settlement - Graphite Comprehensive Policies",
+    "pl_bs": "PL"
+  },
+  "103012": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claim Settlement - COMG/DOMG",
+    "pl_bs": "PL"
+  },
+  "103013": {
+    "ma_line": "Gross Insurance claim expenses",
+    "name": "Claims Health",
+    "pl_bs": "PL"
+  },
+  "103015": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Movement in unallocated loss adjustment",
+    "pl_bs": "PL"
+  },
+  "103016": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Movement in risk adjustment",
+    "pl_bs": "PL"
+  },
+  "103107": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Movement in risk adjustment - Reinsurance",
+    "pl_bs": "PL"
+  },
+  "104001": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance Share of Claims HCV",
+    "pl_bs": "PL"
+  },
+  "104004": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance Share of Claims: Surplus",
+    "pl_bs": "PL"
+  },
+  "104007": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance Share of Claims - Health",
+    "pl_bs": "PL"
+  },
+  "104009": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance Share of Claims: Quota Share Treaty",
+    "pl_bs": "PL"
+  },
+  "104010": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance Share of Claims- MQST JBB",
+    "pl_bs": "PL"
+  },
+  "104011": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Reinsurance share of claims - FMRE MQS",
+    "pl_bs": "PL"
+  },
+  "104012": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Movement in reinsurance claims reserve: FAC",
+    "pl_bs": "PL"
+  },
+  "106000": {
+    "ma_line": "Commission From Reinsurers",
+    "name": "Reinsurance Commission Received (Treaties)",
+    "pl_bs": "PL"
+  },
+  "106001": {
+    "ma_line": "Commission From Reinsurers",
+    "name": "Commission MQST JBB Commission",
+    "pl_bs": "PL"
+  },
+  "106002": {
+    "ma_line": "Commission From Reinsurers",
+    "name": "FAC Commission",
+    "pl_bs": "PL"
+  },
+  "106003": {
+    "ma_line": "Commission From Reinsurers",
+    "name": "Reinsurance Profit Commissions",
+    "pl_bs": "PL"
+  },
+  "107005": {
+    "ma_line": "Commissions Paid",
+    "name": "Commissions Expense-Other Agents",
+    "pl_bs": "PL"
+  },
+  "107006": {
+    "ma_line": "Commissions Paid",
+    "name": "BONU Commission",
+    "pl_bs": "PL"
+  },
+  "107007": {
+    "ma_line": "Commissions Paid",
+    "name": "Commissions Expense-Brokers",
+    "pl_bs": "PL"
+  },
+  "107008": {
+    "ma_line": "Commissions Paid",
+    "name": "Commissions Expense- Agents (HQ)",
+    "pl_bs": "PL"
+  },
+  "107009": {
+    "ma_line": "Commissions Paid",
+    "name": "Commissions expense - Agents (External)",
+    "pl_bs": "PL"
+  },
+  "109002": {
+    "ma_line": "Other Income",
+    "name": "Foreign Exchange Gain",
+    "pl_bs": "PL"
+  },
+  "110004": {
+    "ma_line": "Employee costs",
+    "name": "Severance Expense",
+    "pl_bs": "PL"
+  },
+  "110005": {
+    "ma_line": "Employee costs",
+    "name": "Pension - Employees",
+    "pl_bs": "PL"
+  },
+  "110006": {
+    "ma_line": "Employee costs",
+    "name": "Leave Pay Expense",
+    "pl_bs": "PL"
+  },
+  "110007": {
+    "ma_line": "Employee costs",
+    "name": "Employee Benefits",
+    "pl_bs": "PL"
+  },
+  "110008": {
+    "ma_line": "Employee costs",
+    "name": "Directors Salary",
+    "pl_bs": "PL"
+  },
+  "110009": {
+    "ma_line": "Employee costs",
+    "name": "Medical Aid",
+    "pl_bs": "PL"
+  },
+  "110010": {
+    "ma_line": "Employee costs",
+    "name": "Salaries & Wages",
+    "pl_bs": "PL"
+  },
+  "110011": {
+    "ma_line": "Bonus Pay",
+    "name": "Bonus Pay",
+    "pl_bs": "PL"
+  },
+  "110012": {
+    "ma_line": "Employee costs",
+    "name": "Severance Pay",
+    "pl_bs": "PL"
+  },
+  "110013": {
+    "ma_line": "Employee costs",
+    "name": "Salaries- WHT",
+    "pl_bs": "PL"
+  },
+  "110016": {
+    "ma_line": "Operating Expenses",
+    "name": "Custom Duty",
+    "pl_bs": "PL"
+  },
+  "111000": {
+    "ma_line": "Other Income",
+    "name": "Foreign Exchange Loss",
+    "pl_bs": "PL"
+  },
+  "111001": {
+    "ma_line": "Operating Expenses",
+    "name": "10th Year Anniversary",
+    "pl_bs": "PL"
+  },
+  "111002": {
+    "ma_line": "Finance Cost",
+    "name": "Finance cost - IFRS 16",
+    "pl_bs": "PL"
+  },
+  "111008": {
+    "ma_line": "Operating Expenses",
+    "name": "Utilities",
+    "pl_bs": "PL"
+  },
+  "111010": {
+    "ma_line": "Operating Expenses",
+    "name": "Travel Expense",
+    "pl_bs": "PL"
+  },
+  "111011": {
+    "ma_line": "Operating Expenses",
+    "name": "Cleaning",
+    "pl_bs": "PL"
+  },
+  "111012": {
+    "ma_line": "Operating Expenses",
+    "name": "Fleet Management",
+    "pl_bs": "PL"
+  },
+  "111013": {
+    "ma_line": "Operating Expenses",
+    "name": "Board Fees",
+    "pl_bs": "PL"
+  },
+  "111014": {
+    "ma_line": "Operating Expenses",
+    "name": "Professional Fees - other",
+    "pl_bs": "PL"
+  },
+  "111015": {
+    "ma_line": "Operating Expenses",
+    "name": "Audit Fees",
+    "pl_bs": "PL"
+  },
+  "111016": {
+    "ma_line": "Operating Expenses",
+    "name": "Charitable Donations",
+    "pl_bs": "PL"
+  },
+  "111017": {
+    "ma_line": "Operating Expenses",
+    "name": "Gifts & Donations",
+    "pl_bs": "PL"
+  },
+  "111019": {
+    "ma_line": "Operating Expenses",
+    "name": "Tax -Penalty & interest",
+    "pl_bs": "PL"
+  },
+  "111020": {
+    "ma_line": "Operating Expenses",
+    "name": "License & Permits",
+    "pl_bs": "PL"
+  },
+  "111021": {
+    "ma_line": "Operating Expenses",
+    "name": "Fuel Expense",
+    "pl_bs": "PL"
+  },
+  "111022": {
+    "ma_line": "Operating Expenses",
+    "name": "Rent & Rates",
+    "pl_bs": "PL"
+  },
+  "111023": {
+    "ma_line": "Operating Expenses",
+    "name": "Legal Expense",
+    "pl_bs": "PL"
+  },
+  "111024": {
+    "ma_line": "Operating Expenses",
+    "name": "NBFIRA Levy Expense",
+    "pl_bs": "PL"
+  },
+  "111025": {
+    "ma_line": "Operating Expenses",
+    "name": "Design Expenses",
+    "pl_bs": "PL"
+  },
+  "111026": {
+    "ma_line": "Operating Expenses",
+    "name": "Insurance Expense",
+    "pl_bs": "PL"
+  },
+  "111027": {
+    "ma_line": "Operating Expenses",
+    "name": "Postage & Delivery",
+    "pl_bs": "PL"
+  },
+  "111028": {
+    "ma_line": "Operating Expenses",
+    "name": "Office Expense",
+    "pl_bs": "PL"
+  },
+  "111029": {
+    "ma_line": "Operating Expenses",
+    "name": "Training Levy Expense",
+    "pl_bs": "PL"
+  },
+  "111030": {
+    "ma_line": "Operating Expenses",
+    "name": "Training and development",
+    "pl_bs": "PL"
+  },
+  "111031": {
+    "ma_line": "Operating Expenses",
+    "name": "Dues and Subscriptions",
+    "pl_bs": "PL"
+  },
+  "111032": {
+    "ma_line": "Operating Expenses",
+    "name": "Meals & Entertainment",
+    "pl_bs": "PL"
+  },
+  "111033": {
+    "ma_line": "Operating Expenses",
+    "name": "Secretarial Fees",
+    "pl_bs": "PL"
+  },
+  "111034": {
+    "ma_line": "Operating Expenses",
+    "name": "Workshops and Conferences",
+    "pl_bs": "PL"
+  },
+  "111035": {
+    "ma_line": "Operating Expenses",
+    "name": "Printing & Reproduction Expense",
+    "pl_bs": "PL"
+  },
+  "111037": {
+    "ma_line": "Operating Expenses",
+    "name": "Bank Charges",
+    "pl_bs": "PL"
+  },
+  "111038": {
+    "ma_line": "Operating Expenses",
+    "name": "Office Stationery",
+    "pl_bs": "PL"
+  },
+  "111039": {
+    "ma_line": "Operating Expenses",
+    "name": "Bank Fees",
+    "pl_bs": "PL"
+  },
+  "111041": {
+    "ma_line": "BONU Acquisition",
+    "name": "BONU Admin Expenses",
+    "pl_bs": "PL"
+  },
+  "111043": {
+    "ma_line": "Health Insurance",
+    "name": "Health Care operational Expenses",
+    "pl_bs": "PL"
+  },
+  "111045": {
+    "ma_line": "Health Insurance",
+    "name": "Health Care Expense",
+    "pl_bs": "PL"
+  },
+  "112000": {
+    "ma_line": "IT Expenses",
+    "name": "ICT Network Services",
+    "pl_bs": "PL"
+  },
+  "112002": {
+    "ma_line": "Risk Licensing Fees",
+    "name": "Risk AI Management Fees",
+    "pl_bs": "PL"
+  },
+  "112003": {
+    "ma_line": "IT Expenses",
+    "name": "Amazon Web Services",
+    "pl_bs": "PL"
+  },
+  "114001": {
+    "ma_line": "Telephone & Internet",
+    "name": "Internet Fees",
+    "pl_bs": "PL"
+  },
+  "114002": {
+    "ma_line": "Telephone & Internet",
+    "name": "Telephone Usage",
+    "pl_bs": "PL"
+  },
+  "115001": {
+    "ma_line": "Marketing & Advertising",
+    "name": "Advertising & Promotions",
+    "pl_bs": "PL"
+  },
+  "115002": {
+    "ma_line": "Marketing & Advertising",
+    "name": "Marketing Expense",
+    "pl_bs": "PL"
+  },
+  "116002": {
+    "ma_line": "Staff Welfare",
+    "name": "Staff Welfare",
+    "pl_bs": "PL"
+  },
+  "117000": {
+    "ma_line": "Consultancy Fees",
+    "name": "CONSULTANCY FEES",
+    "pl_bs": "PL"
+  },
+  "117001": {
+    "ma_line": "Consultancy Fees",
+    "name": "HR Consultancy",
+    "pl_bs": "PL"
+  },
+  "118005": {
+    "ma_line": "Broker Entertainment",
+    "name": "Broker Entertainment",
+    "pl_bs": "PL"
+  },
+  "118006": {
+    "ma_line": "Broker Entertainment",
+    "name": "Acquisition Cost",
+    "pl_bs": "PL"
+  },
+  "118007": {
+    "ma_line": "BONU Acquisition",
+    "name": "BONU Acquisition",
+    "pl_bs": "PL"
+  },
+  "118008": {
+    "ma_line": "Gross Insurance claims recovered from reinsurers",
+    "name": "Movement in Closing of Treaties",
+    "pl_bs": "PL"
+  },
+  "118745": {
+    "ma_line": "Licensing Fee",
+    "name": "Licensing Fee Expense - AD Insurtech",
+    "pl_bs": "PL"
+  },
+  "119000": {
+    "ma_line": "Provision for related party",
+    "name": "Provision for related party- ECL (PL)",
+    "pl_bs": "PL"
+  },
+  "119001": {
+    "ma_line": "Taxation",
+    "name": "Deferred Tax Expense",
+    "pl_bs": "PL"
+  },
+  "119002": {
+    "ma_line": "Taxation",
+    "name": "Income Tax Expense",
+    "pl_bs": "PL"
+  },
+  "120001": {
+    "ma_line": "Provision for Subrogation",
+    "name": "Provision for Subrogation - ECL (PL)",
+    "pl_bs": "PL"
+  },
+  "121000": {
+    "ma_line": "Bad Debt Expenses",
+    "name": "Provision for Bad Debts - ECL",
+    "pl_bs": "PL"
+  },
+  "122000": {
+    "ma_line": "Depreciation",
+    "name": "Right of Use (ROU) - Depreciation",
+    "pl_bs": "PL"
+  },
+  "122001": {
+    "ma_line": "Depreciation",
+    "name": "Depreciation",
+    "pl_bs": "PL"
+  },
+  "123001": {
+    "ma_line": "Finance Cost",
+    "name": "Interest Income",
+    "pl_bs": "PL"
+  },
+  "124000": {
+    "ma_line": "Other Income",
+    "name": "Other Income",
+    "pl_bs": "PL"
+  },
+  "124001": {
+    "ma_line": "Other Income",
+    "name": "Payment Plan Charge",
+    "pl_bs": "PL"
+  },
+  "124004": {
+    "ma_line": "Finance Cost",
+    "name": "Interest From Staff Loan",
+    "pl_bs": "PL"
+  },
+  "124005": {
+    "ma_line": "Other Income",
+    "name": "Profit on Disposal of PPE",
+    "pl_bs": "PL"
+  },
+  "124006": {
+    "ma_line": "Finance Cost",
+    "name": "Interest Income - Other",
+    "pl_bs": "PL"
+  },
+  "135": {
+    "ma_line": "Movement in IBNR Reserve",
+    "name": "Provision for Change in IBNR",
+    "pl_bs": "PL"
+  },
+  "147": {
+    "ma_line": "Movement in IBNR Reserve",
+    "name": "Reinsurers share of IBNR claims",
+    "pl_bs": "PL"
+  },
+  "195": {
+    "ma_line": "Bad Debt Expenses",
+    "name": "Bad Debts Expense",
+    "pl_bs": "PL"
+  },
+  "200001": {
+    "ma_line": "Property, Plant & Equipment - Accumulated Depreciation",
+    "name": "Accumulated Depreciation-Motor Vehicle",
+    "pl_bs": "BS"
+  },
+  "202001": {
+    "ma_line": "Other Receivables",
+    "name": "10 Year Anniversary",
+    "pl_bs": "BS"
+  },
+  "202002": {
+    "ma_line": "Other Receivables",
+    "name": "Rent Deposits",
+    "pl_bs": "BS"
+  },
+  "202003": {
+    "ma_line": "Other Receivables",
+    "name": "Other Receivable",
+    "pl_bs": "BS"
+  },
+  "202006": {
+    "ma_line": "Other Receivables",
+    "name": "Receivable From Fraudster",
+    "pl_bs": "BS"
+  },
+  "202007": {
+    "ma_line": "Other Receivables",
+    "name": "Health Receivable",
+    "pl_bs": "BS"
+  },
+  "203001": {
+    "ma_line": "Staff Loans & Advances",
+    "name": "Loans-owing from Employees",
+    "pl_bs": "BS"
+  },
+  "206001": {
+    "ma_line": "Current Lease Liability",
+    "name": "Finance lease - current liability Vehicles",
+    "pl_bs": "BS"
+  },
+  "207001": {
+    "ma_line": "Current Lease Liability",
+    "name": "Finance Lease - Current Liability",
+    "pl_bs": "BS"
+  },
+  "208001": {
+    "ma_line": "IBNR - BS",
+    "name": "Provision for reinsurers share of IBNR",
+    "pl_bs": "BS"
+  },
+  "208002": {
+    "ma_line": "Claims Payable - All Risk",
+    "name": "Claim Reserve",
+    "pl_bs": "BS"
+  },
+  "208003": {
+    "ma_line": "Claims Payable - All Risk",
+    "name": "Claims Payable",
+    "pl_bs": "BS"
+  },
+  "208004": {
+    "ma_line": "IBNR - BS",
+    "name": "Provision for IBNR (BS)",
+    "pl_bs": "BS"
+  },
+  "208005": {
+    "ma_line": "Reinsurance Provisions",
+    "name": "Provision for reinsurance claims reserve",
+    "pl_bs": "BS"
+  },
+  "208006": {
+    "ma_line": "IBNR - BS",
+    "name": "Unallocated loss adjustment",
+    "pl_bs": "BS"
+  },
+  "208007": {
+    "ma_line": "IBNR - BS",
+    "name": "Risk adjustment (BS)",
+    "pl_bs": "BS"
+  },
+  "208008": {
+    "ma_line": "Claims Payable - All Risk",
+    "name": "Health Claims Payable",
+    "pl_bs": "BS"
+  },
+  "209001": {
+    "ma_line": "VAT",
+    "name": "VAT",
+    "pl_bs": "BS"
+  },
+  "210002": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "Motor Vehicle",
+    "pl_bs": "BS"
+  },
+  "211001": {
+    "ma_line": "WHT",
+    "name": "OWHT Payable",
+    "pl_bs": "BS"
+  },
+  "211002": {
+    "ma_line": "WHT",
+    "name": "Other Withholding Taxes (OWHT)",
+    "pl_bs": "BS"
+  },
+  "211003": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Training levy payable",
+    "pl_bs": "BS"
+  },
+  "212001": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Commission Receivable",
+    "pl_bs": "BS"
+  },
+  "2120015": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Health Reinsurance Outstanding Claims",
+    "pl_bs": "BS"
+  },
+  "212002": {
+    "ma_line": "Due to Reinsurers",
+    "name": "FAC Commission Receivable",
+    "pl_bs": "BS"
+  },
+  "212003": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Outstanding Claims-FAC",
+    "pl_bs": "BS"
+  },
+  "212004": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Outstanding Claims-XL & CAT",
+    "pl_bs": "BS"
+  },
+  "212005": {
+    "ma_line": "IBNR - BS",
+    "name": "Due from Reinsurance",
+    "pl_bs": "BS"
+  },
+  "212006": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Treaty Payables",
+    "pl_bs": "BS"
+  },
+  "212007": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance FAC Payables",
+    "pl_bs": "BS"
+  },
+  "212008": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Payable XL & CAT",
+    "pl_bs": "BS"
+  },
+  "212009": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Payable- FMRE MQS",
+    "pl_bs": "BS"
+  },
+  "212010": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Outstanding Claim",
+    "pl_bs": "BS"
+  },
+  "212011": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Premium Retention",
+    "pl_bs": "BS"
+  },
+  "212012": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance MQST Payable JBB",
+    "pl_bs": "BS"
+  },
+  "212014": {
+    "ma_line": "Reinsurance Provisions",
+    "name": "Reinsurance Risk adjustment",
+    "pl_bs": "BS"
+  },
+  "212015": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Cash Call Receivable",
+    "pl_bs": "BS"
+  },
+  "212016": {
+    "ma_line": "Due to Reinsurers",
+    "name": "Reinsurance Health Treaty Payable",
+    "pl_bs": "BS"
+  },
+  "214001": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Rent Payable",
+    "pl_bs": "BS"
+  },
+  "214002": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Account Payable",
+    "pl_bs": "BS"
+  },
+  "214003": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Health Admin Payable",
+    "pl_bs": "BS"
+  },
+  "215001": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Commission Payable-Brokers",
+    "pl_bs": "BS"
+  },
+  "215002": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Provision for Expenses",
+    "pl_bs": "BS"
+  },
+  "215003": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Salary Payable",
+    "pl_bs": "BS"
+  },
+  "215004": {
+    "ma_line": "Trade & Other Payables",
+    "name": "Unidentified Income",
+    "pl_bs": "BS"
+  },
+  "215007": {
+    "ma_line": "Lease Liabilities",
+    "name": "Lease Liability - IFRS 16",
+    "pl_bs": "BS"
+  },
+  "215008": {
+    "ma_line": "Long-term Loan",
+    "name": "Loan Liabilities",
+    "pl_bs": "BS"
+  },
+  "215009": {
+    "ma_line": "Short-term Loan",
+    "name": "Loan Liabilities Short-term",
+    "pl_bs": "BS"
+  },
+  "215010": {
+    "ma_line": "Trade Receivables",
+    "name": "Prepayments",
+    "pl_bs": "BS"
+  },
+  "216001": {
+    "ma_line": "Stated Capital (Issued Share Capital)",
+    "name": "Stated Capital (Issued Share Capital)",
+    "pl_bs": "BS"
+  },
+  "217001": {
+    "ma_line": "Retained Earnings",
+    "name": "IBNR transfer from Retained earnings",
+    "pl_bs": "BS"
+  },
+  "217002": {
+    "ma_line": "Retained Earnings",
+    "name": "Retained Earnings",
+    "pl_bs": "BS"
+  },
+  "218001": {
+    "ma_line": "IBNR Reserve",
+    "name": "Reserve for Change in IBNR",
+    "pl_bs": "BS"
+  },
+  "219001": {
+    "ma_line": "Retained Earnings",
+    "name": "Current Year Earnings",
+    "pl_bs": "BS"
+  },
+  "219003": {
+    "ma_line": "Tax Payable",
+    "name": "Provision for Tax",
+    "pl_bs": "BS"
+  },
+  "220001": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "G F S Software",
+    "pl_bs": "BS"
+  },
+  "220003": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "Computers & Network",
+    "pl_bs": "BS"
+  },
+  "220004": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "Office furniture",
+    "pl_bs": "BS"
+  },
+  "220005": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "Fixtures and Fittings",
+    "pl_bs": "BS"
+  },
+  "230001": {
+    "ma_line": "Property, Plant & Equipment - Accumulated Depreciation",
+    "name": "Accumulated Depreciation-F&F",
+    "pl_bs": "BS"
+  },
+  "230002": {
+    "ma_line": "Property, Plant & Equipment - Accumulated Depreciation",
+    "name": "Accumulated Depreciation-IT Equipment",
+    "pl_bs": "BS"
+  },
+  "240001": {
+    "ma_line": "Subrogation Receivables",
+    "name": "Claims Subrogation Receivable",
+    "pl_bs": "BS"
+  },
+  "240002": {
+    "ma_line": "Subrogation Receivables",
+    "name": "Provision for Subrogation - ECL",
+    "pl_bs": "BS"
+  },
+  "250001": {
+    "ma_line": "Right of Use - Asset",
+    "name": "Right of Use (ROU) - Accumulated Depreciation",
+    "pl_bs": "BS"
+  },
+  "250002": {
+    "ma_line": "Right of Use - Asset",
+    "name": "Right of Use (ROU) - Asset",
+    "pl_bs": "BS"
+  },
+  "260001": {
+    "ma_line": "Salvage Receivables",
+    "name": "Veritas salvage receivable",
+    "pl_bs": "BS"
+  },
+  "270001": {
+    "ma_line": "Deferred tax asset",
+    "name": "Deferred tax asset",
+    "pl_bs": "BS"
+  },
+  "280001": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "First Capital Bank-0002704018802 BWP",
+    "pl_bs": "BS"
+  },
+  "280002": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "First Capital Bank -0002703011578 ZAR",
+    "pl_bs": "BS"
+  },
+  "280003": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "First Capital Bank-0020279780211 USD",
+    "pl_bs": "BS"
+  },
+  "280004": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "First Capital Bank USD Fixed Deposit - 0002101020994",
+    "pl_bs": "BS"
+  },
+  "280005": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNBB (Call A/C) - 62407809485",
+    "pl_bs": "BS"
+  },
+  "280006": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNBB 62403392335 CHEQ A/C",
+    "pl_bs": "BS"
+  },
+  "280007": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNBB (Claims A/C)-62493282265",
+    "pl_bs": "BS"
+  },
+  "280008": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNBB (Investment Income A/C) - 62493292264",
+    "pl_bs": "BS"
+  },
+  "280010": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNBB Credit Card Control A/C - 4901344312871000",
+    "pl_bs": "BS"
+  },
+  "280011": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Orange Money Account",
+    "pl_bs": "BS"
+  },
+  "280012": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Petty Cash",
+    "pl_bs": "BS"
+  },
+  "280013": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Stanbic Bank-9060004053147",
+    "pl_bs": "BS"
+  },
+  "280014": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Bank Suspense Account",
+    "pl_bs": "BS"
+  },
+  "280017": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Liquidity Transfer",
+    "pl_bs": "BS"
+  },
+  "280023": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "Alpha Health Bank FNB 63162367601",
+    "pl_bs": "BS"
+  },
+  "280024": {
+    "ma_line": "Bank and Cash Accounts",
+    "name": "FNB USD A/C-63167551382",
+    "pl_bs": "BS"
+  },
+  "290001": {
+    "ma_line": "Other Receivables",
+    "name": "BONU Accounts Receivable",
+    "pl_bs": "BS"
+  },
+  "290002": {
+    "ma_line": "Trade Receivables",
+    "name": "Accounts Receivable",
+    "pl_bs": "BS"
+  },
+  "290003": {
+    "ma_line": "Trade Receivables",
+    "name": "Graphite Accounts Receivable (MIS)",
+    "pl_bs": "BS"
+  },
+  "290004": {
+    "ma_line": "Trade Receivables",
+    "name": "Provision for credit losses",
+    "pl_bs": "BS"
+  },
+  "290005": {
+    "ma_line": "Trade Receivables",
+    "name": "C.A.R Premium Receivable",
+    "pl_bs": "BS"
+  },
+  "303": {
+    "ma_line": "Operating Expenses",
+    "name": "Accounting Fees",
+    "pl_bs": "PL"
+  },
+  "321": {
+    "ma_line": "Operating Expenses",
+    "name": "Legal Expense - Claims",
+    "pl_bs": "PL"
+  },
+  "330": {
+    "ma_line": "Trade Receivables",
+    "name": "Prepayments",
+    "pl_bs": "BS"
+  },
+  "34": {
+    "ma_line": "Property, Plant & Equipment",
+    "name": "Software Development",
+    "pl_bs": "BS"
+  },
+  "78": {
+    "ma_line": "Other Receivables",
+    "name": "Instant Insurance Accounts Receivable",
+    "pl_bs": "BS"
+  },
+  "84": {
+    "ma_line": "Change in UPR",
+    "name": "Change in Unearned Re-Insurance Premium",
+    "pl_bs": "PL"
+  },
+  "97": {
+    "ma_line": "Finance Cost",
+    "name": "Finance Cost",
+    "pl_bs": "PL"
+  },
+  "999999": {
+    "ma_line": "Retained Earnings",
+    "name": "Undistributed Profits/Losses",
+    "pl_bs": "BS"
+  }
+}

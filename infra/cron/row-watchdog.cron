@@ -1,0 +1,7 @@
+# Row-count watchdog — emails the CFO when data disappears from Omni.
+# Dotless filename ON PURPOSE: cron's run-parts ignores files with a dot, which is
+# how staff-loan-rate and staff-loan-repayments silently never fired for a month.
+# Hourly at :40 — clear of the bank sync (:00/:30), bug triage (:02) and claims sync (:17).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+40 * * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py check_row_counts >> /var/log/alpha-finance/row-watchdog.log 2>&1

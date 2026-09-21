@@ -1,0 +1,44 @@
+# Runs through /usr/local/bin/omni-manage (infra/host/omni-manage.sh), which waits out a
+# blue/green deploy window instead of failing with "backend is not running" (2026-09-04).
+# Time Doctor workforce pull — THREE settle pulls a day (CFO 2026-08-01).
+#
+# Some machines upload their hours to Time Doctor LATE (in delayed batches when
+# they sync). A single early pull then judges a day before its data arrived and
+# wrongly reports "did not track". So we pull the SAME day three times and let
+# hris.people_data_guard tell a settled figure from one still arriving:
+#
+#   03:00 SAST (01:00 UTC)  slot 0300  — first look (most PCs still off)
+#   04:00 SAST (02:00 UTC)  slot 0400  — second look
+#   04:30 SAST (02:30 UTC)  slot 0430  — extra look feeding the 07:05 accuracy check
+#   08:30 SAST (06:30 UTC)  slot 0830  — final backstop look, AFTER people boot up
+#   15:50 SAST (13:50 UTC)  slot 1550  — LATE CATCH-UP for back-filled hours
+#
+# CFO 2026-09-09, checklist L28. The 0830 pull was the LAST look at a day, and
+# Time Doctor keeps ADDING to a past day as offline machines upload what they
+# buffered. So the stored snapshot froze at a figure everyone downstream then
+# read as final. One employee's power cut left her snapshot at 1.74 h while Time
+# Doctor held 3.24 h, and she reported it twice. The permanent record and the
+# leave-docking path now read live (integrations.td_live) and never revise
+# downward — but the readers that CANNOT afford a live call still read this
+# snapshot: reporting/cost_per_hour (a whole month, inside a web request, no
+# cache — live pulls there would time the page out), the Telegram view, the
+# reconciliation view and the healthcheck. This 15:50 pull refreshes the day for
+# all of them, and lands BEFORE the 16:10 SAST record reconcile and the 16:25
+# deduction enforcement so both see the better figure too.
+#
+# CFO 2026-08-05: the consolidated 07:05 Morning Brief runs its DeepSeek/Gemini
+# people-data accuracy check at send time over ALL settle samples, so the new
+# 04:30 pull gives that check more-settled data and makes the 07:05 report
+# trustworthy that early. When CONSOLIDATED_EMAILS_ENABLED is ON the 0830 pull
+# no longer emails a standalone report (folded into the 07:05 brief); it stays a
+# backstop settle pull.
+#
+# Each pull records a per-user tracked-seconds sample under its slot WITHOUT
+# wiping the earlier slots (get_or_create). Skips gracefully if no TIMEDOCTOR_TOKEN
+# (env or CFO Vault) is set. Drop into /etc/cron.d/ (sudo cp + chmod 644). Clock is UTC.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 1 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage pull_timedoctor --slot 0300 --no-email >> /var/log/timedoctor-pull.log 2>&1
+0 2 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage pull_timedoctor --slot 0400 --no-email >> /var/log/timedoctor-pull.log 2>&1
+30 2 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage pull_timedoctor --slot 0430 --no-email >> /var/log/timedoctor-pull.log 2>&1
+30 6 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage pull_timedoctor --slot 0830 >> /var/log/timedoctor-pull.log 2>&1
+50 13 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage pull_timedoctor --slot 1550 --no-email >> /var/log/timedoctor-pull.log 2>&1

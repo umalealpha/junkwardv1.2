@@ -1,0 +1,46 @@
+rules:
+  - id: h33-resolved-is-not-allowed
+    languages: [python]
+    severity: ERROR
+    message: >-
+      H33: this function takes a company from the caller (query string or body)
+      and never clamps it against scoped_company_ids/allowed_company_ids.
+      Read-side scoping hides other entities' rows, which is why this hides: the
+      caller cannot SEE entity B, so nobody checks they can WRITE to it. Live on
+      2026-08-08 a user granted one entity POSTed ?company=<other>, got 201, and
+      quotation Q-2026-00001 landed on another company's books.
+    patterns:
+      - pattern: |
+          def $F(...):
+            ...
+            resolve_company_id_param(...)
+            ...
+      - pattern-not: |
+          def $F(...):
+            ...
+            scoped_company_ids(...)
+            ...
+      - pattern-not: |
+          def $F(...):
+            ...
+            allowed_company_ids(...)
+            ...
+
+  - id: h6-error-dropped-with-no-trace
+    languages: [python]
+    severity: ERROR
+    message: >-
+      H6: the error is caught and dropped. Log it or let it raise. On 2026-08-09
+      this exact shape was written into a TEST the same morning it was fixed in
+      three other files - the swallow reflex hides in test code.
+    pattern-either:
+      - pattern: |
+          try:
+            ...
+          except $E:
+            pass
+      - pattern: |
+          try:
+            ...
+          except BaseException:
+            ...

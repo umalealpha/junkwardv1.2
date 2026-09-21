@@ -1,0 +1,21 @@
+# Close the Omni login of anyone whose last working day has passed.
+# CFO 2026-09-18: the cut-off is END OF THE LAST WORKING DAY.
+#
+# TIMING IS LOAD-BEARING, and the obvious choice is wrong. The rule in
+# payroll.offboard_access.should_close is `termination_date < today`, so at
+# 23:30 on someone's last working day their date is still TODAY and they are
+# correctly NOT closed — and the next run is 24 hours later, leaving them open
+# all of the following day. Running just after midnight Botswana time is what
+# actually delivers "closed at the end of their last day": the date has rolled,
+# `< today` is true, and the account shuts about twenty minutes after the last
+# day ends. (Caught by the off-subscription review, 2026-09-18.)
+#
+# Host clock is UTC — verified on the box, `timedatectl` reports Etc/UTC — and
+# every other cron here is written in UTC for the same reason.
+# 00:20 Botswana (CAT = UTC+2) = 22:20 UTC the previous evening.
+#
+# Idempotent: an already-closed account is skipped, so a missed night is caught
+# the next one. Skips anyone ticked "keep access after exit" (contractors).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+20 22 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py close_leaver_access >> /var/log/alpha-finance/close-leaver-access.log 2>&1

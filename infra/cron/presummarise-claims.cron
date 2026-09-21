@@ -1,0 +1,14 @@
+# Claims payment insight — pre-generate the AI claim summary for OPEN Graphite
+# claims (CFO 2026-08-31, Claim-Description-Spec). `presummarise_open_claims`
+# writes a <=200-word plain-English summary + a SOFT pay/hold opinion onto each
+# open claim, so a claims payment request shows it instantly. Local-first AI over
+# PII-redacted facts; advisory only; the figures/flags are always by rule, never
+# by the AI. Never moves money. Idempotent — skips claims summarised recently.
+#
+# Runs at 02:30 UTC = 04:30 Africa/Gaborone (off-peak, before the working day).
+# Output -> /var/log/alpha-finance/presummarise-claims.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 2 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py presummarise_open_claims >> /var/log/alpha-finance/presummarise-claims.log 2>&1

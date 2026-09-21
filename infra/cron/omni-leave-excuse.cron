@@ -1,0 +1,2 @@
+# Leave-excuse daily processing — 16:25 UTC. Drop into /etc/cron.d/ (0644).
+25 16 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py process_leave_excuses >> /var/log/alpha-finance/leave-excuse.log 2>&1

@@ -1,0 +1,6 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Weekly frozen-screen hand-off (CFO 2026-09-20): every Monday HR + the person's line
+# manager get who was flagged last week, days and hours only — never a title or image.
+# Flags only; nothing is docked. 06:50 UTC = 08:50 CAT Monday.
+50 6 * * 1 root cd /opt/alpha-finance && /usr/local/bin/omni-manage send_screen_integrity_digest --send >> /var/log/alpha-finance/screen-integrity-digest.log 2>&1

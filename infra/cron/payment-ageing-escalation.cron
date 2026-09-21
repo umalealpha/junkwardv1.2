@@ -1,0 +1,20 @@
+# Same-day CFO payment ageing escalation — CFO's FNB & Payments improvement
+# plan, 14-Sep-2026: "payment requests that sit too long must escalate to the
+# CFO the same day, not wait for a next-day digest."
+#
+# Runs hourly during the Gaborone working day and emails the CFO the moment a
+# request crosses the ageing threshold (Finance-editable in the Omni admin,
+# Taskboard > Taskboard settings; seeded at 3 days, the same "stale" figure the
+# 09:30 payment_daily_digest already uses). Each request is escalated once —
+# escalated_at is stamped after a successful send — so this never repeats
+# itself hourly about the same request; the daily digest still covers
+# everything else every morning.
+#
+# READS the payment queue and SENDS an email. It never changes a payment, and
+# Omni never moves money — money leaves at FNB, authorised by the CFO himself
+# with two-factor.
+#
+# 06:00-16:00 Gaborone (UTC+2) = 04:00-14:00 UTC, on the hour.
+# Reminder: this file schedules NOTHING until infra/install-crons.sh runs on
+# the box and payment-ageing-escalation is in its ENABLED list.
+0 4-14 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py payment_ageing_escalation >> /var/log/alpha-finance/payment-ageing-escalation.log 2>&1

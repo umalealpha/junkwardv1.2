@@ -1,0 +1,6 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Time Doctor follow-up chase (CFO 2026-09-20): managers who have left an employee's
+# explanation or an unpaid deduction undecided are reminded after 3 working days
+# (HR copied) and their own manager is copied after 5. Decides nothing. 08:40 CAT Mon-Fri.
+40 6 * * 1-5 root cd /opt/alpha-finance && /usr/local/bin/omni-manage chase_manager_reviews --send >> /var/log/alpha-finance/td-chase.log 2>&1

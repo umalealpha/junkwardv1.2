@@ -1,0 +1,17 @@
+# Candidate CV retention — delete CV files + extracted cv_text older than the
+# 6-month window (hired candidates are kept). Data-minimisation for PII on disk.
+#
+# `purge_old_cvs --commit` deletes only the CV file + cv_text of a Candidate row
+# whose created_at is past the window AND who has no application at stage 'hired'.
+# The Candidate row (name/email) is kept for the hiring history; only the heavy
+# PII is removed. Idempotent — a second run finds nothing left to purge.
+#
+# CFO directive 2026-08-26 (H1 hiring batch).
+#
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+# 03:00 UTC = 05:00 SAST — after the nightly backup (alpha-finance-backup).
+# Output -> /var/log/alpha-finance/purge-old-cvs.log (root-owned).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 3 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py purge_old_cvs --commit >> /var/log/alpha-finance/purge-old-cvs.log 2>&1

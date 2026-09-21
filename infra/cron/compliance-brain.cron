@@ -1,0 +1,14 @@
+# Compliance/AML dashboard — nightly Alpha Brain feed + local-AI analysis.
+# `analyse_compliance_brain`: fetches the PII-FREE aggregate summary from Alpha
+# Brain (the Graphite bolt-on), lets our own AI (local Ollama first) write a
+# plain-English read, and stores it for the Compliance Overview dashboard.
+# No customer data leaves; no browser link. Idempotent; records an "awaiting
+# feed" row until Pramod activates Alpha Brain.
+#
+# Runs at 22:00 UTC = 00:00 Africa/Gaborone (midnight, CFO directive 2026-07-24).
+# Output -> /var/log/alpha-finance/compliance-brain.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 22 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py analyse_compliance_brain >> /var/log/alpha-finance/compliance-brain.log 2>&1

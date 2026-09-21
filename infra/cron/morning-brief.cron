@@ -1,0 +1,18 @@
+# Workforce Morning Brief — every day 07:00 UTC (09:00 SAST).
+# CFO 2026-08-27: moved from 07:05 to 09:00 SAST, AFTER the 08:30 SAST (06:30 UTC)
+# final Time Doctor pull. Reason: most desktop apps finish uploading the day's
+# hours ~08:00, so at 07:05 the brief's live pull saw only a partial morning block
+# — a full day of work could publish as barely two hours with an early "Left"
+# time. The settle guard only HOLDS a still-arriving ZERO; it cannot catch a
+# stable PARTIAL that later grows, so the fix is to send after the uploads are in.
+# The 04:30/08:30 settle pulls + DeepSeek/Gemini zero-hold check still apply.
+# When CONSOLIDATED_EMAILS_ENABLED is ON this brief also folds in the manager
+# "team scoreboard" for managers, so they get one 07:05 email not two.
+# Emails each matched employee their gamified daily brief (hours / week rank /
+# top performer / leave / tasks / taskboard matters / POs to approve).
+# Does nothing until the Morning Brief switch is ON (WorkforceBriefSetting) or
+# WORKFORCE_BRIEF_ENABLED=true. Drop into /etc/cron.d/ (sudo cp + chmod 644). UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 7 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job morning-brief -- send_morning_brief >> /var/log/alpha-finance/morning-brief.log 2>&1

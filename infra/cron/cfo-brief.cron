@@ -1,0 +1,21 @@
+# CFO Omni Brief — the CFO's own morning brief (CFO 2026-09-10: "now do the same
+# feature for me, top 5 emails it needs my attention ... it renders the same way
+# like Aruns morning emails").
+#
+# 🔴 WHY THIS FILE EXISTS: cfo_driver.py and run_cfo.sh shipped in PR #820 on
+# 10-Sep and infra/ceo-monitor/README.md already documented this exact schedule —
+# but the cron was never placed on the host and the schedule was never
+# version-controlled here, so the CFO brief has never run once. Found 11-Sep when
+# the CFO asked why his brief never arrived. Keeping the schedule in infra/cron/
+# means install-crons.sh reinstalls it on every deploy and a host rebuild cannot
+# silently lose it again.
+#
+# 06:35 SAST (04:35 UTC) — five minutes after the CEO brief on purpose: both read
+# the same Time Doctor / Omni data and the stagger keeps them off each other.
+# No graph.env needed: this reads pganesharajah@ with the GRAPH_READER_* app,
+# which is already in the backend container from /etc/alpha-finance/.env.
+# Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+35 4 * * * root /opt/ceo-monitor/run_cfo.sh >> /var/log/cfo-brief.log 2>&1

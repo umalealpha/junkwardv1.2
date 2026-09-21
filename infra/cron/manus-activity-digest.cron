@@ -1,0 +1,19 @@
+# Manus Activity Digest — 05:30 UTC (07:30 SAST), covering YESTERDAY.
+#
+# CFO 2026-08-09: Manus was given manager-level access so it can click through
+# Omni and find what is broken. He asked to be told what it does — once a day,
+# not on every click, so an unexpected change is obvious the next morning
+# without a testing session filling his inbox.
+#
+# Runs at 05:30, after the 05:15 exceptions report, so the two do not contend
+# for the same backend container.
+#
+# It sends EVERY DAY, including "nothing changed". A digest that only arrives
+# when there is news cannot be told apart from one that has silently stopped —
+# which is exactly how the 07:00 manager report died six times unnoticed.
+#
+# Drop into /etc/cron.d/ (chmod 644, owned by root). Times are UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 5 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py run_job manus-activity-digest -- manus_activity_digest >> /var/log/alpha-finance/manus-activity-digest.log 2>&1

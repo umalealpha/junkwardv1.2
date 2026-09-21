@@ -1,0 +1,21 @@
+# Pinned cross-entity access — re-assert NIGHTLY so a key person's access can
+# never sit broken for a whole day between deploys.
+#
+# `seed_pinned_company_access --commit` is additive + idempotent: it only ADDS a
+# grant that is missing from its ROSTER (currently Lemogang Machola -> ADIC, so
+# he can always use the Claims PO / Assessments screen) and NEVER removes
+# anything from anyone. The same command already runs on every deploy
+# (docker/entrypoint.sh); this cron closes the gap BETWEEN deploys, in case an
+# entity sweep or a manual change prunes the grant during the day.
+#
+# CFO directive 2026-07-17 (Lemogang Machola: "key person, must always have
+# access for purchase orders").
+#
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+# 01:30 UTC = 03:30 SAST (deep night, Botswana). Idempotent; a normal run is a
+# no-op that just confirms the grant is present.
+# Output -> /var/log/alpha-finance/pin-access.log (root-owned).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 1 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py seed_pinned_company_access --commit >> /var/log/alpha-finance/pin-access.log 2>&1

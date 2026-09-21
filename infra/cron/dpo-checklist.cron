@@ -1,0 +1,5 @@
+# DPO daily checklist sweep — 05:30 UTC (07:30 SAST).
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 5 * * * root cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py dpo_checklist_sweep >> /var/log/alpha-finance/dpo-checklist.log 2>&1

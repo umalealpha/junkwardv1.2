@@ -1,0 +1,5 @@
+# Omni User Manual — nightly "What's New" auto-update.
+# Botswana midnight (CAT = UTC+2) = 22:00 UTC; the server runs UTC.
+# Deploy: copy to /etc/cron.d/manual-update (root:root, 0644). The referenced
+# script must be executable (chmod +x infra/cron/manual-update.sh).
+0 22 * * * root /opt/alpha-finance/infra/cron/manual-update.sh >> /var/log/alpha-finance/manual-update.log 2>&1

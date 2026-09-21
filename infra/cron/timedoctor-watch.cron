@@ -1,0 +1,8 @@
+# Hourly Time Doctor access watch — CFO 19-Sep-2026. Clock is UTC.
+# Alerts only when access changes: blocked -> urgent email (CFO/Arjun/Unami) +
+# Telegram to the CFO; working again -> Telegram to the CFO. See
+# infra/timedoctor-watch.sh. The daily 05:30 check_timedoctor_token stays as is.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+10 * * * * root bash /opt/alpha-finance/infra/timedoctor-watch.sh >> /var/log/alpha-finance/timedoctor-watch.log 2>&1

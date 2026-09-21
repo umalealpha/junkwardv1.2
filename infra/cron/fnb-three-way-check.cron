@@ -1,0 +1,20 @@
+# Payments daily three-way check — CFO's FNB & Payments improvement plan,
+# 13-Sep-2026: "implement what is legal and real, dont break whatever we have
+# built previously."
+#
+# Reports every payment whose status in Omni disagrees with its FNB batch, plus
+# the batches the bank has not settled, with age, amount and owner. It READS
+# ONLY — it never corrects a payment, because two of the disagreements on
+# production are payments a person deliberately CANCELLED against a batch the
+# bank had already settled, and a machine that "fixes" those erases a human
+# decision.
+#
+# Silent on a clean day; the command still prints its verdict every run, so the
+# log proves it ran even when it sends nothing. (The failed-debit report sent
+# nothing for a month and nobody noticed, because silence and death look the
+# same — 11-Sep-2026.)
+#
+# 07:00 Gaborone = 05:00 UTC, before the morning payment window.
+# Reminder: this file schedules NOTHING until infra/install-crons.sh runs on the
+# box and fnb-three-way-check is in its ENABLED list.
+0 5 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py fnb_three_way_check --email >> /var/log/fnb-three-way-check.log 2>&1

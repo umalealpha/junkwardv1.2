@@ -1,0 +1,4 @@
+# Stuck-work sweep - daily 06:15 CAT (04:15 UTC). CFO 2026-08-20 ("can we create
+# auto reminders and tasks if someone is sitting on something"). Runs BEFORE the
+# 06:30 task-reminder digest so a task raised this morning is chased this morning.
+15 4 * * * root cd /opt/alpha-finance && docker exec alpha-finance-backend python manage.py sweep_stuck_work >> /var/log/alpha-finance/stuck-work-sweep.log 2>&1

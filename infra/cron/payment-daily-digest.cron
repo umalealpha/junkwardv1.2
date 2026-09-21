@@ -1,0 +1,23 @@
+# Payment Daily Digest — 07:30 UTC = 09:30 Africa/Gaborone.
+#
+# CFO 2026-08-09: "every day I need a cron somewhere around nine thirty AM,
+# summarising all the payment requests. everything... and email to me one email.
+# I have more than seven accountants requesting for payments, and it is too much
+# overwhelming for me to go and check everything."
+#
+# One email, every open request, grouped by who loaded it and by company, with
+# any duplicate override that has NOT been countersigned at the top in red —
+# that is the control that failed on 7 Aug and let BWP 13,662.67 out twice.
+#
+# Sends EVERY day, including "nothing is waiting on you". A digest that only
+# arrives when there is news cannot be told apart from one that has silently
+# stopped — which is how the 07:00 manager report died six times unnoticed.
+#
+# The figures are computed by Omni. The AI only writes the plain-English read of
+# them, and if it is unavailable the email still goes with a written fallback.
+#
+# Drop into /etc/cron.d/ (chmod 644, owned by root). Times are UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 7 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py payment_daily_digest >> /var/log/alpha-finance/payment-daily-digest.log 2>&1

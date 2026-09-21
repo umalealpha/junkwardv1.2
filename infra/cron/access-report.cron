@@ -1,0 +1,18 @@
+# Monthly Omni access-change report — CFO directive 2026-09-15.
+#
+# He delegated day-to-day access administration to Unopa Male and asked for one
+# email on the 1st showing everything granted and revoked the month before, and
+# by whom. It goes to BOTH of them deliberately — nobody is audited behind their
+# back, and Unopa sees his own month's work.
+#
+# Botswana is UTC+2, so subtract 2 hours from local time.
+#   1st 06:00 UTC = 08:00 local — waiting for him at the start of the month.
+#
+# The command reads the audit log user administration already writes, so a
+# re-run is safe and cannot double-record anything. Clock UTC.
+#
+# Drop into /etc/cron.d/ via infra/install-crons.sh (editing this file alone
+# schedules nothing on the host).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 6 1 * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py email_access_report >> /var/log/alpha-finance/access-report.log 2>&1

@@ -1,0 +1,87 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environment
+venv/
+.venv/
+.venv
+env/
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Next.js build cache (root level)
+.next/
+
+# Prototype scratch files (large base64 images)
+redesign-*.jsx
+prototype-*.jsx
+image-data.js
+
+# Docker build artifacts
+*.pid
+
+# Frontend build output (also covered by frontend/.gitignore but be explicit)
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.turbo/
+
+# Local Claude Code project state — never commit
+# (except shared steering docs and specs, which encode ERP relationship rules
+#  and feature designs that the whole team must agree on before coding)
+.claude/*
+!.claude/steering/
+!.claude/specs/
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/tb-check.md
+# Shared SessionStart hook config — registers infra/cloud-skills-install.sh so
+# Claude Code on the web can see the skills in infra/skills/ (cloud only; the PC
+# and the Mac keep their own ~/.claude/skills, synced by infra/skills-sync.sh).
+!.claude/settings.json
+
+# CFO-provided seed data — real Alpha Direct financials, must NEVER be committed.
+# Transfer to production via SCP to /tmp/ only.
+seed_production_fy.py
+Seed Production.docx
+
+# tb_check JSON receipts (one per run — local artefact, not source-of-truth)
+reports/tb-check-*.json
+
+# QC screenshots are evidence for a single run, not source.
+qc-out/
+
+# Local test-DB settings written by a dev session. Never committed.
+.testenv
+
+# parallel test-runner clones (manage.py test --parallel)
+default_*.sqlite3

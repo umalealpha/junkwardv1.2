@@ -1,0 +1,53 @@
+# Force LF line endings on shell scripts so Windows checkouts don't break
+# Docker entrypoint execution (`/usr/bin/env sh\r: bad interpreter`).
+*.sh             text eol=lf
+*.cron           text eol=lf
+docker/*         text eol=lf
+
+# Python / config text files — normalise to LF
+*.py             text eol=lf
+*.toml           text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+*.json           text eol=lf
+Dockerfile*      text eol=lf
+Makefile         text eol=lf
+.env*            text eol=lf
+
+# Binary assets — never normalise
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.ico            binary
+*.pdf            binary
+*.xlsx           binary
+*.xlsb           binary
+*.xls            binary
+*.docx           binary
+*.doc            binary
+*.zip            binary
+*.gz             binary
+*.tar            binary
+*.woff           binary
+*.woff2          binary
+*.ttf            binary
+*.otf            binary
+*.glb            binary
+*.gltf           binary
+MACHINE-TALK.md merge=union
+MACHINE-TALK-ARCHIVE.md merge=union
+
+# Byte-for-byte mirrors of the hand-deployed files in /opt/ceo-monitor on the
+# omni host. Never let git rewrite line endings here: the documented md5s in
+# infra/ceo-monitor/README.md are how we prove the repo copy still matches prod.
+infra/ceo-monitor/** -text
+
+# Shared Claude skills (infra/skills-sync.sh). NEVER normalise these.
+# This PC has core.autocrlf=true, so git hands CRLF back for anything it treats
+# as text. The sync verifies by comparing the file it pushed with the file it
+# reads back off origin/main: with normalisation on, an LF file returns as CRLF,
+# every comparison fails, and push reports FAILED for files that ARE on the
+# server while pull rewrites every skill on every run. -text keeps them
+# byte-for-byte, which is the only thing that makes the verification honest.
+infra/skills/** -text

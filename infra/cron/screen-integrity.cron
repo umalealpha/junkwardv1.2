@@ -1,0 +1,11 @@
+# Screen-Integrity nightly sweep — stores yesterday's frozen-screen /
+# weight-on-a-key Time Doctor exceptions so the CFO's /hris/screen-integrity
+# screen loads instantly (no live pull on page open). Read-only: it FLAGS for a
+# human "explain your day" step and never docks pay. Runs at 04:20 UTC (06:20
+# SAST) — after Time Doctor's own screenshots for the day have settled and
+# before the 07:00 UTC Morning Brief reads the same detector.
+# Drop into /etc/cron.d/ (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+20 4 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py detect_frozen_screen --persist >> /var/log/alpha-finance/screen-integrity.log 2>&1

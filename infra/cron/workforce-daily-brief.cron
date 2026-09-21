@@ -1,0 +1,15 @@
+# Runs through /usr/local/bin/omni-manage (infra/host/omni-manage.sh), which waits out a
+# blue/green deploy window instead of failing with "backend is not running" (2026-09-04).
+# Workforce Daily Brief — every day 07:05 UTC (09:05 SAST). CFO 2026-08-27: moved
+# from 07:10 SAST to AFTER the 08:30 SAST (06:30 UTC) final Time Doctor pull. This
+# writes the PERMANENT attendance record that 1-Sep leave-docking reads, so it must
+# never run on a half-uploaded day — a late upload was recording real work as a
+# short/absent day (a full day of work could land on record as zero hours).
+# Emails each employee their hours / leave / tasks / announcements for the
+# previous day and records the day's justified-vs-unjustified status.
+# Does nothing until WORKFORCE_BRIEF_ENABLED=true in /etc/alpha-finance/.env.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+5 7 * * * root cd /opt/alpha-finance && /usr/local/bin/omni-manage run_job workforce-daily-brief -- send_daily_brief --no-email >> /var/log/alpha-finance/workforce-daily-brief.log 2>&1

@@ -1,0 +1,29 @@
+# Transformation Board — the daily pulse (CFO 2026-09-20).
+#
+# "create a living dashboard which updates everyday linking to our everyday
+# activities and software development". This is the job that makes it living:
+# every morning it recomputes the board from live payroll, the Build Log,
+# tasks, Time Doctor and the per-day workday record, refreshes each
+# department's headcount and cost, asks the AI panel for the morning note, and
+# stores ONE snapshot for the day so the screen can animate a real trend.
+#
+# Drop this file into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644).
+# System clock is UTC. SAST/CAT = UTC+02.
+#
+#   03:40 UTC (05:40 CAT) — before anyone opens the board for the day, and
+#   after the overnight jobs (Time Doctor pull, bank feeds, watchdogs) have
+#   finished, so the morning note reads last night's real work.
+#
+# READ-MOSTLY: the only writes are the day's snapshot and each department's
+# refreshed headcount/cost. It posts no journal, moves no money, sends no
+# customer mail, and never writes to Graphite.
+#
+# If the AI panel is unreachable the figures are unaffected — the board simply
+# has no paragraph that morning (see transformation/ai_panel.py).
+#
+# Output -> /var/log/alpha-finance/transformation-pulse.log (root-owned).
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+40 3 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py transformation_pulse --commit >> /var/log/alpha-finance/transformation-pulse.log 2>&1

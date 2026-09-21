@@ -1,0 +1,136 @@
+name: Deploy backend to omni
+
+# Manual deploy to the omni prod EC2 via EC2 Instance Connect (headless — uses
+# the same AWS Actions secrets as morning-check.yml; no human MFA).
+# Safety: builds the new backend image, runs `manage.py check` on it BEFORE
+# swapping containers — if check fails the running prod container is untouched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "git ref to deploy"
+        default: "main"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  PROD_BACKEND_IP: 15.240.20.178
+  EC2_INSTANCE_ID: i-02a5d76a61f4f09a5
+  AWS_REGION:      af-south-1
+
+concurrency:
+  group: omni-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Push ephemeral SSH key via EC2 Instance Connect
+        run: |
+          set -euo pipefail
+          ssh-keygen -t ed25519 -N "" -f /tmp/eic_key -C "deploy@${GITHUB_RUN_ID}"
+          aws ec2-instance-connect send-ssh-public-key \
+            --region "$AWS_REGION" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --instance-os-user ubuntu \
+            --ssh-public-key file:///tmp/eic_key.pub
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$PROD_BACKEND_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy on prod (gated build → check → swap → migrate)
+        env:
+          SSHOPTS: "-i /tmp/eic_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+          REF: ${{ github.event.inputs.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ssh $SSHOPTS "ubuntu@${PROD_BACKEND_IP}" REF="${REF}" GH_TOKEN="${GH_TOKEN}" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /opt/alpha-finance
+          echo "::group::checkout ${REF}"
+          # .git is owned by ubuntu — run git as ubuntu (NOT sudo/root, which has
+          # no GitHub key). Fall back to HTTPS + Actions token if SSH fetch fails.
+          ORIG_URL=$(git remote get-url origin)
+          if ! git fetch origin --prune 2>/dev/null; then
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/alphadirectinsurance/alpha-finance.git"
+            git fetch origin --prune
+            git remote set-url origin "$ORIG_URL"
+          fi
+          git checkout "${REF}" 2>/dev/null || git checkout -B "${REF}" "origin/${REF}"
+          git reset --hard "origin/${REF}"
+          git log --oneline -1
+          echo "::endgroup::"
+          echo "::group::build backend"
+          # Stamp the image with the commit it is. Without this the health
+          # endpoint answers "commit": "unknown", and the drift check — the
+          # alarm for "merged but never live" — cannot compare anything and
+          # gives up before it starts. Measured on prod 11-Sep: it was
+          # answering "unknown", because only the blue/green script passed
+          # these and this path did not.
+          sudo docker compose --env-file /etc/alpha-finance/.env build \
+            --build-arg GIT_SHA="$(git -C /opt/alpha-finance rev-parse HEAD)" \
+            --build-arg BUILD_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            backend
+          echo "::endgroup::"
+          echo "::group::GATE manage.py check (new image, prod untouched if this fails)"
+          # -T + </dev/null: do NOT let `run` consume the rest of this heredoc on stdin.
+          sudo docker compose --env-file /etc/alpha-finance/.env run --rm -T backend python manage.py check </dev/null
+          echo "::endgroup::"
+          echo "::group::swap + migrate"
+          sudo docker compose --env-file /etc/alpha-finance/.env up -d --force-recreate --no-deps backend
+          sleep 12
+          sudo docker exec alpha-finance-backend python manage.py migrate --noinput
+          sudo docker exec alpha-finance-backend python manage.py showmigrations healthcare
+          echo "::endgroup::"
+          echo "::group::route diagnostics (informational — never gates the deploy)"
+          sudo docker exec alpha-finance-backend python manage.py shell -c "import healthcare.vendor_views; from django.urls import resolve; print('vendor_views import OK'); print('RESOLVE', resolve('/api/v1/health/vendor-onboarding/submit/').view_name)" </dev/null || true
+          echo "::endgroup::"
+          echo "::group::frontend build + swap (next build)"
+          sudo docker compose --env-file /etc/alpha-finance/.env build frontend
+          sudo docker compose --env-file /etc/alpha-finance/.env up -d --force-recreate --no-deps frontend
+          sleep 8
+          sudo docker compose --env-file /etc/alpha-finance/.env ps
+          echo "::endgroup::"
+          echo "::group::record the release in the CFO build log"
+          # This workflow does its own build + up and never runs
+          # infra/host/deploy-zero-downtime.sh, so while the recording lived only
+          # inside that script a deploy from here went unrecorded and the Build
+          # Log's "Finished today" band stayed empty. Same shared script every
+          # other deploy path calls; it can never fail a deploy (always exits 0).
+          sudo RR_DC="docker compose --env-file /etc/alpha-finance/.env" \
+            bash infra/host/record-release.sh || true
+          echo "::endgroup::"
+          REMOTE
+
+      - name: Smoke probe (auth gate + health)
+        run: |
+          set -euo pipefail
+          gate=$(curl -sk -o /dev/null -w "%{http_code}" -X POST \
+            https://omni.alphadirect.co.bw/api/v1/health/vendor-onboarding/submit/ || echo 000)
+          health=$(curl -sk -o /dev/null -w "%{http_code}" https://omni.alphadirect.co.bw/ || echo 000)
+          page=$(curl -sk -o /dev/null -w "%{http_code}" https://omni.alphadirect.co.bw/health/vendor-onboarding || echo 000)
+          echo "vendor-onboarding/submit (unauth) -> $gate  (expect 401 or 403)"
+          echo "vendor-onboarding PAGE -> $page  (expect 200 SPA shell)"
+          echo "site health -> $health"
+          # Audit 2026-06-11: this probe used to only echo WARN, so a broken
+          # deploy (500 / 000 / unexpected auth state) still reported green.
+          # It now FAILS the job so a bad swap is caught instead of shipped.
+          fail=0
+          case "$gate"   in 401|403)     echo "auth gate OK";;     *) echo "FAIL: auth gate returned $gate";   fail=1;; esac
+          case "$page"   in 200|307|308) echo "page OK";;          *) echo "FAIL: page returned $page";        fail=1;; esac
+          case "$health" in 200|307|308) echo "site health OK";;   *) echo "FAIL: site health returned $health"; fail=1;; esac
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Smoke probe failed — deploy is unhealthy. Investigate before relying on prod."
+            exit 1
+          fi
+          echo "Smoke probe passed."

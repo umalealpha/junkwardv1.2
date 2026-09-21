@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon background. These two colours are sampled from the opposite
+  corners of the store-listing artwork (APP ICON (512x512).png), so the flat
+  background meets the artwork's own edge without a visible seam.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:startColor="#F6FBFF"
+        android:endColor="#D5DEE7"
+        android:type="linear" />
+</shape>

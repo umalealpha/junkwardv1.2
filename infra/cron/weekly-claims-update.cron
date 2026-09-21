@@ -1,0 +1,27 @@
+# Weekly CLAIMS UPDATE to the recipient list Finance keep.
+#
+# WHY (B1, requested by Bokani Makosha): Finance rebuilt this every week out of
+# the Graphite "Claims As On Date (Inception-to-Date)" export — paste, derive the
+# group from the policy number, pivot by month reported, total the reserve and
+# payment columns, email it. The export and the email are mechanical.
+#
+# 05:00 UTC MONDAY = 07:00 Monday in Gaborone (Botswana never observes DST, so
+# this offset is fixed year-round) — the CFO's decision, so the position is on
+# Finance's desk when they start the week. Day-of-week 1 is Monday.
+#
+# NOT a date-of-loss report. The month is the month the claim was REPORTED.
+#
+# omni-manage, NOT `docker compose exec`: the raw form was retired on 2026-09-04
+# after a cron ran mid blue/green flip and the company lost a day's attendance
+# record. The wrapper waits for a healthy container instead of writing into a
+# dying one.
+#
+# Read-only. It SELECTs from the Graphite claims mirror and sends an email. It
+# raises no payment, changes no claim and moves no money. It exits NON-ZERO when
+# the mirror is unreadable, when no claim has ever had its detail synced (every
+# money figure would be zero and it would read as a quiet month), or when the
+# recipient list is empty — so a broken Monday never looks like a calm one.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 5 * * 1 root /usr/local/bin/omni-manage send_weekly_claims_report >> /var/log/alpha-finance/weekly-claims-update.log 2>&1

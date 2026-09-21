@@ -1,0 +1,10 @@
+# Evening ADH Service-Provider dashboard — every day 16:00 UTC (18:00 CAT / Botswana).
+# Emails EXCO (CC) + the CEO & COO by name a branded glance-and-act dashboard of
+# the provider network, and sends a short WhatsApp summary to the exec contacts.
+# Gated on PROVIDER_DASHBOARD_ENABLED (default true) and PROVIDER_DASHBOARD_TO in
+# /etc/alpha-finance/.env — change recipients without a code deploy.
+# Drop into /etc/cron.d/ on the omni EC2 (sudo cp + chmod 644). Clock is UTC.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+0 16 * * * root cd /opt/alpha-finance && /usr/bin/docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py send_provider_dashboard >> /var/log/alpha-finance/exec-provider-dashboard.log 2>&1
