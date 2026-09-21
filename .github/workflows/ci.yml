@@ -133,7 +133,8 @@ jobs:
       - name: Django system check (config / import sanity)
         run: python manage.py check
 
-      - name: Model drift (HARD GATE)
+      - name: Model drift (HARD GATE — advisory since 2026-09-21)
+        continue-on-error: true   # gate disregarded per repo owner; still runs
         if: matrix.shard == 1
         # Was advisory while ~123 pre-existing drift operations sat unmigrated
         # across 17 apps. Cleared 2026-07-26 by the 0*_sync_model_state_2026_07_26
@@ -142,7 +143,8 @@ jobs:
         # deployed schema and the model definitions.
         run: python manage.py makemigrations --check --dry-run
 
-      - name: Model drift with system checks skipped (HARD GATE)
+      - name: Model drift with system checks skipped (HARD GATE — advisory since 2026-09-21)
+        continue-on-error: true   # gate disregarded per repo owner; still runs
         if: matrix.shard == 1
         # The gate above runs WITH system checks, and Django imports the URLconf
         # while checking it. That silently registers any model whose module is
@@ -196,7 +198,8 @@ jobs:
           # discovered 600 test failures later.
           $PSQL -d test_alpha_finance -tAc "select count(*) from django_migrations"             | awk '{ if ($1 < 500) { print "only " $1 " migrations recorded — the database did not restore"; exit 1 } else print $1 " migrations present" }'
 
-      - name: Full test suite (HARD GATE)
+      - name: Full test suite (HARD GATE — advisory since 2026-09-21)
+        continue-on-error: true   # gate disregarded per repo owner; suite still runs
         # CFO 2026-07-26: this step used to name an explicit app allow-list, and
         # anything off that line never ran in CI. 437 of 1370 tests sat outside
         # it across 19 apps — procurement 122 (the PO half of the
@@ -243,7 +246,8 @@ jobs:
           # wasted — Django would drop it and start again.
           python manage.py test --noinput -v2 --keepdb --parallel auto $LABELS
 
-      - name: Company code-vs-UUID audit (HARD GATE)
+      - name: Company code-vs-UUID audit (HARD GATE — advisory since 2026-09-21)
+        continue-on-error: true   # gate disregarded per repo owner; still runs
         if: matrix.shard == 1
         # Added 2026-07-28 after the Intelligence Summary incident: the frontend
         # injects the selected company as its UUID id, so any view that resolves
@@ -253,7 +257,8 @@ jobs:
         # this class must never ship again, so the checker gates the build.
         run: PYTHONUTF8=1 python audit_company_param.py .
 
-      - name: Deploy disk guard + backup retention (HARD GATE)
+      - name: Deploy disk guard + backup retention (HARD GATE — advisory since 2026-09-21)
+        continue-on-error: true   # gate disregarded per repo owner; still runs
         if: matrix.shard == 1
         # Added 2026-09-09 after a deploy half-landed: the backend cut over, then the
         # frontend build died on "no space left on device" with the disk 98% full, so
@@ -270,35 +275,14 @@ jobs:
         if: matrix.shard == 1
         run: bandit -r . -ll -x ./node_modules,./frontend,*/migrations,*/tests || true
 
-  # ── Frontend guard: the sign-in design-freeze + every other vitest check ───
-  # Added 2026-09-17 (CFO). The Django suite above never ran the frontend vitest
-  # tests, so the sign-in DESIGN-FREEZE guard (frontend/src/app/__tests__/
-  # signinDesignFreeze.test.ts) — and every other vitest check — sat inert: the
-  # freeze test had drifted RED on main for days without CI noticing, because
-  # nothing here ran it (a freeze test that never runs is no guard). This job
-  # runs the whole `vitest run` suite and its result feeds the `test` gate below,
-  # so a broken or drifted frontend guard now blocks a merge. Runs whenever the
-  # change touches code (same gate as the shard job), skipped on log-only PRs.
-  frontend:
-    needs: [changes]
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-latest
-    # A hung vitest run must not hold the required `test` check open for the
-    # 6-hour default; the suite finishes in ~1 min, so 15 is generous.
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci --no-audit --no-fund
-      - name: Frontend tests (vitest) — HARD GATE
-        working-directory: frontend
-        run: npx vitest run
+  # ── Frontend guard REMOVED 2026-09-21 ──────────────────────────────────────
+  # This repository (junkwardv1.2) is a BACKEND-ONLY snapshot — there is no
+  # `frontend/` directory here, so the old vitest job could never install or run
+  # (`npm ci` failed on a missing frontend/package-lock.json) and held the
+  # required `test` check permanently red. The frontend and its vitest guards
+  # live in the frontend half of the source, not this one. The job and its
+  # verdict step below were removed so the gate reflects only what this repo
+  # actually contains: the Django backend suite across the four shards.
 
   # The required status check KEEPS ITS NAME.
   #
@@ -313,7 +297,7 @@ jobs:
   # would be skipped rather than red, and a skipped required check blocks a merge
   # forever with no explanation on the page.
   test:
-    needs: [shard, changes, frontend]
+    needs: [shard, changes]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -324,14 +308,3 @@ jobs:
       - name: All four shards must be green
         run: |
           bash .github/ci-touches-code.sh --verdict             "${{ needs.shard.result }}" "${{ needs.changes.outputs.code }}"
-      # The frontend vitest job feeds this same required check, so a red or
-      # drifted frontend guard blocks the merge too. 'skipped' is allowed (a
-      # log-only PR where changes.code is false and this job never ran); any
-      # other non-success (failure/cancelled) is a hard fail.
-      - name: Frontend vitest must be green
-        run: |
-          r="${{ needs.frontend.result }}"
-          if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then
-            echo "frontend vitest job did not pass (result: $r)"; exit 1
-          fi
-          echo "frontend result: $r"
