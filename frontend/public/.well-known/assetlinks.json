@@ -1,0 +1,18 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.alphadirect.rewardshealth",
+      "sha256_cert_fingerprints": ["7D:98:7E:79:57:87:21:EA:A8:99:EE:14:9F:93:88:40:85:28:78:2A:6F:B1:81:A0:31:D6:B0:6D:44:33:15:CF"]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "co.bw.alphadirect.omnistaff",
+      "sha256_cert_fingerprints": ["4F:F8:2D:15:88:21:5C:0E:F0:BF:F9:3E:02:76:88:EE:EE:AE:43:39:EE:57:C8:42:FD:21:1C:44:08:E3:F6:72"]
+    }
+  }
+]

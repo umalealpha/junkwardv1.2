@@ -1,0 +1,17 @@
+{
+  "name": "Alpha Nexus",
+  "short_name": "Alpha Nexus",
+  "description": "Alpha Direct customer app — Nexus drive rewards, loyalty points and the Alpha Thrive wellness scan. Not a medical diagnosis.",
+  "id": "/m",
+  "start_url": "/m",
+  "scope": "/m",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D1B2A",
+  "theme_color": "#0D1B2A",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

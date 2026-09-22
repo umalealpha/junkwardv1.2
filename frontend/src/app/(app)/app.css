@@ -1,0 +1,108 @@
+/* Omni staff app motion — transform/opacity only, ease-out-expo, 150–250 ms.
+ * Inline styles cannot express :active, so the press state lives here. */
+.oa-press {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.oa-press:active { transform: scale(0.98); }
+.oa-press:focus-visible { outline: 3px solid #F4A623; outline-offset: 2px; }
+.oa-rise { animation: oa-rise 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.oa-rise-2 { animation-delay: 40ms; }
+.oa-rise-3 { animation-delay: 80ms; }
+@keyframes oa-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.oa-spin { animation: oa-spin 800ms linear infinite; }
+@keyframes oa-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .oa-press, .oa-rise, .oa-spin { transition: none; animation: none; }
+}
+
+/* Public staff privacy notice (/app/privacy) — a real table on a wide screen,
+ * stacked label/value rows under 560px so three columns of prose stay readable
+ * on a 390px phone. Explicit ARIA roles on the markup keep table semantics when
+ * display:block breaks the implicit ones. */
+.pv-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; line-height: 1.55; }
+.pv-table th, .pv-table td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid #E8EBEF; }
+.pv-table th { font-family: "Book Antiqua", "Palatino Linotype", Palatino, Georgia, serif; font-weight: 700; color: #111827; background: #F6F7F9; }
+.pv-table td { color: #5B6068; }
+@media (max-width: 560px) {
+  .pv-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .pv-table, .pv-table tbody, .pv-table tr, .pv-table td { display: block; width: 100%; }
+  .pv-table tr { border: 1px solid #E8EBEF; border-radius: 14px; padding: 6px 2px; margin-bottom: 12px; background: #F6F7F9; }
+  .pv-table td { border-bottom: 0; padding: 8px 12px; }
+  .pv-table td::before { content: attr(data-label); display: block;
+    font-family: "Book Antiqua", "Palatino Linotype", Palatino, Georgia, serif; font-weight: 700;
+    font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #111827; margin-bottom: 2px; }
+  .pv-table td:first-child { color: #111827; font-weight: 600; }
+}
+
+/* Alpha Omni intro (Intro.tsx) — the hand draws itself wrist → fingertip, then
+ * touches the mark. All motion is transform/opacity/dash only. Under reduced
+ * motion every piece shows its finished state at once. */
+.oi-bokeh { position: absolute; border-radius: 50%; filter: blur(22px); pointer-events: none; }
+@keyframes oiDriftA { from { transform: translate(0, 0) scale(1); } to { transform: translate(18px, -26px) scale(1.15); } }
+@keyframes oiDriftB { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-22px, 18px) scale(0.9); } }
+@keyframes oiDriftC { from { transform: translate(0, 0) scale(0.95); } to { transform: translate(-16px, -20px) scale(1.12); } }
+.oi-wire { animation: oiDraw 520ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes oiDraw { to { stroke-dashoffset: 0; } }
+.oi-node { opacity: 0; animation: oiNode 380ms ease-out both; }
+@keyframes oiNode { 0% { opacity: 0; transform: scale(0.2); transform-box: fill-box; transform-origin: center; }
+                    60% { opacity: 1; transform: scale(1.6); transform-box: fill-box; transform-origin: center; }
+                    100% { opacity: 1; transform: scale(1); transform-box: fill-box; transform-origin: center; } }
+.oi-node-hot { animation: oiNode 380ms ease-out both, oiPulse 1.8s ease-in-out 2.6s infinite; }
+@keyframes oiPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.oi-tip { opacity: 0; animation: oiTip 700ms ease-out both; }
+@keyframes oiTip { from { opacity: 0; transform: scale(0.3); transform-box: fill-box; transform-origin: center; }
+                   to { opacity: 1; transform: scale(1); transform-box: fill-box; transform-origin: center; } }
+.oi-ring { opacity: 0; animation: oiRing 1100ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes oiRing { 0% { opacity: 0.9; transform: scale(1); transform-box: fill-box; transform-origin: center; }
+                    100% { opacity: 0; transform: scale(9); transform-box: fill-box; transform-origin: center; } }
+.oi-signal { opacity: 0; animation: oiSignalIn 300ms ease-out both, oiSignalFlow 700ms linear infinite; }
+@keyframes oiSignalIn { to { opacity: 0.9; } }
+@keyframes oiSignalFlow { to { stroke-dashoffset: -9; } }
+.oi-mark { opacity: 0; animation: oiMark 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes oiMark { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+.oi-word { opacity: 0; animation: oiRise 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes oiRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.oi-status { animation: oiFade 400ms ease-out both; }
+@keyframes oiFade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .oi-bokeh { animation: none; }
+  .oi-wire { animation: none; stroke-dashoffset: 0 !important; }
+  .oi-node, .oi-node-hot, .oi-tip, .oi-ring, .oi-signal, .oi-mark, .oi-word, .oi-status { animation: none; opacity: 1; }
+  .oi-ring { opacity: 0; }
+}
+
+/* Intro data pulse — a short orange dash runs a hot spoke into the core. */
+.oi-pulse { opacity: 0; animation: oiPulseRun 900ms cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+@keyframes oiPulseRun { 0% { opacity: 0; stroke-dashoffset: 0; } 15% { opacity: 0.95; } 100% { opacity: 0; stroke-dashoffset: -160; } }
+@media (prefers-reduced-motion: reduce) { .oi-pulse { animation: none; opacity: 0; } }
+
+/* ⛔ FROZEN — Alpha Omni splash (Intro.tsx), the CFO's supplied design of
+ * 2026-09-08 (artboard "2a — Orbit, white ground"). These keyframes and
+ * durations are the design's own; do not retune them. All motion is
+ * transform/opacity/width only. Under reduced motion every piece shows its
+ * finished state at once and nothing turns. */
+.om-spin-14    { animation: om-spin 14s linear infinite; }
+.om-spin-11    { animation: om-spin 11s linear infinite; }
+.om-spinrev-9  { animation: om-spinrev 9s linear infinite; }
+.om-spinrev-17 { animation: om-spinrev 17s linear infinite; }
+.om-pulsering  { animation: om-pulsering 5.5s ease-out infinite; }
+.om-breathe    { animation: om-breathe 7s ease-in-out infinite; }
+.om-dot        { animation: om-dot 2.2s ease-in-out infinite; }
+.om-fadeup-word { animation: om-fadeup 1.2s ease-out both; }
+.om-fadeup-tag  { animation: om-fadeup 1.4s ease-out 0.25s both; }
+@keyframes om-spin { to { transform: rotate(360deg); } }
+@keyframes om-spinrev { to { transform: rotate(-360deg); } }
+@keyframes om-pulsering { from { transform: scale(0.8); opacity: 0.5; } to { transform: scale(1.85); opacity: 0; } }
+@keyframes om-breathe { 0%, 100% { transform: scale(1); opacity: 0.45; } 50% { transform: scale(1.12); opacity: 0.85; } }
+@keyframes om-dot { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes om-fadeup { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .om-spin-14, .om-spin-11, .om-spinrev-9, .om-spinrev-17,
+  .om-pulsering, .om-breathe, .om-dot { animation: none; }
+  .om-pulsering { opacity: 0; }
+  .om-fadeup-word, .om-fadeup-tag { animation: none; opacity: 1; transform: none; }
+}

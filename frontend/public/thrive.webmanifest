@@ -1,0 +1,17 @@
+{
+  "name": "Alpha Thrive",
+  "short_name": "Thrive",
+  "description": "Alpha Direct wellness check-in — a finger pulse scan for heart rate, stress and breathing, with rewards. Not a medical diagnosis.",
+  "id": "/thrive",
+  "start_url": "/thrive",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D1B2A",
+  "theme_color": "#0D1B2A",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

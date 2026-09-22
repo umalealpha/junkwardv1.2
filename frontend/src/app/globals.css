@@ -1,0 +1,1154 @@
+@import "tailwindcss";
+
+/* Dark-mode scoping (QC 2026-08-17): Tailwind v4 defaults `dark:` utilities to
+   `prefers-color-scheme`, so pages using dark:bg-* went dark whenever the user's
+   OS was in dark mode — even on the light Professional theme (the "dark navy
+   panel in light mode" the QC photographed). Bind `dark:` to the app's own Fun
+   (dark) theme instead, so the in-app theme switch is the only thing that turns
+   dark surfaces on. Light / Professional / Heavenly stay light regardless of OS. */
+@custom-variant dark (&:where(html.theme-fun, html.theme-fun *));
+
+/* ─── Alpha Direct Design System — CSS Custom Properties ────────────────────── */
+@theme {
+  /* Brand Colors */
+  --color-ad-navy:          #0B0B3B;
+  --color-ad-navy-light:    #1A1A5E;
+  --color-ad-navy-dark:     #07074E;
+  --color-ad-navy-50:       #EDEDF5;
+  --color-ad-navy-100:      #D4D4E8;
+
+  --color-ad-orange:        #F07F00;
+  --color-ad-orange-dark:   #CC6C00;
+  --color-ad-orange-light:  #FF9A2E;
+  --color-ad-orange-50:     #FFF7ED;
+  --color-ad-orange-100:    #FFEDD5;
+
+  /* Font — CFO directive 2026-05-17: Book Antiqua across the whole ERP.
+     Falls back to Palatino on macOS, URW Palladio L on Linux, then a
+     generic serif. Browsers without any of these will still render a
+     serif face (visually similar). */
+  --font-sans: 'Book Antiqua', 'Palatino Linotype', Palatino, 'URW Palladio L', Georgia, serif;
+  --font-book-antiqua: 'Book Antiqua', 'Palatino Linotype', Palatino, 'URW Palladio L', Georgia, serif;
+
+  /* Shadows */
+  --shadow-card:       0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg:         0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --animate-fade-in: fadeIn 0.2s ease-in-out;
+  --animate-slide-in: slideIn 0.2s ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideIn {
+    from { transform: scale(0.95) translateY(-4px); opacity: 0; }
+    to   { transform: scale(1)    translateY(0);    opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+}
+
+/* ─── Alpha Direct CSS Custom Properties ────────────────────────────────────── */
+:root {
+  /* Primary Brand */
+  --ad-navy:          #0B0B3B;
+  --ad-navy-light:    #1A1A5E;
+  --ad-navy-dark:     #07074E;
+  --ad-navy-50:       #EDEDF5;
+  --ad-navy-100:      #D4D4E8;
+
+  --ad-orange:        #F07F00;
+  --ad-orange-dark:   #CC6C00;
+  --ad-orange-light:  #FF9A2E;
+  --ad-orange-50:     #FFF7ED;
+  --ad-orange-100:    #FFEDD5;
+
+  /* Neutrals */
+  --ad-white:         #FFFFFF;
+  --ad-gray-50:       #F9FAFB;
+  --ad-gray-100:      #F3F4F6;
+  --ad-gray-200:      #E5E7EB;
+  --ad-gray-300:      #D1D5DB;
+  --ad-gray-400:      #9CA3AF;
+  --ad-gray-500:      #686F7D;  /* muted-label role: 4.54:1 on --ad-gray-100 (#6B7280 was 4.35:1) */
+  --ad-gray-600:      #4B5563;
+  --ad-gray-700:      #374151;
+  --ad-gray-800:      #1F2937;
+  --ad-gray-900:      #111827;
+
+  /* Semantic Status */
+  --ad-success:       #059669;
+  --ad-success-bg:    #ECFDF5;
+  --ad-success-light: #D1FAE5;
+
+  --ad-warning:       #AE6005;  /* 4.53:1 on --ad-warning-bg (#D97706 was 3.07:1) */
+  --ad-warning-bg:    #FFFBEB;
+  --ad-warning-light: #FEF3C7;
+
+  --ad-error:         #DC2626;
+  --ad-error-bg:      #FEF2F2;
+  --ad-error-light:   #FEE2E2;
+
+  --ad-info:          #2563EB;
+  --ad-info-bg:       #EFF6FF;
+  --ad-info-light:    #DBEAFE;
+
+  /* Functional Tokens */
+  --ad-bg-page:       var(--ad-gray-50);
+  --ad-bg-card:       var(--ad-white);
+  --ad-bg-sidebar:    var(--ad-navy);
+  --ad-bg-topbar:     var(--ad-white);
+  --ad-bg-modal:      var(--ad-white);
+  --ad-bg-hover:      var(--ad-orange-50);
+  --ad-bg-selected:   var(--ad-warning-light);
+  --ad-bg-table-head: var(--ad-gray-100);
+  --ad-bg-table-alt:  var(--ad-gray-50);
+
+  --ad-text-primary:   var(--ad-gray-900);
+  --ad-text-secondary: var(--ad-gray-500);
+  --ad-text-heading:   var(--ad-navy);
+  --ad-text-label:     var(--ad-gray-700);
+  --ad-text-muted:     var(--ad-gray-400);
+  --ad-text-link:      var(--ad-orange);
+  --ad-text-error:     var(--ad-error);
+
+  --ad-border:        var(--ad-gray-200);
+  --ad-border-input:  var(--ad-gray-300);
+  --ad-border-focus:  var(--ad-orange);
+
+  --ad-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ad-shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --ad-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  /* Chart Colors */
+  --ad-chart-1: #0B0B3B;
+  --ad-chart-2: #F07F00;
+  --ad-chart-3: #3B82F6;
+  --ad-chart-4: #10B981;
+  --ad-chart-5: #8B5CF6;
+  --ad-chart-6: #F59E0B;
+  --ad-chart-7: #EF4444;
+  --ad-chart-8: #06B6D4;
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  /* BUG-007 (Oprah QA, 2026-06-08): large blank gap appears when scrolling long
+     list pages (Journal Entries, Trial Balance) — Chrome scroll-anchoring fights
+     the sticky table headers. Disable scroll anchoring app-wide so the viewport
+     no longer jumps/leaves a blank band on fast scroll. */
+  overflow-anchor: none;
+}
+
+body {
+  height: 100%;
+  overflow-anchor: none;
+  background-color: var(--ad-gray-50);
+  color: var(--ad-gray-900);
+  /* CFO directive 2026-05-22: Book Antiqua across EVERYTHING including
+     buttons, inputs, dropdowns. Legacy rule pinned 'Inter' here which
+     overrode the Tailwind font-sans + --font-sans variable. */
+  font-family: var(--font-sans), 'Book Antiqua', 'Palatino Linotype', Palatino, Georgia, serif;
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force-inherit for form elements — browsers default to system UI for
+   button / input / select / textarea, ignoring body font. */
+button, input, select, textarea, optgroup {
+  font-family: inherit;
+  font-feature-settings: inherit;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ad-gray-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ad-gray-300);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ad-gray-400);
+}
+
+/* ─── Focus Styles ───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--ad-orange);
+  outline-offset: 2px;
+}
+
+/* ─── Links ──────────────────────────────────────────────────────────────────── */
+a {
+  color: var(--ad-orange-dark);
+  transition: color 150ms ease;
+}
+a:hover {
+  color: var(--ad-orange);
+}
+
+/* ─── Skeleton Animation ─────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ─── Table utilities ────────────────────────────────────────────────────────── */
+.table-row-alt:nth-child(even) {
+  background-color: var(--ad-gray-50);
+}
+
+/* ─── Financial number formatting ───────────────────────────────────────────── */
+.font-mono-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* ─── Display font (Book Antiqua family) ────────────────────────────────────── */
+/* Renders Book Antiqua on Windows, Palatino on macOS (visually identical) —
+ * a classic serif for hero greetings, big numbers, and section headings.
+ * Falls back to Georgia / serif if neither is installed.
+ */
+.font-display {
+  font-family: 'Book Antiqua', 'Palatino', 'Palatino Linotype', 'Palatino LT STD', Georgia, 'Times New Roman', serif;
+  font-feature-settings: 'liga', 'kern';
+  letter-spacing: -0.01em;
+}
+.font-display-tight {
+  font-family: 'Book Antiqua', 'Palatino', 'Palatino Linotype', 'Palatino LT STD', Georgia, 'Times New Roman', serif;
+  font-feature-settings: 'liga', 'kern', 'tnum';
+  letter-spacing: -0.025em;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+.animate-slide-in {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* ─── Card hover ─────────────────────────────────────────────────────────────── */
+.card-hover {
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.card-hover:hover {
+  box-shadow: var(--ad-shadow-lg);
+  transform: translateY(-1px);
+}
+
+/* ─── Sidebar active item ────────────────────────────────────────────────────── */
+.sidebar-item-active {
+  background: rgba(240, 127, 0, 0.15);
+  border-left: 3px solid var(--ad-orange);
+  color: #FFFFFF;
+}
+.sidebar-item-hover:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Fun (Dark) Theme Overrides ─────────────────────────────────────────────── */
+html.theme-fun {
+  --ad-navy:          #E0E7FF;
+  --ad-navy-light:    #C4B5FD;
+  --ad-navy-50:       #1E1B4B;
+  --ad-navy-100:      #2D2D7A;
+
+  --ad-orange:        #FF9F2E;
+  --ad-orange-dark:   #FF9F2E;
+  --ad-orange-light:  #FFB84D;
+  --ad-orange-50:     #1A1050;
+  --ad-orange-100:    #251860;
+
+  --ad-white:         #151555;
+  --ad-gray-50:       #121245;
+  --ad-gray-100:      #1A1A5E;
+  --ad-gray-200:      #2D2D7A;
+  --ad-gray-300:      #3D3D9A;
+  --ad-gray-400:      #8B7FD4;
+  --ad-gray-500:      #C4B5FD;
+  --ad-gray-600:      #C4B5FD;
+  --ad-gray-700:      #E0E7FF;
+  --ad-gray-800:      #E8E0FF;
+  --ad-gray-900:      #FFFFFF;
+
+  --ad-success:       #4ADE80;
+  --ad-success-bg:    #052E16;
+  --ad-success-light: #064E3B;
+
+  --ad-warning:       #FDE047;
+  --ad-warning-bg:    #3B2504;
+  --ad-warning-light: #4D3806;
+
+  --ad-error:         #FB7185;
+  --ad-error-bg:      #4C0519;
+  --ad-error-light:   #701030;
+
+  --ad-info:          #818CF8;
+  --ad-info-bg:       #1E1B4B;
+  --ad-info-light:    #2D2770;
+
+  --ad-bg-page:       #0A0A30;
+  --ad-bg-card:       #151555;
+  --ad-bg-sidebar:    #0D0D42;
+  --ad-bg-topbar:     #13134D;
+  --ad-bg-modal:      #151555;
+  --ad-bg-hover:      #1A1A5E;
+  --ad-bg-selected:   #251860;
+  --ad-bg-table-head: #1A1A5E;
+  --ad-bg-table-alt:  #121245;
+
+  --ad-text-primary:   #FFFFFF;
+  --ad-text-secondary: #C4B5FD;
+  --ad-text-heading:   #E0E7FF;
+  --ad-text-label:     #E0E7FF;
+  --ad-text-muted:     #8B7FD4;
+  --ad-text-link:      #FF9F2E;
+  --ad-text-error:     #FB7185;
+
+  --ad-border:        #2D2D7A;
+  --ad-border-input:  #3D3D9A;
+  --ad-border-focus:  #FF9F2E;
+
+  --ad-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ad-shadow-md: 0 2px 12px rgba(240, 127, 0, 0.12);
+  --ad-shadow-lg: 0 4px 20px rgba(240, 127, 0, 0.18);
+}
+
+html.theme-fun body {
+  background-color: #0A0A30;
+  color: #FFFFFF;
+}
+
+html.theme-fun .skeleton {
+  background: linear-gradient(90deg, #1A1A5E 25%, #2D2D7A 50%, #1A1A5E 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+html.theme-fun .table-row-alt:nth-child(even) {
+  background-color: #121245;
+}
+
+html.theme-fun ::-webkit-scrollbar-track {
+  background: #0D0D42;
+}
+html.theme-fun ::-webkit-scrollbar-thumb {
+  background: #2D2D7A;
+}
+html.theme-fun ::-webkit-scrollbar-thumb:hover {
+  background: #3D3D9A;
+}
+
+/* ─── Fun Mode — Hardcoded-color overrides ──────────────────────────────────── */
+/* Text colors */
+html.theme-fun .text-\[\#111827\] { color: #FFFFFF !important; }
+html.theme-fun .text-\[\#374151\] { color: #E0E7FF !important; }
+html.theme-fun .text-\[\#6B7280\] { color: #C4B5FD !important; }
+html.theme-fun .text-\[\#9CA3AF\] { color: #8B7FD4 !important; }
+html.theme-fun .text-\[\#0B0B3B\] { color: #E0E7FF !important; }
+html.theme-fun .text-\[\#CC6C00\] { color: #FF9F2E !important; }
+html.theme-fun .text-\[\#1F2937\] { color: #E0E7FF !important; }
+html.theme-fun .text-\[\#4B5563\] { color: #C4B5FD !important; }
+html.theme-fun .text-\[\#DC2626\] { color: #FB7185 !important; }
+html.theme-fun .text-\[\#059669\] { color: #4ADE80 !important; }
+html.theme-fun .text-\[\#2563EB\] { color: #818CF8 !important; }
+html.theme-fun .text-\[\#D97706\] { color: #FDE047 !important; }
+
+/* Backgrounds */
+html.theme-fun .bg-\[\#F3F4F6\] { background-color: #1A1A5E !important; }
+html.theme-fun .bg-\[\#F9FAFB\] { background-color: #121245 !important; }
+html.theme-fun .bg-white { background-color: #151555 !important; }
+html.theme-fun .bg-\[\#FFFFFF\] { background-color: #151555 !important; }
+html.theme-fun .bg-\[\#FEF2F2\] { background-color: #4C0519 !important; }
+html.theme-fun .bg-\[\#ECFDF5\] { background-color: #052E16 !important; }
+html.theme-fun .bg-\[\#FFF7ED\] { background-color: #1A1050 !important; }
+html.theme-fun .bg-\[\#FFFBEB\] { background-color: #3B2504 !important; }
+html.theme-fun .bg-\[\#EFF6FF\] { background-color: #1E1B4B !important; }
+
+/* Borders */
+html.theme-fun .border-\[\#E5E7EB\] { border-color: #2D2D7A !important; }
+html.theme-fun .border-\[\#D1D5DB\] { border-color: #3D3D9A !important; }
+html.theme-fun .border-\[\#FEE2E2\] { border-color: #701030 !important; }
+html.theme-fun .border-\[\#FED7AA\] { border-color: #4D3806 !important; }
+html.theme-fun .border-\[\#A7F3D0\] { border-color: #064E3B !important; }
+html.theme-fun .border-\[\#BFDBFE\] { border-color: #2D2770 !important; }
+html.theme-fun .border-\[\#DDD6FE\] { border-color: #2D2D7A !important; }
+html.theme-fun .border-b-2.border-\[\#E5E7EB\] { border-color: #2D2D7A !important; }
+html.theme-fun .border-t-2.border-\[\#E5E7EB\] { border-color: #2D2D7A !important; }
+
+/* Divide */
+html.theme-fun .divide-\[\#E5E7EB\] > :not(:first-child) { border-color: #2D2D7A !important; }
+
+/* Hover states */
+html.theme-fun .hover\:bg-\[\#FFF7ED\]:hover { background-color: #1A1050 !important; }
+html.theme-fun .hover\:bg-\[\#F9FAFB\]:hover { background-color: #121245 !important; }
+html.theme-fun .hover\:text-\[\#F07F00\]:hover { color: #FF9F2E !important; }
+html.theme-fun .hover\:text-\[\#DC2626\]:hover { color: #FB7185 !important; }
+html.theme-fun .hover\:border-\[\#DC2626\]\/40:hover { border-color: rgba(251,113,133,0.4) !important; }
+
+/* Input fields */
+html.theme-fun input, html.theme-fun select, html.theme-fun textarea {
+  background-color: #151555;
+  color: #FFFFFF;
+  border-color: #3D3D9A;
+}
+html.theme-fun input::placeholder, html.theme-fun textarea::placeholder {
+  color: #8B7FD4;
+}
+
+/* ─── Print ──────────────────────────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body {
+    background: white;
+    color: black;
+  }
+}
+
+/* ─── Mobile (CFO directive 2026-05-16: iPhone + Samsung) ──────────────────── */
+@media (max-width: 767px) {
+  /* Stop the world from horizontally scrolling on phones. Any rogue wide
+     element gets contained at the body level. */
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Honour iOS safe-area inset so the bottom of pages isn't under the
+     home-indicator bar. */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Touch targets: tappable controls must be >= 44x44 CSS px per
+     Apple HIG / Android guidelines. */
+  button:not(.inline-link),
+  [role='button']:not(.inline-link),
+  a.btn,
+  a[role='button'] {
+    min-height: 44px;
+  }
+
+  /* Tables — wrap in horizontal-scroll container on phones. Opt out
+     with class .no-mobile-wrap. */
+  table:not(.no-mobile-wrap) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Reduce extreme display headings on mobile so they fit + read. */
+  .font-display-tight {
+    font-size: clamp(1.75rem, 7vw, 2.75rem);
+    line-height: 1.05;
+  }
+
+  /* Default page padding for dashboard sub-pages. */
+  .max-w-\[1400px\],
+  .max-w-\[1200px\] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Sidebar on mobile renders as a fixed drawer. Ensure dashboard content
+     never has md:ml-* applied on phones. */
+  main.flex-1 {
+    margin-left: 0 !important;
+  }
+}
+
+/* Phone landscape + small tablets: keep dashboard cards from over-stretching. */
+@media (max-width: 1023px) {
+  .dash-row > div {
+    min-height: 0;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * PREMIUM PASS — 2026-05-29 (CFO directive: "make the system look premium").
+ * Data-dense (Datadog/ClickHouse heritage) + the locked Alpha Direct
+ * palette (ad-navy + ad-orange + Book Antiqua). Aesthetic-only — never
+ * overrides FROZEN_NUMBERS or MA layout per prat-skill §10.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+html, body {
+  /* Tabular + lining figures globally so financial numbers align in every
+     table, tile and form. Antialiased font smoothing makes Book Antiqua
+     render crisp on retina. */
+  font-feature-settings: "tnum" 1, "lnum" 1, "ss01" 1, "kern" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Brand-orange selection highlight — small touch, big premium signal. */
+::selection {
+  background: #F07F00;
+  color: #ffffff;
+}
+
+/* Polished scrollbar — narrow, low-contrast, orange on hover. */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(11, 11, 59, 0.18);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgba(240, 127, 0, 0.55); background-clip: padding-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Focus ring tuned to brand orange — every input/button inherits this. */
+*:focus-visible {
+  outline: 2px solid #F07F00;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Premium utilities — opt in per component ───────────────────────── */
+
+/* 11px uppercase eyebrow used above tile titles, table sections, group
+   headers. Refined letter-spacing makes data-dense screens feel curated. */
+.eyebrow {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  color: rgba(11, 11, 59, 0.55);
+  font-feature-settings: "tnum" 1;
+}
+.eyebrow-on-dark {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Hairline divider in navy/10 — replaces the heavier gray-200 default. */
+.hairline       { border-color: rgba(11, 11, 59, 0.08) !important; }
+.hairline-dark  { border-color: rgba(255, 255, 255, 0.10) !important; }
+
+/* Data-dense tile (Datadog heritage): flat surface, 1px hairline,
+   4px radius, no shadow. The lift comes from an orange ring on hover. */
+.tile {
+  background: #ffffff;
+  border: 1px solid rgba(11, 11, 59, 0.08);
+  border-radius: 6px;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.tile:hover {
+  border-color: rgba(240, 127, 0, 0.45);
+}
+.tile-dark {
+  background: #0F0F46;        /* slightly lifted from ad-navy for surface */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-radius: 6px;
+  transition: border-color 160ms ease;
+}
+.tile-dark:hover { border-color: rgba(240, 127, 0, 0.65); }
+
+/* Numeric cell — tabular figures + slightly tighter tracking. Use on
+   any element rendering a monetary or count value. */
+.numeric {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.005em;
+}
+
+/* App shell variant — wraps dashboards in a slightly deeper navy so the
+   tiles "float". */
+.app-shell {
+  background: linear-gradient(180deg, #0B0B3B 0%, #0a0a31 100%);
+  color: #ffffff;
+}
+
+/* Premium primary button — orange fill with a slow shine on hover. */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #F07F00 0%, #D86E00 100%);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 1px 2px rgba(0,0,0,0.15);
+  transition: filter 160ms ease, transform 80ms ease;
+}
+.btn-premium:hover  { filter: brightness(1.04); }
+.btn-premium:active { transform: translateY(1px); filter: brightness(0.96); }
+.btn-premium::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 700ms ease;
+}
+.btn-premium:hover::after { transform: translateX(120%); }
+
+/* Subtle inset highlight on active sidebar items + premium glow. */
+[data-active="true"] {
+  box-shadow: inset 0 0 0 1px rgba(240, 127, 0, 0.35);
+}
+
+/* Reduced motion guard — silence the shimmer for users that opt out. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-premium::after { transition: none; }
+  *,*::before,*::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * FUTURISTIC PASS — 2026-06-02 (CFO directive: "super cool, futuristic,
+ * modern"). PURELY ADDITIVE + aesthetic. New opt-in classes + light glass /
+ * glow elevation of the existing .tile and .btn-premium. Brand-locked
+ * (ad-navy + ad-orange + Book Antiqua). Never alters layout, routes,
+ * FROZEN_NUMBERS or MA presentation. Respects prefers-reduced-motion.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Ambient aurora behind dashboard content — a slow, low-opacity navy/orange
+   gradient mesh. Fixed, pointer-events:none, sits BEHIND everything (z:0). */
+.aurora-surface { position: relative; }
+.aurora-surface::before {
+  content: "";
+  position: fixed;
+  inset: -20vmax;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38vmax 38vmax at 12% 8%,  rgba(240,127,0,0.10), transparent 60%),
+    radial-gradient(42vmax 42vmax at 88% 0%,  rgba(59,130,246,0.08), transparent 62%),
+    radial-gradient(50vmax 50vmax at 78% 92%, rgba(11,11,59,0.10),  transparent 60%),
+    radial-gradient(36vmax 36vmax at 4% 96%,  rgba(240,127,0,0.07), transparent 60%);
+  filter: blur(8px) saturate(1.05);
+  animation: auroraDrift 28s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift {
+  0%   { transform: translate3d(0,0,0) scale(1);     }
+  50%  { transform: translate3d(1.5%, -1%, 0) scale(1.04); }
+  100% { transform: translate3d(-1.5%, 1.5%, 0) scale(1.02); }
+}
+/* Fun (dark) theme — let the aurora glow a touch hotter on the deep navy. */
+html.theme-fun .aurora-surface::before {
+  background:
+    radial-gradient(40vmax 40vmax at 10% 6%,  rgba(255,159,46,0.16), transparent 60%),
+    radial-gradient(44vmax 44vmax at 90% 2%,  rgba(129,140,248,0.14), transparent 62%),
+    radial-gradient(52vmax 52vmax at 80% 94%, rgba(96,165,250,0.12),  transparent 60%),
+    radial-gradient(38vmax 38vmax at 2% 98%,  rgba(255,159,46,0.12),  transparent 60%);
+}
+
+/* Glass elevation on the data-dense tile — translucent surface, gradient
+   hairline border, soft depth, and a brand-orange glow on hover. Keeps the
+   6px radius + flat data-dense feel; just adds the futuristic sheen. */
+.tile {
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.86));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.6) inset,
+    0 8px 24px -16px rgba(11,11,59,0.35);
+}
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.7) inset,
+    0 16px 36px -18px rgba(240,127,0,0.45);
+}
+html.theme-fun .tile {
+  background: linear-gradient(180deg, rgba(21,21,85,0.72), rgba(15,15,70,0.66));
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 10px 30px -18px rgba(0,0,0,0.7);
+}
+
+/* Animated gradient ring — wrap any element to give it a rotating
+   orange→navy→blue border. Use for hero cards / KPI hovers. */
+.grad-ring {
+  position: relative;
+  border-radius: 12px;
+  background-clip: padding-box;
+}
+.grad-ring::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from 180deg,
+    #F07F00, #3B82F6, #0B0B3B, #F07F00);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0.55;
+  animation: ringSpin 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes ringSpin { to { transform: rotate(1turn); } }
+
+/* Glassmorphism card — opt-in. For hero panels / modals that want depth. */
+.glass-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.62));
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -28px rgba(11,11,59,0.5);
+}
+html.theme-fun .glass-card {
+  background: linear-gradient(180deg, rgba(30,27,75,0.62), rgba(15,15,70,0.5));
+  border: 1px solid rgba(129,140,248,0.22);
+}
+
+/* Brand-orange glow — opt-in on any focal element. */
+.glow-orange { box-shadow: 0 0 0 1px rgba(240,127,0,0.25), 0 0 28px -6px rgba(240,127,0,0.45); }
+
+/* Holographic KPI number — gradient-filled big figure. Keeps tabular
+   alignment via .numeric. Use only on display values, never on table cells. */
+.holo-num {
+  background: linear-gradient(120deg, #0B0B3B 0%, #F07F00 55%, #3B82F6 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+html.theme-fun .holo-num {
+  background: linear-gradient(120deg, #FFFFFF 0%, #FF9F2E 55%, #818CF8 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Premium button — add a soft orange glow so primary actions feel alive. */
+.btn-premium { box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 6px 20px -10px rgba(240,127,0,0.65); }
+
+/* Reduced motion: kill aurora + ring spin. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-surface::before, .grad-ring::after { animation: none !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * OMNI OBSIDIAN — premium redesign foundation (2026-06-12, CFO redesign pack).
+ * PURELY ADDITIVE: new tokens + new opt-in classes. Does NOT override the
+ * existing light theme, .glass-card, routes, data, or any figure. Screens opt
+ * in by using these classes. Respects prefers-reduced-motion.
+ * ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --obsidian-900: #080B12;
+  --obsidian-800: #0D1320;
+  --obsidian-700: #131B2C;
+  --obsidian-line: rgba(255,255,255,0.07);
+  --ad-orange-soft: rgba(240,127,0,0.14);
+  --ob-text-primary:   #EAF0FA;
+  --ob-text-secondary: #9FB0C7;
+  --ob-text-muted:     #5C6B82;
+  --positive: #34D399;
+  --negative: #F87171;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Full-bleed obsidian scene (Report a Bug chooser, future premium pages). */
+.obsidian-scene {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(60vmax 40vmax at 50% -10%, rgba(240,127,0,0.10), transparent 60%),
+    radial-gradient(50vmax 50vmax at 100% 100%, rgba(240,127,0,0.06), transparent 55%),
+    var(--obsidian-900);
+  color: var(--ob-text-primary);
+  overflow: hidden;
+}
+/* Faint drifting embers (very low opacity) — felt, not seen. */
+.obsidian-scene::before {
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0.5;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 30%, rgba(240,127,0,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 78% 18%, rgba(255,255,255,0.18), transparent),
+    radial-gradient(1.5px 1.5px at 64% 72%, rgba(240,127,0,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 28% 84%, rgba(255,255,255,0.12), transparent),
+    radial-gradient(1.5px 1.5px at 90% 60%, rgba(240,127,0,0.35), transparent);
+  animation: emberDrift 26s ease-in-out infinite alternate;
+}
+@keyframes emberDrift {
+  0%   { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(0,-14px,0); }
+}
+
+/* Glass panel for obsidian screens (does not touch the light .glass-card). */
+.ob-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.018) 100%);
+  border: 1px solid var(--obsidian-line);
+  border-radius: 20px;
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 30px 70px -32px rgba(0,0,0,0.7);
+}
+
+/* Pointer-tilt card (chooser). JS sets --rx/--ry; CSS applies the transform. */
+.tilt-card {
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .25s var(--ease-out), border-color .2s, box-shadow .2s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.tilt-card:hover {
+  border-color: rgba(240,127,0,0.45);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 40px 90px -30px rgba(240,127,0,0.28);
+}
+.tilt-float { animation: obFloat 5s ease-in-out infinite; }
+@keyframes obFloat { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-8px);} }
+.ob-glow-ring { box-shadow: 0 0 0 1px rgba(240,127,0,0.35), 0 0 30px -4px rgba(240,127,0,0.5); }
+
+/* Success check draw-in. */
+.ob-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: obDraw .6s var(--ease-out) forwards; }
+@keyframes obDraw { to { stroke-dashoffset: 0; } }
+
+/* Dashboard Banner (Dashboard Banner.dc.html — claude.ai/design import 2026-07-06) */
+@keyframes bnr-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bnr-shimmer { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+@keyframes bnr-glow { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .obsidian-scene::before, .tilt-float, .ob-check { animation: none !important; }
+  .tilt-card { transition: none !important; }
+  [style*="bnr-"] { animation: none !important; opacity: 1 !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * HEAVENLY THEME (theme #3, 2026-06-12) — airy sky-blue + white glass, black
+ * fonts, single sky-blue accent (NO orange). Light-based, so the app's
+ * hardcoded light Tailwind classes already read correctly; this block only
+ * (a) paints the sky gradient, (b) recolours the hardcoded ORANGE to sky-blue,
+ * and (c) re-skins the bug "obsidian-scene" to sky/white. Pure presentation —
+ * no data, no figures. Mirrors the .theme-fun override pattern.
+ * ────────────────────────────────────────────────────────────────────────── */
+html.theme-heavenly {
+  --ad-orange: #2E8BE6;
+  --ad-orange-dark: #1F6FBF;
+  --ad-orange-light: #5BA8EE;
+  --ad-orange-soft: rgba(46,139,230,0.12);
+  /* bug-scene text ramp → dark on light */
+  --ob-text-primary: #0F172A;
+  --ob-text-secondary: #475569;
+  --ob-text-muted: #94A3B8;
+}
+html.theme-heavenly body {
+  background:
+    radial-gradient(60vmax 36vmax at 50% -6%, rgba(46,139,230,0.10), transparent 60%),
+    linear-gradient(180deg, #EAF4FF 0%, #F7FBFF 42%, #FFFFFF 100%) fixed;
+  color: #0F172A;
+}
+/* Recolour the hardcoded brand orange → sky-blue everywhere in Heavenly. */
+html.theme-heavenly .text-\[\#F07F00\],
+html.theme-heavenly .text-\[\#CC6C00\],
+html.theme-heavenly .text-\[\#F4A623\],
+html.theme-heavenly .text-\[\#FF9F2E\] { color: #2E8BE6 !important; }
+html.theme-heavenly .bg-\[\#F07F00\],
+html.theme-heavenly .bg-\[\#F4A623\] { background-color: #2E8BE6 !important; }
+html.theme-heavenly .border-\[\#F07F00\],
+html.theme-heavenly .border-\[\#F4A623\] { border-color: #2E8BE6 !important; }
+/* Sidebar active accent (hardcoded orange) → sky-blue. */
+html.theme-heavenly .border-l-\[3px\].border-\[\#F07F00\] { border-left-color: #2E8BE6 !important; }
+/* The light-aurora hero gradient text + KPI accents pick up --ad-orange. */
+
+/* Bug "obsidian-scene" re-skinned to Heavenly (sky/white). */
+html.theme-heavenly .obsidian-scene {
+  background:
+    radial-gradient(60vmax 40vmax at 50% -10%, rgba(46,139,230,0.12), transparent 60%),
+    linear-gradient(180deg, #EAF4FF 0%, #FFFFFF 100%);
+  color: #0F172A;
+}
+html.theme-heavenly .obsidian-scene::before { opacity: 0.18; }   /* fewer embers, calm */
+html.theme-heavenly .ob-glass {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid #DCEBFB;
+  box-shadow: 0 10px 30px rgba(46,139,230,0.12);
+}
+html.theme-heavenly .tilt-card:hover {
+  border-color: rgba(46,139,230,0.5);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 40px 90px -30px rgba(46,139,230,0.30);
+}
+html.theme-heavenly .ob-glow-ring { box-shadow: 0 0 0 1px rgba(46,139,230,0.4), 0 0 30px -4px rgba(46,139,230,0.5); }
+html.theme-heavenly .obsidian-scene img[alt=""] { filter: drop-shadow(0 8px 24px rgba(46,139,230,0.45)) hue-rotate(170deg) saturate(1.15) !important; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * PROFESSIONAL theme (CFO directive 2026-08-10) — clean, calm, neutral light.
+ * White surfaces, a LIGHT sidebar, ONE soft slate-blue accent (#4F6BED),
+ * soft pastel status chips, and a clean sans face (not the Book-Antiqua serif).
+ * The theme object in lib/themes.ts drives everything styled via useTheme()
+ * (sidebar bg, topbar, cards, KPI numbers, accents). THIS block re-skins the
+ * hardcoded navy/orange Tailwind classes → slate, lightens the sidebar's
+ * hardcoded white-on-dark chrome, and swaps serif → sans. Pure presentation —
+ * no data, no figures. Mirrors the .theme-fun / .theme-heavenly pattern and is
+ * fully additive: nothing here touches Light / Fun / Heavenly.
+ * ────────────────────────────────────────────────────────────────────────── */
+html.theme-professional {
+  /* clean sans face — overrides the Book-Antiqua serif for this theme only */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* re-point the design-system tokens to the neutral / slate palette */
+  --ad-orange:        #4F6BED;
+  --ad-orange-dark:   #3F58CC;
+  --ad-orange-light:  #7C93F2;
+  --ad-orange-50:     #EEF2FC;
+  --ad-orange-100:    #E0E7FB;
+  --ad-navy:          #1A1D21;
+  --ad-navy-light:    #2A2F36;
+  --ad-navy-dark:     #111318;
+  --ad-bg-page:       #F7F8FA;
+  --ad-bg-sidebar:    #FFFFFF;
+  --ad-bg-hover:      #F7F8FA;
+  --ad-bg-selected:   #EEF2FC;
+  --ad-bg-table-head: #F7F8FA;
+  --ad-bg-table-alt:  #FBFBFC;
+  --ad-text-heading:  #1A1D21;
+  --ad-text-link:     #3F58CC;
+  --ad-border:        #ECEEF1;
+  --ad-border-input:  #D7DBE0;
+  --ad-border-focus:  #4F6BED;
+  /* chart palette → calm slate + muted supporting tones */
+  --ad-chart-1: #4F6BED;
+  --ad-chart-2: #5FB6A8;
+  --ad-chart-3: #6FA8DC;
+  --ad-chart-4: #9B8FD1;
+  --ad-chart-5: #E0A44C;
+  --ad-chart-6: #8B95A6;
+}
+html.theme-professional,
+html.theme-professional body {
+  font-family: var(--font-sans) !important;
+  background-color: #F7F8FA;
+  color: #1A1D21;
+}
+/* serif utility classes → sans in this theme */
+html.theme-professional .font-serif,
+html.theme-professional .font-display,
+html.theme-professional .font-display-tight { font-family: var(--font-sans) !important; }
+/* Some hero / page-title components hardcode a Book-Antiqua serif inline —
+   force the clean sans on everything (mono numerals + code kept). */
+html.theme-professional *:not(.font-mono-nums):not([class*="mono"]):not(code):not(pre):not(kbd) {
+  font-family: var(--font-sans) !important;
+}
+/* Exec page-title hero: hardcoded navy word + gold-gradient italic word → neutral + slate */
+html.theme-professional h1 span { color: #1A1D21 !important; }
+html.theme-professional h1 span[style*="italic"] {
+  background: none !important;
+  -webkit-text-fill-color: #3F58CC !important;
+  color: #3F58CC !important;
+}
+/* The hero's soft peach/gold aurora wash → calm neutral-slate tint */
+html.theme-professional [class*="aurora"],
+html.theme-professional [style*="253, 251, 247"],
+html.theme-professional [style*="251, 246, 238"],
+html.theme-professional [style*="252, 246"],
+html.theme-professional [style*="255, 247, 237"] {
+  background-image: linear-gradient(135deg, #F7F8FA 0%, #EEF2FC 100%) !important;
+  background-color: #F9FAFB !important;
+}
+/* links + focus ring → slate */
+html.theme-professional a { color: #3F58CC; }
+html.theme-professional a:hover { color: #4F6BED; }
+html.theme-professional :focus-visible { outline-color: #4F6BED; }
+
+/* ── Recolour hardcoded brand ORANGE → slate-blue (all variants: hover:/focus:) ── */
+html.theme-professional [class*="text-[#F07F00"],
+html.theme-professional [class*="text-[#CC6C00"],
+html.theme-professional [class*="text-[#F4A623"],
+html.theme-professional [class*="text-[#A34A00"],
+html.theme-professional [class*="text-[#B04E00"],
+html.theme-professional [class*="text-[#FF9F2E"] { color: #3F58CC !important; }
+/* Only a BASE background is repainted at rest. A substring match also hits the
+   variant forms (hover:bg-[#F4A623]/[0.06], file:bg-[#F07F00]), and repainting
+   those at rest paints a whole table body solid blue — the Purchase Orders list,
+   11-Sep-2026. Variants are handled in their own state below. */
+html.theme-professional [class*="bg-[#F07F00"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#F4A623"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#FF9F2E"]:not([class*=":bg-[#"]) { background-color: #4F6BED !important; }
+html.theme-professional [class*="border-[#F07F00"],
+html.theme-professional [class*="border-[#F4A623"] { border-color: #4F6BED !important; }
+html.theme-professional [class*="ring-[#F07F00"],
+html.theme-professional [class*="ring-[#F4A623"] { --tw-ring-color: #4F6BED !important; }
+/* orange-50 table/row hover tint → neutral grey */
+html.theme-professional [class*="bg-[#FFF7ED"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#FFEDD5"]:not([class*=":bg-[#"]) { background-color: #F7F8FA !important; }
+
+/* ── Recolour hardcoded NAVY chrome → slate (bg) / near-black (text) ── */
+html.theme-professional [class*="bg-[#0B0B3B"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#0D1B2A"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#07074E"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#1A1A5E"]:not([class*=":bg-[#"]) { background-color: #4F6BED !important; }
+
+/* ── The variant forms, in the state they belong to ── */
+html.theme-professional [class*="hover:bg-[#0D1B2A"]:hover,
+html.theme-professional [class*="hover:bg-[#1A1A5E"]:hover,
+html.theme-professional [class*="active:bg-[#07074E"]:active { background-color: #4F6BED !important; }
+html.theme-professional [class*="file:bg-[#F07F00"]::file-selector-button,
+html.theme-professional [class*="file:bg-[#0B0B3B"]::file-selector-button { background-color: #4F6BED !important; }
+/* faint orange row tints stay faint — a neutral hover, not a solid blue row */
+html.theme-professional [class*="hover:bg-[#F4A623]/"]:hover { background-color: #F7F8FA !important; }
+html.theme-professional [class*="text-[#0B0B3B"],
+html.theme-professional [class*="text-[#0D1B2A"] { color: #1A1D21 !important; }
+html.theme-professional [class*="border-[#0B0B3B"],
+html.theme-professional [class*="border-[#0D1B2A"] { border-color: #4F6BED !important; }
+
+/* ── LIGHT sidebar: the rail + panel are styled white-on-dark; flip to dark-on-light ── */
+html.theme-professional [data-omni-sidebar] {
+  border-right: 1px solid #ECEEF1;
+  box-shadow: 0 0 0 1px rgba(16,24,40,0.02);
+}
+/* the icon rail uses a hardcoded dark overlay bg + white hairline — neutralise */
+html.theme-professional [data-omni-sidebar] > div:first-child {
+  background: #FCFCFD !important;
+  border-right: 1px solid #ECEEF1 !important;
+}
+/* white nav text (full + alpha variants) → dark greys */
+html.theme-professional [data-omni-sidebar] .text-white,
+html.theme-professional [data-omni-sidebar] [class*="text-white/"],
+html.theme-professional [data-omni-sidebar] [class*="text-white\\/"] { color: #3A3F46 !important; }
+html.theme-professional [data-omni-sidebar] [class*="text-white/3"],
+html.theme-professional [data-omni-sidebar] [class*="text-white/4"] { color: #9AA1AC !important; }
+/* white hover washes (invisible on a light rail) → light grey */
+html.theme-professional [data-omni-sidebar] [class*="hover:bg-white"]:hover { background: #F1F3F5 !important; }
+/* section dividers drawn as white-alpha borders → hairline
+   (match the browser-serialized form with spaces after commas) */
+html.theme-professional [data-omni-sidebar] [style*="rgba(255, 255, 255"] { border-color: #ECEEF1 !important; }
+/* a11y: the icon-rail ACTIVE module button paints its 9.5px label + icon white on
+   the solid accent. Professional's accent (#4F6BED) is only 4.26:1 vs white, so it
+   misses WCAG AA. Repaint the active button with the accent-DARK (#3F58CC → 6.1:1
+   white). Active state only; inactive rail labels sit on the light rail and pass. */
+html.theme-professional [data-omni-sidebar] button[data-omni-active] {
+  background: #3F58CC !important;
+  color: #FFFFFF !important;
+}
+/* a11y: hardcoded muted-number grey #9CA3AF (~2.5:1 on white) fails AA. Remap to
+   the house muted #6B7280 (≥4.6:1) — mirrors the .theme-fun remap above. */
+html.theme-professional .text-\[\#9CA3AF\] { color: #6B7280 !important; }
+
+/* ── WAVE 2 (CFO 2026-08-10): deeper screens use the ORG-brand palette
+ * (Alpha Navy #1D3270 / Direct Orange #F47C20) and a few extra Tailwind orange
+ * shades that Wave 1 didn't cover. Re-skin those hardcoded classes → slate too,
+ * and re-point the @theme colour tokens so any `*-ad-orange`/`*-ad-navy` utility
+ * follows. (Chart data-series colours set as inline JS constants on a handful of
+ * pages are handled per-page, not here.) Still scoped to Professional only. ── */
+html.theme-professional {
+  --color-ad-navy: #1A1D21;
+  --color-ad-navy-light: #2A2F36;
+  --color-ad-navy-dark: #111318;
+  --color-ad-orange: #4F6BED;
+  --color-ad-orange-dark: #3F58CC;
+  --color-ad-orange-light: #7C93F2;
+}
+/* org + extra orange shades → slate accent (all hover:/focus: variants) */
+html.theme-professional [class*="text-[#F47C20"],
+html.theme-professional [class*="text-[#F97316"],
+html.theme-professional [class*="text-[#FB923C"],
+html.theme-professional [class*="text-[#FF9A2E"],
+html.theme-professional [class*="text-[#EA580C"] { color: #3F58CC !important; }
+html.theme-professional [class*="bg-[#F47C20"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#F97316"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#FB923C"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#FF9A2E"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#EA580C"]:not([class*=":bg-[#"]) { background-color: #4F6BED !important; }
+html.theme-professional [class*="border-[#F47C20"],
+html.theme-professional [class*="border-[#F97316"],
+html.theme-professional [class*="border-[#EA580C"] { border-color: #4F6BED !important; }
+html.theme-professional [class*="ring-[#F47C20"] { --tw-ring-color: #4F6BED !important; }
+/* org navy → near-black text / slate surfaces */
+html.theme-professional [class*="text-[#1D3270"] { color: #1A1D21 !important; }
+html.theme-professional [class*="bg-[#1D3270"]:not([class*=":bg-[#"]),
+html.theme-professional [class*="bg-[#13134D"]:not([class*=":bg-[#"]) { background-color: #4F6BED !important; }
+/* the remaining variant forms, in the state they belong to (see the note above) */
+html.theme-professional [class*="hover:bg-[#FFF7ED"]:hover,
+html.theme-professional [class*="hover:bg-[#FFEDD5"]:hover,
+html.theme-professional [class*="focus:bg-[#FFF7ED"]:focus { background-color: #F7F8FA !important; }
+html.theme-professional [class*="hover:bg-[#1D3270]/"]:hover { background-color: #F7F8FA !important; }
+html.theme-professional [class*="file:bg-[#1D3270"]::file-selector-button { background-color: #4F6BED !important; }
+html.theme-professional [class*="border-[#1D3270"] { border-color: #4F6BED !important; }
+
+/* Charts (recharts & co.) paint series as SVG fill/stroke attributes set from
+ * inline JS colour constants across ~74 pages — recolour them centrally here so
+ * no page file has to change. Orange family → slate accent; navy family → a
+ * calm secondary blue, so a two-tone (navy+orange) chart stays distinguishable.
+ * lucide icons use stroke="currentColor" (not a hex) so they are untouched. */
+html.theme-professional [fill="#F47C20"],  html.theme-professional [fill="#F07F00"],
+html.theme-professional [fill="#F4A623"],  html.theme-professional [fill="#EA580C"],
+html.theme-professional [fill="#F97316"],  html.theme-professional [fill="#FF9A2E"],
+html.theme-professional [fill="#CC6C00"],  html.theme-professional [fill="#B04E00"] { fill: #4F6BED !important; }
+html.theme-professional [stroke="#F47C20"], html.theme-professional [stroke="#F07F00"],
+html.theme-professional [stroke="#F4A623"], html.theme-professional [stroke="#EA580C"],
+html.theme-professional [stroke="#F97316"] { stroke: #4F6BED !important; }
+html.theme-professional [fill="#1D3270"],  html.theme-professional [fill="#0B0B3B"],
+html.theme-professional [fill="#0D1B2A"],  html.theme-professional [fill="#13134D"],
+html.theme-professional [fill="#07074E"],  html.theme-professional [fill="#1A1A5E"] { fill: #5FB6A8 !important; }
+html.theme-professional [stroke="#1D3270"], html.theme-professional [stroke="#0B0B3B"],
+html.theme-professional [stroke="#0D1B2A"] { stroke: #5FB6A8 !important; }
+/* Icons/text coloured via inline style from a brand constant (e.g. a lucide
+ * icon with style="color:#1D3270", painting itself + its paths via currentColor).
+ * The browser serialises the inline value to rgb(), so match that form. Navy →
+ * neutral dark, orange → slate accent. Scoped to Professional. */
+html.theme-professional [style*="color: rgb(29, 50, 112)"],
+html.theme-professional [style*="color: rgb(11, 11, 59)"],
+html.theme-professional [style*="color: rgb(13, 27, 42)"] { color: #3A3F46 !important; }
+html.theme-professional [style*="color: rgb(244, 124, 32)"],
+html.theme-professional [style*="color: rgb(240, 127, 0)"],
+html.theme-professional [style*="color: rgb(244, 166, 35)"],
+html.theme-professional [style*="color: rgb(234, 88, 12)"] { color: #4F6BED !important; }
+
+/* Transformation Board (/transformation) — card entrance + ring fill.
+ * transform/opacity/stroke-dashoffset only (compositor/paint-friendly, no
+ * layout properties). The global prefers-reduced-motion rule above already
+ * zeroes every animation-duration; components also gate these classes behind
+ * the reduceMotion context flag so JS-driven count-ups agree with CSS. */
+@keyframes tb-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tb-ring {
+  from { stroke-dashoffset: var(--tb-ring-from, 283); }
+  to   { stroke-dashoffset: var(--tb-ring-to, 0); }
+}
+@keyframes tb-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.tb-fill { transform-origin: left; }
+
+/* Evolution strip — idle bob for the current creature, and a one-off arrival
+ * pop when the CFO's stored progress crosses into a new stage. transform +
+ * opacity only.
+ *
+ * These classes must NEVER sit on an element that also carries a `transform`
+ * ATTRIBUTE. In SVG that attribute is a presentation attribute, so a CSS
+ * animation of `transform` overrides it completely and the element jumps to
+ * the origin. Put the placement on an outer <g> and the class on an inner
+ * one. (Caught at the gate, 20-Sep-2026 — the earlier comment here claimed
+ * the opposite and the current figure was being clipped into the corner.) */
+@keyframes tb-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes tb-arrive {
+  0%   { transform: scale(0.55); opacity: 0; }
+  55%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.tb-bob { animation: tb-bob 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.tb-arrive { animation: tb-arrive 700ms cubic-bezier(0.16,1,0.3,1) both; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .tb-bob, .tb-arrive { animation: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-fill { transform: scaleX(1) !important; animation: none !important; }
+}

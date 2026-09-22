@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alpha Direct IT Help Desk</title>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script>
+  /* Mirror omni's theme (same-origin localStorage): light (default) | fun | heavenly.
+     Runs before paint to avoid a flash; also live-updates if omni's theme changes. */
+  (function(){
+    function apply(t){
+      var c = document.documentElement.classList;
+      c.toggle('theme-fun', t === 'fun');
+      c.toggle('theme-heavenly', t === 'heavenly');
+    }
+    try { apply(localStorage.getItem('alpha_theme')); } catch(e){}
+    window.addEventListener('storage', function(e){ if (e.key === 'alpha_theme') apply(e.newValue); });
+  })();
+</script>
+<style>
+  /* Themes mirror omni (src/lib/themes.ts). --navy = page background,
+     --navy-2 = surface (cards/topbar/modals), --navy-3 = surface-2 (inputs/table head/hover),
+     --sidebar = the dark rail, --on-accent = text on the orange/accent. */
+  :root{                 /* LIGHT — omni "Light" (default) */
+    --navy:#F9FAFB;
+    --navy-2:#FFFFFF;
+    --navy-3:#F3F4F6;
+    --sidebar:#0B0B3B;
+    --sidebar-text:#C7CBE6;
+    --on-accent:#FFFFFF;
+    --orange:#F07F00;
+    --orange-dim:#C96A00;
+    --text:#111827;
+    --muted:#6B7280;
+    --border:#E5E7EB;
+    --green:#059669;
+    --red:#DC2626;
+    --yellow:#B45309;
+    --blue:#2563EB;
+    --gray:#6B7280;
+  }
+  html.theme-fun{        /* omni "Fun Mode" */
+    --navy:#121235;
+    --navy-2:#1A1A5E;
+    --navy-3:#23236E;
+    --sidebar:#0D0D42;
+    --sidebar-text:#D4CCFF;
+    --on-accent:#1A1050;
+    --orange:#FF9F2E;
+    --orange-dim:#E08820;
+    --text:#FFFFFF;
+    --muted:#B9AEEC;
+    --border:#2D2D7A;
+    --green:#4ADE80;
+    --red:#FB7185;
+    --yellow:#FACC15;
+    --blue:#818CF8;
+    --gray:#9B91E0;
+  }
+  html.theme-heavenly{   /* omni "Heavenly" — sky-blue accent, no orange */
+    --navy:#EAF4FF;
+    --navy-2:#FFFFFF;
+    --navy-3:#EFF6FF;
+    --sidebar:#0E2A47;
+    --sidebar-text:#BBD5F0;
+    --on-accent:#FFFFFF;
+    --orange:#2E8BE6;
+    --orange-dim:#2576C4;
+    --text:#0F172A;
+    --muted:#475569;
+    --border:#DCEBFB;
+    --green:#059669;
+    --red:#DC2626;
+    --yellow:#B45309;
+    --blue:#2E8BE6;
+    --gray:#94A3B8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--navy);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px}
+  button{font-family:inherit;cursor:pointer;border:none;outline:none}
+  input,select,textarea{font-family:inherit;font-size:14px;background:var(--navy-3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px 12px;outline:none;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--orange)}
+  textarea{resize:vertical;min-height:80px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500}
+
+  /* Layout */
+  .app{display:none;height:100vh;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr}
+  .app.active{display:grid}
+  .topbar{grid-column:1/-1;background:var(--navy-2);border-bottom:1px solid var(--border);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px}
+  .logo .dot{width:10px;height:10px;background:var(--orange);border-radius:50%}
+  .topbar-right{display:flex;align-items:center;gap:16px}
+  .user-pill{background:var(--navy-3);padding:6px 14px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:8px}
+  .user-pill .avatar{width:24px;height:24px;background:var(--orange);color:var(--on-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
+  .btn-logout{background:transparent;color:var(--muted);font-size:13px;padding:6px 10px;border-radius:6px}
+  .btn-logout:hover{color:var(--text);background:var(--navy-3)}
+
+  .sidebar{background:var(--sidebar);border-right:1px solid var(--border);padding:20px 12px;overflow-y:auto}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:var(--sidebar-text);font-size:14px;cursor:pointer;margin-bottom:4px;transition:all .15s}
+  .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+  .nav-item.active{background:var(--orange);color:var(--on-accent);font-weight:600}
+  .nav-section{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--sidebar-text);opacity:.7;padding:16px 14px 8px}
+
+  .main{padding:24px 32px;overflow-y:auto}
+  .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  .page-title{font-size:22px;font-weight:600}
+  .page-subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+
+  /* Splash / Login */
+  .splash{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);text-align:center}
+  .splash.hidden{display:none}
+  .splash-card{background:var(--navy-2);border:1px solid var(--border);border-radius:14px;padding:48px 40px;width:440px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .splash-logo{font-size:24px;font-weight:700;margin-bottom:8px}
+  .splash-logo .dot{display:inline-block;width:12px;height:12px;background:var(--orange);border-radius:50%;margin-right:8px;vertical-align:middle}
+  .splash-tag{color:var(--muted);font-size:14px;margin-bottom:32px}
+  .splash-spinner{display:inline-block;width:32px;height:32px;border:3px solid var(--navy-3);border-top-color:var(--orange);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .splash-status{color:var(--muted);font-size:13px;min-height:20px}
+  .splash-error{background:rgba(239,68,68,.15);color:#fca5a5;padding:12px 14px;border-radius:8px;font-size:13px;margin-top:16px;text-align:left;display:none}
+  .splash-error.visible{display:block}
+  .btn-signin{background:var(--orange);color:var(--on-accent);padding:12px 28px;border-radius:8px;font-size:15px;font-weight:600;margin-top:18px;display:none}
+  .btn-signin.visible{display:inline-block}
+
+  /* Buttons */
+  .btn{padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;transition:all .15s}
+  .btn-primary{background:var(--orange);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--orange-dim)}
+  .btn-secondary{background:var(--navy-3);color:var(--text);border:1px solid var(--border)}
+  .btn-secondary:hover{background:var(--border)}
+  .btn-danger{background:var(--red);color:white}
+  .btn-sm{padding:6px 12px;font-size:12px}
+
+  /* Cards & stats */
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+  .stat-card{background:var(--navy-2);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .stat-value{font-size:28px;font-weight:700;margin-top:6px}
+  .stat-trend{font-size:12px;color:var(--muted);margin-top:4px}
+  .stat-card.alert{border-left:4px solid var(--red)}
+  .stat-card.success{border-left:4px solid var(--green)}
+  .stat-card.warning{border-left:4px solid var(--yellow)}
+  .stat-card.info{border-left:4px solid var(--blue)}
+
+  /* Tables */
+  .panel{background:var(--navy-2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .panel-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  .panel-title{font-size:15px;font-weight:600}
+  .filter-row{display:flex;gap:8px;flex-wrap:wrap}
+  .filter-row select,.filter-row input{width:auto;min-width:130px;padding:6px 10px;font-size:12px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;padding:12px 18px;background:var(--navy-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
+  td{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+  tr.clickable{cursor:pointer;transition:background .1s}
+  tr.clickable:hover{background:var(--navy-3)}
+  tr:last-child td{border-bottom:none}
+  .empty{padding:50px;text-align:center;color:var(--muted)}
+  .loading-row td{text-align:center;color:var(--muted);padding:30px;font-style:italic}
+
+  /* Badges */
+  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+  .badge-open{background:rgba(59,130,246,.15);color:#60a5fa}
+  .badge-inprogress{background:rgba(234,179,8,.15);color:#facc15}
+  .badge-onhold{background:rgba(107,114,128,.15);color:#9ca3af}
+  .badge-resolved{background:rgba(34,197,94,.15);color:#4ade80}
+  .badge-closed{background:rgba(107,114,128,.2);color:#9ca3af}
+  .badge-low{background:rgba(34,197,94,.15);color:#4ade80}
+  .badge-medium{background:rgba(234,179,8,.15);color:#facc15}
+  .badge-high{background:rgba(249,115,22,.15);color:#fb923c}
+  .badge-critical{background:rgba(239,68,68,.18);color:#f87171}
+  .badge-sla-ok{background:rgba(34,197,94,.15);color:#4ade80}
+  .badge-sla-warn{background:rgba(234,179,8,.15);color:#facc15}
+  .badge-sla-breach{background:rgba(239,68,68,.18);color:#f87171}
+
+  /* Modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal-bg.active{display:flex}
+  .modal{background:var(--navy-2);border:1px solid var(--border);border-radius:12px;width:100%;max-width:760px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+  .modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .modal-title{font-size:17px;font-weight:600}
+  .modal-close{background:transparent;color:var(--muted);font-size:22px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+  .modal-close:hover{background:var(--navy-3);color:var(--text)}
+  .modal-body{padding:22px;overflow-y:auto;flex:1}
+  .modal-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .field{margin-bottom:14px}
+
+  /* Ticket detail */
+  .detail-grid{display:grid;grid-template-columns:1fr 240px;gap:24px}
+  .meta-list{background:var(--navy-3);border-radius:8px;padding:14px}
+  .meta-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px}
+  .meta-row:last-child{border-bottom:none}
+  .meta-label{color:var(--muted);white-space:nowrap}
+  .meta-value{font-weight:500;text-align:right;word-break:break-word}
+  .activity{margin-top:24px}
+  .activity h4{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px}
+  .comment{background:var(--navy-3);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+  .comment-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px}
+  .comment-author{font-weight:600;color:var(--text)}
+  .comment-text{font-size:13px;line-height:1.5;white-space:pre-wrap}
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty-state .big{font-size:48px;margin-bottom:12px;opacity:.4}
+
+  .footer-note{text-align:center;color:var(--muted);font-size:11px;padding:14px;border-top:1px solid var(--border);margin-top:24px}
+
+  /* Toast */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--navy-2);border:1px solid var(--border);border-left:4px solid var(--green);padding:14px 18px;border-radius:8px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:200;max-width:360px;animation:slideIn .25s ease-out}
+  .toast.error{border-left-color:var(--red)}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+  /* Loading indicator inside panels */
+  .inline-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:6px}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .detail-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH / LOGIN -->
+<div id="splash" class="splash">
+  <div class="splash-card">
+    <div class="splash-logo"><span class="dot"></span>Alpha Direct IT Help Desk</div>
+    <div class="splash-tag">Internal IT support for Alpha Direct Insurance staff</div>
+    <div class="splash-spinner" id="splashSpinner"></div>
+    <div class="splash-status" id="splashStatus">Initializing...</div>
+    <button class="btn-signin" id="signInBtn">Sign in with Microsoft</button>
+    <div class="splash-error" id="splashError"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="app">
+  <div class="topbar">
+    <div class="logo"><span class="dot"></span>Alpha Direct IT Help Desk</div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <div class="avatar" id="userAvatar"></div>
+        <div>
+          <div id="userName" style="font-weight:600"></div>
+          <div id="userRoleLabel" style="font-size:11px;color:var(--muted)"></div>
+        </div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<!-- TICKET MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ALPHA DIRECT IT HELP DESK — v2 (SharePoint backed)
+// ============================================================
+
+const CONFIG = {
+  clientId: 'e0a3b758-f709-4bf0-a4aa-f855458a5ee1',
+  tenantId: 'fb4aec07-793a-494c-92f6-7a527a7f89c0',
+  sharepointHost: 'alphadirectbw.sharepoint.com',
+  sitePath: '/sites/ITHelpDesk',
+  listName: 'IT Tickets',
+  agentGroup: 'IT-HelpDesk-Agents',
+  adminGroup: 'IT-HelpDesk-Admins'
+};
+
+const SLA = {
+  Critical: { response: 1,  resolution: 4   },
+  High:     { response: 2,  resolution: 8   },
+  Medium:   { response: 4,  resolution: 24  },
+  Low:      { response: 8,  resolution: 72  }
+};
+
+const CATEGORIES = ['Hardware','Software','Network','Access / Account','Email & Communication','Printing','Mobile / BYOD','Other'];
+const PRIORITIES = ['Low','Medium','High','Critical'];
+const STATUSES   = ['Open','In Progress','On Hold','Resolved','Closed'];
+const DEPARTMENTS = ['Finance','Underwriting','Claims','Data Analytics','IT','HR','Sales','Operations','EXCO','Other'];
+
+// ============================================================
+//  MSAL — Microsoft Authentication
+// ============================================================
+
+const msalConfig = {
+  auth: {
+    clientId: CONFIG.clientId,
+    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
+    redirectUri: window.location.origin + window.location.pathname,
+    postLogoutRedirectUri: window.location.origin + window.location.pathname,
+    navigateToLoginRequestUrl: true
+  },
+  cache: {
+    cacheLocation: 'localStorage',   // share the session across tabs + popups (SSO)
+    storeAuthStateInCookie: true     // helps redirect flows under strict cookie settings
+  }
+};
+
+const loginRequest = {
+  scopes: ['User.Read', 'Sites.ReadWrite.All', 'GroupMember.Read.All']
+};
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+// ============================================================
+//  STATE
+// ============================================================
+
+const state = {
+  user: null,            // { displayName, email, id, role: 'user'|'agent'|'admin' }
+  siteId: null,
+  listId: null,
+  tickets: [],           // cache of all tickets
+  loaded: false,
+  currentPage: null,
+  agentList: []          // list of IT agents (from Azure AD group)
+};
+
+// ============================================================
+//  GRAPH API CLIENT
+// ============================================================
+
+async function getToken() {
+  const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+  if (!account) throw new Error('No signed-in account');
+  try {
+    const response = await msalInstance.acquireTokenSilent({ ...loginRequest, account });
+    return response.accessToken;
+  } catch (e) {
+    if (e instanceof msal.InteractionRequiredAuthError) {
+      // Re-auth without a popup (popups fail when the page is itself in a popup).
+      await msalInstance.acquireTokenRedirect(loginRequest);
+      return null;
+    }
+    throw e;
+  }
+}
+
+async function callGraph(endpoint, options = {}) {
+  const token = await getToken();
+  const url = endpoint.startsWith('http') ? endpoint : `https://graph.microsoft.com/v1.0${endpoint}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    let errMsg = `Graph API ${response.status}`;
+    try {
+      const errJson = JSON.parse(errText);
+      errMsg = errJson.error?.message || errMsg;
+    } catch (e) { /* not JSON */ }
+    throw new Error(errMsg);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+// ============================================================
+//  AUTH FLOW
+// ============================================================
+
+function setSplashStatus(msg) {
+  document.getElementById('splashStatus').textContent = msg;
+}
+function showSplashError(msg) {
+  const el = document.getElementById('splashError');
+  el.textContent = msg;
+  el.classList.add('visible');
+  document.getElementById('splashSpinner').style.display = 'none';
+  document.getElementById('signInBtn').classList.add('visible');
+  document.getElementById('signInBtn').textContent = 'Try Again';
+}
+
+async function bootstrap() {
+  // MSAL's silent-SSO probe loads this page inside a hidden iframe. Let the parent
+  // window read the auth response from it; don't boot the whole app in the frame.
+  if (window !== window.top) return;
+  try {
+    setSplashStatus('Initializing...');
+    await msalInstance.initialize();
+
+    // Complete a returning redirect sign-in, if any.
+    const response = await msalInstance.handleRedirectPromise();
+    if (response && response.account) {
+      msalInstance.setActiveAccount(response.account);
+    }
+
+    let account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+
+    // Staff are already signed in to Microsoft 365 — get them in with NO popup and NO
+    // password: try a silent SSO first, then fall back to a full-page redirect (which
+    // works inside nested popups too, unlike loginPopup). Guard against redirect loops.
+    if (!account) {
+      setSplashStatus('Signing you in...');
+      try {
+        const silent = await msalInstance.ssoSilent(loginRequest);
+        account = silent.account;
+      } catch (e) {
+        if (sessionStorage.getItem('hd_redirected') !== '1') {
+          sessionStorage.setItem('hd_redirected', '1');
+          setSplashStatus('Taking you in...');
+          await msalInstance.loginRedirect(loginRequest);
+          return; // navigates away; the next load completes sign-in
+        }
+        // Returned from a redirect still without an account — offer a manual retry.
+        setSplashStatus('Please sign in to continue.');
+        document.getElementById('splashSpinner').style.display = 'none';
+        const btn = document.getElementById('signInBtn');
+        btn.classList.add('visible');
+        btn.onclick = () => signIn();
+        return;
+      }
+    }
+
+    sessionStorage.removeItem('hd_redirected');
+    msalInstance.setActiveAccount(account);
+    await loadUserAndApp();
+
+  } catch (err) {
+    console.error('Bootstrap error:', err);
+    showSplashError('Failed to initialize: ' + err.message);
+  }
+}
+
+async function signIn() {
+  try {
+    document.getElementById('signInBtn').classList.remove('visible');
+    document.getElementById('splashError').classList.remove('visible');
+    document.getElementById('splashSpinner').style.display = 'inline-block';
+    setSplashStatus('Taking you in...');
+    sessionStorage.removeItem('hd_redirected');
+    // Redirect only — never a popup. Staff already on M365 round-trip without a password.
+    await msalInstance.loginRedirect(loginRequest);
+  } catch (err) {
+    console.error('Sign-in error:', err);
+    showSplashError('Sign-in failed: ' + err.message);
+  }
+}
+
+async function loadUserAndApp() {
+  try {
+    setSplashStatus('Loading your profile...');
+    const me = await callGraph('/me');
+
+    setSplashStatus('Checking your role...');
+    const role = await detectRole();
+
+    state.user = {
+      displayName: me.displayName,
+      email: me.mail || me.userPrincipalName,
+      id: me.id,
+      jobTitle: me.jobTitle || '',
+      role
+    };
+
+    setSplashStatus('Connecting to SharePoint...');
+    await initSharePoint();
+
+    setSplashStatus('Loading tickets...');
+    await refreshTickets();
+
+    if (role === 'admin' || role === 'agent') {
+      try {
+        await loadAgents();
+      } catch (e) {
+        console.warn('Could not load agent list:', e.message);
+      }
+    }
+
+    enterApp();
+  } catch (err) {
+    console.error('Load error:', err);
+    showSplashError('Failed to load: ' + err.message);
+  }
+}
+
+async function detectRole() {
+  try {
+    const result = await callGraph('/me/memberOf?$select=id,displayName');
+    const groupNames = result.value.map(g => g.displayName).filter(Boolean);
+    if (groupNames.includes(CONFIG.adminGroup)) return 'admin';
+    if (groupNames.includes(CONFIG.agentGroup)) return 'agent';
+    return 'user';
+  } catch (e) {
+    console.warn('Role detection failed, defaulting to user:', e.message);
+    return 'user';
+  }
+}
+
+async function loadAgents() {
+  // Get all members of the IT-HelpDesk-Agents group for assignment dropdowns
+  console.log(`Looking up Azure AD group: ${CONFIG.agentGroup}`);
+  const groupsResult = await callGraph(`/groups?$filter=displayName eq '${CONFIG.agentGroup}'`);
+  if (!groupsResult.value || groupsResult.value.length === 0) {
+    console.warn(`Group '${CONFIG.agentGroup}' not found in Azure AD. Assignee dropdown will be empty.`);
+    return;
+  }
+  const agentGroupId = groupsResult.value[0].id;
+  console.log(`Found ${CONFIG.agentGroup} group, ID: ${agentGroupId}. Loading members...`);
+
+  // Paginate through all group members
+  const allMembers = [];
+  let url = `/groups/${agentGroupId}/members?$select=id,displayName,mail,userPrincipalName&$top=100`;
+  let pageCount = 0;
+  const MAX_PAGES = 10;
+
+  while (url && pageCount < MAX_PAGES) {
+    const result = await callGraph(url);
+    if (result.value) allMembers.push(...result.value);
+    url = result['@odata.nextLink'] || null;
+    pageCount++;
+  }
+
+  state.agentList = allMembers
+    .filter(m => m.displayName)  // skip any entries without a name
+    .map(m => ({
+      id: m.id,
+      name: m.displayName,
+      email: m.mail || m.userPrincipalName || ''
+    }));
+
+  console.log(`Loaded ${state.agentList.length} agents into dropdown:`, state.agentList.map(a => a.name));
+}
+
+async function initSharePoint() {
+  // Get site ID
+  const site = await callGraph(`/sites/${CONFIG.sharepointHost}:${CONFIG.sitePath}`);
+  state.siteId = site.id;
+
+  // Get list ID
+  const lists = await callGraph(`/sites/${state.siteId}/lists?$filter=displayName eq '${CONFIG.listName}'`);
+  if (lists.value.length === 0) throw new Error(`List '${CONFIG.listName}' not found`);
+  state.listId = lists.value[0].id;
+}
+
+function signOut() {
+  stopAutoRefresh();
+  msalInstance.logoutRedirect({
+    postLogoutRedirectUri: window.location.origin + window.location.pathname
+  });
+}
+
+// ============================================================
+//  SHAREPOINT DATA LAYER
+// ============================================================
+
+async function fetchTickets() {
+  // Returns array of items with fields expanded, paginated across all pages.
+  // Microsoft Graph paginates at ~100 items per page regardless of $top.
+  const allItems = [];
+  let url = `/sites/${state.siteId}/lists/${state.listId}/items?$expand=fields&$top=100`;
+  let pageCount = 0;
+  const MAX_PAGES = 50; // safety net — 50 pages = 5000 tickets
+
+  while (url && pageCount < MAX_PAGES) {
+    const result = await callGraph(url);
+    if (result.value) {
+      allItems.push(...result.value);
+    }
+    url = result['@odata.nextLink'] || null;
+    pageCount++;
+  }
+
+  console.log(`fetchTickets: loaded ${allItems.length} items across ${pageCount} page(s)`);
+
+  const tickets = allItems.map(item => normalizeTicket(item));
+
+  // Resolve missing Person field display names via the User Information List
+  await resolvePersonFields(tickets);
+
+  return tickets;
+}
+
+// Cache for SharePoint user lookups (lookupId -> {name, email})
+const userCache = new Map();
+let userListId = null;
+let userInfoListBootstrapped = false;
+
+async function findUserInformationListId() {
+  if (userListId) return userListId;
+  // Try common names for the user info list
+  const candidates = ['User Information List', 'Users'];
+  for (const name of candidates) {
+    try {
+      const result = await callGraph(`/sites/${state.siteId}/lists?$filter=displayName eq '${encodeURIComponent(name).replace(/'/g, "''")}'`);
+      if (result.value && result.value.length > 0) {
+        userListId = result.value[0].id;
+        console.log(`Found User Information List as "${name}" → ${userListId}`);
+        return userListId;
+      }
+    } catch (e) {
+      console.warn(`Lookup attempt failed for "${name}":`, e.message);
+    }
+  }
+  // Last resort: query all lists and find the one with template type 112 (User Info)
+  try {
+    const all = await callGraph(`/sites/${state.siteId}/lists?$select=id,displayName,list&$top=200`);
+    const found = all.value.find(l =>
+      l.displayName === 'User Information List' ||
+      l.displayName === 'Users' ||
+      l.displayName?.toLowerCase().includes('user information')
+    );
+    if (found) {
+      userListId = found.id;
+      console.log(`Found User Information List by enumeration → ${userListId}`);
+      return userListId;
+    }
+  } catch (e) {
+    console.warn('Could not enumerate lists for user info list:', e.message);
+  }
+  return null;
+}
+
+async function bootstrapUserCache() {
+  if (userInfoListBootstrapped) return;
+  userInfoListBootstrapped = true;
+  const listId = await findUserInformationListId();
+  if (!listId) {
+    console.warn('User Information List not accessible — person names will show as "User #N"');
+    return;
+  }
+  try {
+    // Paginate through all users (the User Information List can be large in big tenants)
+    let url = `/sites/${state.siteId}/lists/${listId}/items?$expand=fields&$top=100`;
+    let count = 0;
+    let pageCount = 0;
+    const MAX_PAGES = 50;
+
+    while (url && pageCount < MAX_PAGES) {
+      const result = await callGraph(url);
+      (result.value || []).forEach(item => {
+        const f = item.fields || {};
+        const id = parseInt(f.id || item.id);
+        const name = f.Title || f.Name || f.UserName || '';
+        const email = f.EMail || f.Email || '';
+        if (id) {
+          userCache.set(id, { name, email });
+          count++;
+        }
+      });
+      url = result['@odata.nextLink'] || null;
+      pageCount++;
+    }
+
+    console.log(`Cached ${count} SharePoint users from User Information List (across ${pageCount} page(s))`);
+  } catch (e) {
+    console.warn('Failed to bootstrap user cache:', e.message);
+  }
+}
+
+async function resolvePersonFields(tickets) {
+  // One-time: load all SharePoint users into the cache
+  await bootstrapUserCache();
+  applyUserCache(tickets);
+}
+
+function applyUserCache(tickets) {
+  tickets.forEach(t => {
+    if (t.requesterLookupId && (t.requesterName === 'Unknown' || !t.requesterName)) {
+      const u = userCache.get(t.requesterLookupId);
+      if (u && u.name) {
+        t.requesterName = u.name;
+        t.requesterEmail = u.email || t.requesterEmail;
+      } else {
+        t.requesterName = `User #${t.requesterLookupId}`;
+      }
+    }
+    if (t.assigneeLookupId && !t.assigneeName) {
+      const u = userCache.get(t.assigneeLookupId);
+      if (u && u.name) {
+        t.assigneeName = u.name;
+        t.assigneeEmail = u.email || t.assigneeEmail;
+      } else {
+        t.assigneeName = `User #${t.assigneeLookupId}`;
+      }
+    }
+  });
+}
+
+function extractPerson(fields, baseName) {
+  // Person fields in Graph appear in various shapes. Parse defensively.
+  // Always pull lookupId from the explicit LookupId field first.
+  const lookupIdRaw = fields[baseName + 'LookupId'];
+  const lookupId = lookupIdRaw ? parseInt(lookupIdRaw) : null;
+
+  // Try the main field as either a string display name or a person object
+  const v = fields[baseName];
+  if (typeof v === 'string' && v.trim()) {
+    return { name: v, email: '', lookupId };
+  }
+  if (typeof v === 'object' && v !== null) {
+    const name = v.LookupValue || v.DisplayName || v.Title || '';
+    const email = v.Email || v.email || '';
+    return { name, email, lookupId: v.LookupId || lookupId };
+  }
+  // Try "FieldName0" variant
+  const v0 = fields[baseName + '0'];
+  if (typeof v0 === 'string' && v0.trim()) {
+    return { name: v0, email: '', lookupId };
+  }
+  // No display data — return lookupId only; resolvePersonFields will fill in the name
+  return { name: '', email: '', lookupId };
+}
+
+function normalizeTicket(item) {
+  const f = item.fields || {};
+  const requester = extractPerson(f, 'Requester');
+  const assignee = extractPerson(f, 'AssignedTo');
+
+  // ONE-TIME diagnostic: log the first ticket's raw fields so we can see Graph's actual structure
+  if (!window._loggedSampleFields) {
+    console.log('SAMPLE FIELDS FROM GRAPH (first ticket) →', JSON.parse(JSON.stringify(f)));
+    console.log('Field keys returned:', Object.keys(f));
+    window._loggedSampleFields = true;
+  }
+
+  return {
+    id: item.id,                                 // SharePoint item ID
+    ticketId: f.TicketID || '',
+    title: f.Title || '(no title)',
+    description: f.Description || '',
+    category: f.Category || 'Other',
+    priority: f.Priority || 'Medium',
+    status: f.Status || 'Open',
+    department: f.Department || '',
+    requesterName: requester.name || 'Unknown',
+    requesterEmail: requester.email || '',
+    requesterLookupId: requester.lookupId,
+    assigneeName: assignee.name || null,
+    assigneeEmail: assignee.email || '',
+    assigneeLookupId: assignee.lookupId,
+    createdAt: item.createdDateTime,
+    modifiedAt: item.lastModifiedDateTime,
+    firstResponseAt: f.FirstResponseAt || null,
+    resolvedAt: f.ResolvedAt || null,
+    comments: f.Comments || '',
+    slaHours: f.SLAHours || resolveSLAHoursFromPriority(f.Priority),
+    breachNotified: !!f.BreachNotified,
+    raw: item
+  };
+}
+
+function resolveSLAHoursFromPriority(p) {
+  return SLA[p]?.resolution || 24;
+}
+
+async function refreshTickets() {
+  state.tickets = await fetchTickets();
+  state.loaded = true;
+}
+
+async function createTicketCore(data) {
+  // Generate next TicketID
+  const existing = state.tickets
+    .map(t => parseInt((t.ticketId || '').replace(/[^0-9]/g, '')) || 0)
+    .filter(n => !isNaN(n));
+  const nextNum = existing.length === 0 ? 1 : Math.max(...existing) + 1;
+  const ticketId = 'TKT-' + String(nextNum).padStart(4, '0');
+
+  const fields = {
+    Title: data.title,
+    TicketID: ticketId,
+    Description: data.description,
+    Category: data.category,
+    Priority: data.priority,
+    Status: 'Open',
+    Department: data.department
+  };
+
+  // Person field: resolve the user's SharePoint LookupId
+  if (state.user?.email) {
+    let lookupId = null;
+
+    // First try the in-memory user cache (populated by bootstrapUserCache at startup)
+    await bootstrapUserCache();
+    const emailLower = state.user.email.toLowerCase();
+    for (const [id, user] of userCache.entries()) {
+      if ((user.email || '').toLowerCase() === emailLower) {
+        lookupId = id;
+        console.log(`Found requester in userCache: ${state.user.email} → LookupId ${id}`);
+        break;
+      }
+    }
+
+    // If not in cache, try the SharePoint REST ensureUser via Graph
+    if (!lookupId) {
+      try {
+        lookupId = await ensureSharePointUser(state.user.email);
+        if (lookupId) console.log(`Found requester via ensureSharePointUser: ${state.user.email} → LookupId ${lookupId}`);
+      } catch (e) {
+        console.warn('Requester lookup via ensureSharePointUser failed:', e.message);
+      }
+    }
+
+    if (lookupId) {
+      fields.RequesterLookupId = lookupId;
+    } else {
+      console.warn(`Could not resolve LookupId for ${state.user.email}. Ticket will be created without Requester field set.`);
+    }
+  }
+
+  console.log('Creating ticket with fields:', fields);
+
+  const url = `/sites/${state.siteId}/lists/${state.listId}/items`;
+  const result = await callGraph(url, {
+    method: 'POST',
+    body: JSON.stringify({ fields })
+  });
+
+  console.log('Ticket created:', result);
+  return { ticketId, item: result };
+}
+
+async function ensureSharePointUser(email) {
+  // Use SharePoint's hidden User Information List, accessed via Graph
+  try {
+    const result = await callGraph(`/sites/${state.siteId}/lists/User Information List/items?$expand=fields&$filter=fields/EMail eq '${encodeURIComponent(email)}'`);
+    if (result.value.length > 0) {
+      return parseInt(result.value[0].fields.id || result.value[0].id);
+    }
+  } catch (e) {
+    console.warn('User info list query failed:', e.message);
+  }
+  return null;
+}
+
+async function updateTicket(itemId, fields) {
+  const url = `/sites/${state.siteId}/lists/${state.listId}/items/${itemId}/fields`;
+  return callGraph(url, {
+    method: 'PATCH',
+    body: JSON.stringify(fields)
+  });
+}
+
+async function appendComment(ticket, text) {
+  const now = new Date();
+  const author = state.user.displayName;
+  const newLine = `[${now.toLocaleString('en-GB')}] ${author}:\n${text}\n\n`;
+  const updated = (ticket.comments || '') + newLine;
+  return updateTicket(ticket.id, { Comments: updated });
+}
+
+// ============================================================
+//  HELPERS
+// ============================================================
+
+function fmt(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  } catch (e) { return '—'; }
+}
+function ago(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff/60000);
+  if (m<1) return 'just now';
+  if (m<60) return m+'m ago';
+  const h = Math.floor(m/60);
+  if (h<24) return h+'h ago';
+  const d = Math.floor(h/24);
+  return d+'d ago';
+}
+function initials(name) {
+  return (name || '?').split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase();
+}
+function slaStatus(t) {
+  if (t.status==='Resolved' || t.status==='Closed') return 'ok';
+  const targetMs = (t.slaHours || 24) * 3600 * 1000;
+  const elapsed = Date.now() - new Date(t.createdAt).getTime();
+  const pct = elapsed/targetMs;
+  if (pct >= 1) return 'breach';
+  if (pct >= 0.8) return 'warn';
+  return 'ok';
+}
+function escapeHtml(str) {
+  return (str||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function badgeClass(label) {
+  return 'badge-' + label.toLowerCase().replace(/\s+/g, '');
+}
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = 'toast' + (type==='error' ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ============================================================
+//  ENTER APP / NAV
+// ============================================================
+
+function enterApp() {
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('userName').textContent = state.user.displayName;
+  const roleLabel = state.user.role === 'user' ? 'End User'
+                  : state.user.role === 'agent' ? 'IT Agent'
+                  : 'IT Admin';
+  document.getElementById('userRoleLabel').textContent = roleLabel;
+  document.getElementById('userAvatar').textContent = initials(state.user.displayName);
+  document.getElementById('logoutBtn').onclick = signOut;
+  renderSidebar();
+  renderPage(defaultPage());
+  startAutoRefresh();
+}
+
+// =============================
+//  AUTO-REFRESH (every 60 seconds)
+// =============================
+let autoRefreshInterval = null;
+let lastAutoRefreshAt = null;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshInterval = setInterval(async () => {
+    try {
+      // Only refresh if a modal isn't open (don't surprise the user mid-edit)
+      const modalOpen = document.getElementById('modalBg')?.classList.contains('active');
+      if (modalOpen) return;
+
+      // Silent refresh — no spinner, no toast
+      const prevCount = state.tickets.length;
+      await refreshTickets();
+      lastAutoRefreshAt = new Date();
+      const newCount = state.tickets.length;
+
+      // Only re-render if the visible page is a ticket-listing page
+      const ticketPages = ['my-tickets', 'queue', 'my-assigned', 'all-tickets', 'dashboard', 'sla-breaches'];
+      if (ticketPages.includes(state.currentPage)) {
+        renderPage(state.currentPage);
+      }
+
+      // Show a subtle toast ONLY if new tickets arrived
+      if (newCount > prevCount) {
+        showToast(`${newCount - prevCount} new ticket(s) just arrived`);
+      }
+    } catch (e) {
+      // Silent failure — don't spam the user
+      console.warn('Auto-refresh failed:', e.message);
+    }
+  }, 60000); // 60 seconds
+  console.log('Auto-refresh started (every 60 seconds)');
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
+
+function defaultPage() {
+  if (state.user.role === 'user') return 'my-tickets';
+  if (state.user.role === 'agent') return 'queue';
+  return 'dashboard';
+}
+
+function renderSidebar() {
+  const nav = {
+    user: [
+      {section:'Tickets'},
+      {id:'my-tickets', icon:'🎫', label:'My Tickets'},
+      {id:'new-ticket', icon:'➕', label:'New Ticket'},
+      {section:'Info'},
+      {id:'sla-info', icon:'⏱️', label:'SLA Targets'}
+    ],
+    agent: [
+      {section:'Queue'},
+      {id:'queue', icon:'📥', label:'Open Queue'},
+      {id:'my-assigned', icon:'🛠️', label:'My Assigned'},
+      {id:'all-tickets', icon:'📋', label:'All Tickets'},
+      {id:'new-ticket', icon:'➕', label:'New Ticket'},
+      {section:'Info'},
+      {id:'sla-info', icon:'⏱️', label:'SLA Targets'}
+    ],
+    admin: [
+      {section:'Overview'},
+      {id:'dashboard', icon:'📊', label:'Dashboard'},
+      {section:'Tickets'},
+      {id:'queue', icon:'📥', label:'Open Queue'},
+      {id:'all-tickets', icon:'📋', label:'All Tickets'},
+      {id:'sla-breaches', icon:'🚨', label:'SLA Breaches'},
+      {id:'new-ticket', icon:'➕', label:'New Ticket'},
+      {section:'Info'},
+      {id:'sla-info', icon:'⏱️', label:'SLA Targets'}
+    ]
+  };
+  const items = nav[state.user.role];
+  document.getElementById('sidebar').innerHTML = items.map(item => {
+    if (item.section) return `<div class="nav-section">${item.section}</div>`;
+    return `<div class="nav-item" data-page="${item.id}"><span>${item.icon}</span><span>${item.label}</span></div>`;
+  }).join('');
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => renderPage(el.dataset.page));
+  });
+}
+
+function renderPage(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  const main = document.getElementById('main');
+  const routes = {
+    'my-tickets': pageMyTickets,
+    'new-ticket': pageNewTicket,
+    'queue': pageQueue,
+    'my-assigned': pageMyAssigned,
+    'all-tickets': pageAllTickets,
+    'dashboard': pageDashboard,
+    'sla-breaches': pageSlaBreaches,
+    'sla-info': pageSlaInfo
+  };
+  (routes[page] || pageMyTickets)(main);
+}
+
+// ============================================================
+//  PAGES
+// ============================================================
+
+function pageMyTickets(root) {
+  const mine = state.tickets
+    .filter(t => (t.requesterEmail || '').toLowerCase() === (state.user.email || '').toLowerCase())
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">My Tickets</div>
+        <div class="page-subtitle">Tickets you have submitted to IT.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+        <button class="btn btn-primary" id="newBtn">+ New Ticket</button>
+      </div>
+    </div>
+    ${renderStatBar(mine)}
+    ${renderTicketTable(mine, {showRequester:false})}
+  `;
+  document.getElementById('newBtn').onclick = () => renderPage('new-ticket');
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  attachRowHandlers();
+}
+
+function pageNewTicket(root) {
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Log a New Ticket</div>
+        <div class="page-subtitle">Tell IT what's wrong. The more detail, the faster we can help.</div>
+      </div>
+    </div>
+    <div class="panel" style="padding:24px;max-width:760px">
+      <div class="field">
+        <label>Title *</label>
+        <input id="ntTitle" placeholder="e.g. Cannot connect to wifi in conference room B" />
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Category *</label>
+          <select id="ntCategory">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
+        </div>
+        <div class="field">
+          <label>Priority *</label>
+          <select id="ntPriority">${PRIORITIES.map(p=>`<option ${p==='Medium'?'selected':''}>${p}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Department *</label>
+        <select id="ntDept">${DEPARTMENTS.map(d=>`<option>${d}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Describe the problem *</label>
+        <textarea id="ntDescription" rows="6" placeholder="What were you doing? What did you expect? What happened? Any error messages?"></textarea>
+      </div>
+      <div class="field" style="background:var(--navy-3);padding:12px 14px;border-radius:8px;font-size:12px;color:var(--muted)">
+        <strong style="color:var(--orange)">SLA reminder:</strong>
+        Critical = 4hr · High = 8hr · Medium = 24hr · Low = 72hr. Use Critical only if work is fully blocked.
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" id="ntSubmit">Submit Ticket</button>
+        <button class="btn btn-secondary" id="ntCancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('ntCancel').onclick = () => renderPage('my-tickets');
+  document.getElementById('ntSubmit').onclick = async () => {
+    const title = document.getElementById('ntTitle').value.trim();
+    const desc = document.getElementById('ntDescription').value.trim();
+    if (!title || !desc) { showToast('Please fill in title and description.', 'error'); return; }
+    const btn = document.getElementById('ntSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-spinner"></span>Submitting...';
+    try {
+      const result = await createTicketCore({
+        title,
+        description: desc,
+        category: document.getElementById('ntCategory').value,
+        priority: document.getElementById('ntPriority').value,
+        department: document.getElementById('ntDept').value
+      });
+      showToast(`Sharp sharp! Ticket ${result.ticketId} logged.`);
+      // Send branded HTML confirmation email — fire-and-forget; never blocks ticket creation
+      fetch('/api/helpdesk/notify/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticket_id:       result.ticketId,
+          title,
+          priority:        document.getElementById('ntPriority').value,
+          category:        document.getElementById('ntCategory').value,
+          department:      document.getElementById('ntDept').value,
+          requester_email: state.user?.email || '',
+          requester_name:  state.user?.displayName || state.user?.email || ''
+        })
+      }).catch(() => {});
+      await refreshTickets();
+      renderPage('my-tickets');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to submit: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Submit Ticket';
+    }
+  };
+}
+
+function pageQueue(root) {
+  const open = state.tickets
+    .filter(t => t.status === 'Open' || t.status === 'In Progress')
+    .sort((a,b) => {
+      const order = {Critical:0,High:1,Medium:2,Low:3};
+      return order[a.priority] - order[b.priority] || new Date(a.createdAt) - new Date(b.createdAt);
+    });
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Open Queue</div>
+        <div class="page-subtitle">${open.length} ticket(s) requiring attention. Sorted by priority then age.</div>
+      </div>
+      <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+    </div>
+    ${renderStatBar(state.tickets)}
+    ${renderTicketTable(open, {showRequester:true, showAssignee:true})}
+  `;
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  attachRowHandlers();
+}
+
+function pageMyAssigned(root) {
+  const mine = state.tickets
+    .filter(t => (t.assigneeName || '').toLowerCase().includes((state.user.displayName || '').toLowerCase()))
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Assigned To Me</div>
+        <div class="page-subtitle">Tickets currently on your plate.</div>
+      </div>
+      <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+    </div>
+    ${renderStatBar(mine)}
+    ${renderTicketTable(mine, {showRequester:true})}
+  `;
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  attachRowHandlers();
+}
+
+function pageAllTickets(root) {
+  const all = [...state.tickets].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">All Tickets</div>
+        <div class="page-subtitle">${all.length} ticket(s) in the system.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" id="exportBtn">📥 Export CSV</button>
+        <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:16px;padding:14px 18px">
+      <div class="filter-row">
+        <select id="fStatus"><option value="">All statuses</option>${STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+        <select id="fPriority"><option value="">All priorities</option>${PRIORITIES.map(p=>`<option>${p}</option>`).join('')}</select>
+        <select id="fCategory"><option value="">All categories</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select>
+        <input id="fSearch" placeholder="Search title/ID..." />
+      </div>
+    </div>
+    <div id="ticketList">${renderTicketTable(all, {showRequester:true, showAssignee:true})}</div>
+  `;
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  const getFiltered = () => {
+    const fs = document.getElementById('fStatus').value;
+    const fp = document.getElementById('fPriority').value;
+    const fc = document.getElementById('fCategory').value;
+    const q = document.getElementById('fSearch').value.toLowerCase();
+    return all.filter(t =>
+      (!fs || t.status === fs) &&
+      (!fp || t.priority === fp) &&
+      (!fc || t.category === fc) &&
+      (!q || t.title.toLowerCase().includes(q) || (t.ticketId||'').toLowerCase().includes(q))
+    );
+  };
+  const apply = () => {
+    document.getElementById('ticketList').innerHTML = renderTicketTable(getFiltered(), {showRequester:true, showAssignee:true});
+    attachRowHandlers();
+  };
+  ['fStatus','fPriority','fCategory','fSearch'].forEach(id => {
+    document.getElementById(id).addEventListener('input', apply);
+  });
+  document.getElementById('exportBtn').onclick = () => exportTicketsToCsv(getFiltered());
+  attachRowHandlers();
+}
+
+// =============================
+//  CSV EXPORT
+// =============================
+function exportTicketsToCsv(tickets) {
+  if (!tickets || tickets.length === 0) {
+    showToast('No tickets to export', 'error');
+    return;
+  }
+
+  // CSV header
+  const headers = [
+    'Ticket ID', 'Title', 'Category', 'Priority', 'Status',
+    'Department', 'Requester', 'Requester Email', 'Assignee',
+    'Created', 'First Response', 'Resolved',
+    'SLA Hours', 'SLA Status', 'Description', 'Comments'
+  ];
+
+  const escapeCsv = (val) => {
+    if (val == null) return '';
+    const s = String(val).replace(/"/g, '""'); // escape quotes
+    // wrap in quotes if contains comma, newline, or quote
+    if (/[",\n\r]/.test(s)) return `"${s}"`;
+    return s;
+  };
+
+  const rows = tickets.map(t => [
+    t.ticketId,
+    t.title,
+    t.category,
+    t.priority,
+    t.status,
+    t.department,
+    t.requesterName,
+    t.requesterEmail,
+    t.assigneeName || '',
+    t.createdAt,
+    t.firstResponseAt || '',
+    t.resolvedAt || '',
+    t.slaHours,
+    slaStatus(t),
+    t.description,
+    t.comments
+  ].map(escapeCsv).join(','));
+
+  const csv = [headers.map(escapeCsv).join(','), ...rows].join('\n');
+
+  // Trigger browser download
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  const stamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  a.href = url;
+  a.download = `ADI_IT_Tickets_${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+
+  showToast(`Exported ${tickets.length} ticket(s) to CSV`);
+}
+
+function pageDashboard(root) {
+  const all = state.tickets;
+  const open = all.filter(t => t.status === 'Open').length;
+  const inProgress = all.filter(t => t.status === 'In Progress').length;
+  const resolved = all.filter(t => t.status === 'Resolved' || t.status === 'Closed').length;
+  const breaches = all.filter(t => slaStatus(t) === 'breach' && t.status !== 'Resolved' && t.status !== 'Closed').length;
+  const resolvedTickets = all.filter(t => t.resolvedAt);
+  const avgResHours = resolvedTickets.length === 0 ? 0
+    : resolvedTickets.reduce((s,t) => s + (new Date(t.resolvedAt) - new Date(t.createdAt)), 0) / resolvedTickets.length / 3600000;
+
+  // Breakdown by category
+  const catCount = {};
+  CATEGORIES.forEach(c => catCount[c] = 0);
+  all.forEach(t => { if (catCount[t.category] !== undefined) catCount[t.category]++; });
+
+  // Breakdown by priority
+  const priCount = {};
+  PRIORITIES.forEach(p => priCount[p] = 0);
+  all.forEach(t => { if (priCount[t.priority] !== undefined) priCount[t.priority]++; });
+
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">IT Dashboard</div>
+        <div class="page-subtitle">Live overview of help desk activity.</div>
+      </div>
+      <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card info"><div class="stat-label">Open</div><div class="stat-value">${open}</div><div class="stat-trend">awaiting pickup</div></div>
+      <div class="stat-card warning"><div class="stat-label">In Progress</div><div class="stat-value">${inProgress}</div><div class="stat-trend">being worked on</div></div>
+      <div class="stat-card success"><div class="stat-label">Resolved</div><div class="stat-value">${resolved}</div><div class="stat-trend">closed / completed</div></div>
+      <div class="stat-card alert"><div class="stat-label">SLA Breaches</div><div class="stat-value">${breaches}</div><div class="stat-trend">past target time</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Resolution</div><div class="stat-value">${avgResHours.toFixed(1)}h</div><div class="stat-trend">over ${resolvedTickets.length} resolved</div></div>
+      <div class="stat-card"><div class="stat-label">Total Tickets</div><div class="stat-value">${all.length}</div><div class="stat-trend">all time</div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-header"><div class="panel-title">Tickets by Category</div></div>
+      <table>
+        <thead><tr><th>Category</th><th>Count</th><th>%</th></tr></thead>
+        <tbody>
+          ${CATEGORIES.map(c => {
+            const n = catCount[c];
+            const pct = all.length ? (n/all.length*100).toFixed(0) : 0;
+            return `<tr><td>${escapeHtml(c)}</td><td>${n}</td><td>${pct}%</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-header"><div class="panel-title">Tickets by Priority</div></div>
+      <table>
+        <thead><tr><th>Priority</th><th>Count</th></tr></thead>
+        <tbody>
+          ${PRIORITIES.map(p => `<tr><td><span class="badge badge-${p.toLowerCase()}">${p}</span></td><td>${priCount[p]}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 style="font-size:16px;margin:24px 0 12px">Recent Tickets</h2>
+    ${renderTicketTable(all.slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,10), {showRequester:true, showAssignee:true})}
+  `;
+
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  attachRowHandlers();
+}
+
+function pageSlaBreaches(root) {
+  const breaches = state.tickets
+    .filter(t => slaStatus(t) === 'breach' && t.status !== 'Resolved' && t.status !== 'Closed')
+    .sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">SLA Breaches</div>
+        <div class="page-subtitle">${breaches.length} ticket(s) past their resolution SLA target.</div>
+      </div>
+      <button class="btn btn-secondary" id="refreshBtn">Refresh</button>
+    </div>
+    ${breaches.length === 0
+      ? `<div class="panel"><div class="empty-state"><div class="big">✓</div><div>No SLA breaches. Sharp sharp!</div></div></div>`
+      : renderTicketTable(breaches, {showRequester:true, showAssignee:true})}
+  `;
+  document.getElementById('refreshBtn').onclick = doRefresh;
+  attachRowHandlers();
+}
+
+function pageSlaInfo(root) {
+  root.innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">SLA Targets</div>
+        <div class="page-subtitle">Service level commitments by priority.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Priority</th><th>First Response</th><th>Resolution Target</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-critical">Critical</span></td><td>1 hour</td><td>4 hours</td><td>Work fully blocked / multiple users affected / system down</td></tr>
+          <tr><td><span class="badge badge-high">High</span></td><td>2 hours</td><td>8 hours</td><td>Major function broken, no workaround</td></tr>
+          <tr><td><span class="badge badge-medium">Medium</span></td><td>4 hours</td><td>24 hours</td><td>Function impaired but workaround exists</td></tr>
+          <tr><td><span class="badge badge-low">Low</span></td><td>8 hours</td><td>72 hours</td><td>Cosmetic / informational / request</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="footer-note">SLAs measured in business hours. Critical tickets trigger after-hours escalation.</div>
+  `;
+}
+
+// ============================================================
+//  RENDER HELPERS
+// ============================================================
+
+function renderStatBar(tickets) {
+  const open = tickets.filter(t => t.status === 'Open').length;
+  const inProgress = tickets.filter(t => t.status === 'In Progress').length;
+  const resolved = tickets.filter(t => t.status === 'Resolved' || t.status === 'Closed').length;
+  return `
+    <div class="stats-grid">
+      <div class="stat-card info"><div class="stat-label">Open</div><div class="stat-value">${open}</div></div>
+      <div class="stat-card warning"><div class="stat-label">In Progress</div><div class="stat-value">${inProgress}</div></div>
+      <div class="stat-card success"><div class="stat-label">Resolved</div><div class="stat-value">${resolved}</div></div>
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${tickets.length}</div></div>
+    </div>
+  `;
+}
+
+function renderTicketTable(tickets, opts={}) {
+  if (!state.loaded) {
+    return `<div class="panel"><table><tbody><tr class="loading-row"><td><span class="inline-spinner"></span>Loading tickets from SharePoint...</td></tr></tbody></table></div>`;
+  }
+  if (tickets.length === 0) {
+    return `<div class="panel"><div class="empty-state"><div class="big">📭</div><div>No tickets to show.</div></div></div>`;
+  }
+  const showReq = opts.showRequester;
+  const showAsg = opts.showAssignee;
+  return `
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            ${showReq ? '<th>Requester</th>' : ''}
+            ${showAsg ? '<th>Assignee</th>' : ''}
+            <th>SLA</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tickets.map(t => {
+            const sla = slaStatus(t);
+            const slaBadge = sla === 'breach' ? '<span class="badge badge-sla-breach">Breached</span>'
+                          : sla === 'warn' ? '<span class="badge badge-sla-warn">At risk</span>'
+                          : '<span class="badge badge-sla-ok">OK</span>';
+            return `
+              <tr class="clickable" data-id="${t.id}">
+                <td style="font-family:monospace;font-weight:600">${escapeHtml(t.ticketId)}</td>
+                <td>${escapeHtml(t.title)}</td>
+                <td>${escapeHtml(t.category)}</td>
+                <td><span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span></td>
+                <td><span class="badge ${badgeClass(t.status)}">${t.status}</span></td>
+                ${showReq ? `<td>${escapeHtml(t.requesterName)}<div style="font-size:11px;color:var(--muted)">${escapeHtml(t.department)}</div></td>` : ''}
+                ${showAsg ? `<td>${t.assigneeName ? escapeHtml(t.assigneeName) : '<span style="color:var(--muted)">Unassigned</span>'}</td>` : ''}
+                <td>${slaBadge}</td>
+                <td>${ago(t.createdAt)}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function attachRowHandlers() {
+  document.querySelectorAll('tr.clickable').forEach(row => {
+    row.addEventListener('click', () => openTicket(row.dataset.id));
+  });
+}
+
+async function doRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="inline-spinner"></span>Refreshing...';
+  }
+  try {
+    await refreshTickets();
+    renderPage(state.currentPage);
+  } catch (e) {
+    showToast('Refresh failed: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+//  TICKET DETAIL MODAL
+// ============================================================
+
+function openTicket(itemId) {
+  const t = state.tickets.find(x => x.id === itemId);
+  if (!t) return;
+  const canEdit = state.user.role === 'agent' || state.user.role === 'admin';
+  const isRequester = (t.requesterEmail || '').toLowerCase() === (state.user.email || '').toLowerCase();
+
+  document.getElementById('modalTitle').textContent = `${t.ticketId} · ${t.title}`;
+
+  const sla = slaStatus(t);
+  const slaBadge = sla === 'breach' ? '<span class="badge badge-sla-breach">Breached</span>'
+                  : sla === 'warn' ? '<span class="badge badge-sla-warn">At risk</span>'
+                  : '<span class="badge badge-sla-ok">Within SLA</span>';
+
+  const agentOptions = ['<option value="">— Unassigned —</option>']
+    .concat(state.agentList.map(a => `<option value="${escapeHtml(a.email)}" ${t.assigneeName === a.name ? 'selected' : ''}>${escapeHtml(a.name)}</option>`))
+    .join('');
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-grid">
+      <div>
+        <div style="font-size:13px;line-height:1.6;background:var(--navy-3);padding:14px;border-radius:8px;margin-bottom:18px;white-space:pre-wrap">${escapeHtml(t.description)}</div>
+
+        ${canEdit ? `
+          <div class="form-row">
+            <div class="field">
+              <label>Status</label>
+              <select id="dStatus">${STATUSES.map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select>
+            </div>
+            <div class="field">
+              <label>Priority</label>
+              <select id="dPriority">${PRIORITIES.map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}</select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label>Assignee</label>
+              <select id="dAssignee">${agentOptions}</select>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select id="dCategory">${CATEGORIES.map(c=>`<option ${c===t.category?'selected':''}>${c}</option>`).join('')}</select>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="activity">
+          <h4>Activity & Comments</h4>
+          <div id="commentList">
+            <div id="spComments">${renderComments(t)}</div>
+            <div id="djComments"><div style="color:var(--muted);font-size:12px">Loading...</div></div>
+          </div>
+          <div class="field" style="margin-top:14px">
+            <label>Add a comment / update</label>
+            <textarea id="dComment" placeholder="Type an update..."></textarea>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="dAddComment">Post Comment</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="meta-list">
+          <div class="meta-row"><span class="meta-label">Status</span><span class="meta-value"><span class="badge ${badgeClass(t.status)}">${t.status}</span></span></div>
+          <div class="meta-row"><span class="meta-label">Priority</span><span class="meta-value"><span class="badge badge-${t.priority.toLowerCase()}">${t.priority}</span></span></div>
+          <div class="meta-row"><span class="meta-label">SLA</span><span class="meta-value">${slaBadge}</span></div>
+          <div class="meta-row"><span class="meta-label">Category</span><span class="meta-value">${escapeHtml(t.category)}</span></div>
+          <div class="meta-row"><span class="meta-label">Requester</span><span class="meta-value">${escapeHtml(t.requesterName)}</span></div>
+          <div class="meta-row"><span class="meta-label">Department</span><span class="meta-value">${escapeHtml(t.department)}</span></div>
+          <div class="meta-row"><span class="meta-label">Assignee</span><span class="meta-value">${t.assigneeName ? escapeHtml(t.assigneeName) : '—'}</span></div>
+          <div class="meta-row"><span class="meta-label">Created</span><span class="meta-value">${fmt(t.createdAt)}</span></div>
+          <div class="meta-row"><span class="meta-label">1st Response</span><span class="meta-value">${fmt(t.firstResponseAt)}</span></div>
+          <div class="meta-row"><span class="meta-label">Resolved</span><span class="meta-value">${fmt(t.resolvedAt)}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const footer = document.getElementById('modalFooter');
+  if (canEdit) {
+    footer.innerHTML = `
+      <button class="btn btn-secondary" id="dClose">Close</button>
+      <button class="btn btn-primary" id="dSave">Save Changes</button>
+    `;
+    document.getElementById('dSave').onclick = () => saveTicketChanges(t);
+  } else {
+    footer.innerHTML = `<button class="btn btn-secondary" id="dClose">Close</button>`;
+  }
+  document.getElementById('dClose').onclick = closeModal;
+
+  document.getElementById('dAddComment').onclick = async () => {
+    const text = document.getElementById('dComment').value.trim();
+    if (!text) return;
+    const btn = document.getElementById('dAddComment');
+    btn.disabled = true; btn.innerHTML = '<span class="inline-spinner"></span>Posting...';
+    try {
+      await appendComment(t, text);
+      // If agent is responding for the first time, set FirstResponseAt
+      if (state.user.role === 'agent' && !t.firstResponseAt) {
+        await updateTicket(t.id, { FirstResponseAt: new Date().toISOString() });
+      }
+      await refreshTickets();
+      const fresh = state.tickets.find(x => x.id === t.id);
+      openTicket(fresh.id);
+    } catch (e) {
+      showToast('Failed to post comment: ' + e.message, 'error');
+      btn.disabled = false; btn.textContent = 'Post Comment';
+    }
+  };
+
+  document.getElementById('modalBg').classList.add('active');
+
+  // Load Django-side comments (posted via SSM management command) asynchronously
+  // so they don't block the modal from opening.
+  fetchDjangoComments(t.ticketId).then(comments => {
+    const el = document.getElementById('djComments');
+    if (!el) return;
+    if (!comments.length) { el.innerHTML = ''; return; }
+    el.innerHTML = comments.map(c => `
+      <div class="comment" style="border-left:3px solid var(--orange);background:var(--navy-2)">
+        <div class="comment-meta">
+          <span class="comment-author">${escapeHtml(c.author)}</span>
+          <span style="color:var(--muted);font-size:10px">via Claude Code &middot; ${new Date(c.created_at).toLocaleString('en-GB')}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(c.text)}</div>
+      </div>
+    `).join('');
+  });
+}
+
+function renderComments(t) {
+  const text = (t.comments || '').trim();
+  if (!text) return '<div style="color:var(--muted);font-size:13px;padding:8px">No activity yet.</div>';
+  // Parse the comments string which uses our convention: [timestamp] author:\ntext\n\n
+  const blocks = text.split('\n\n').filter(b => b.trim());
+  return blocks.map(b => {
+    const lines = b.split('\n');
+    const header = lines[0] || '';
+    const body = lines.slice(1).join('\n');
+    return `
+      <div class="comment">
+        <div class="comment-meta">
+          <span class="comment-author">${escapeHtml(header)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(body)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function saveTicketChanges(t) {
+  const newStatus = document.getElementById('dStatus').value;
+  const newPriority = document.getElementById('dPriority').value;
+  const newAssigneeEmail = document.getElementById('dAssignee').value;
+  const newCategory = document.getElementById('dCategory').value;
+
+  const fields = {};
+  if (newStatus !== t.status) fields.Status = newStatus;
+  if (newPriority !== t.priority) fields.Priority = newPriority;
+  if (newCategory !== t.category) fields.Category = newCategory;
+
+  // Assignee lookup
+  if (newAssigneeEmail) {
+    try {
+      const lookupId = await ensureSharePointUser(newAssigneeEmail);
+      if (lookupId) fields.AssignedToLookupId = lookupId;
+    } catch (e) {
+      console.warn('Assignee lookup failed:', e.message);
+    }
+  } else if (!newAssigneeEmail && t.assigneeName) {
+    fields.AssignedToLookupId = null;
+  }
+
+  // Set timestamps automatically based on status transitions
+  if (newStatus === 'In Progress' && !t.firstResponseAt) {
+    fields.FirstResponseAt = new Date().toISOString();
+  }
+  if ((newStatus === 'Resolved' || newStatus === 'Closed') && !t.resolvedAt) {
+    fields.ResolvedAt = new Date().toISOString();
+  }
+
+  if (Object.keys(fields).length === 0) {
+    closeModal();
+    return;
+  }
+
+  const btn = document.getElementById('dSave');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="inline-spinner"></span>Saving...';
+
+  try {
+    await updateTicket(t.id, fields);
+    showToast('Ticket updated.');
+    await refreshTickets();
+    closeModal();
+    renderPage(state.currentPage);
+  } catch (e) {
+    showToast('Save failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+}
+
+async function fetchDjangoComments(ticketId) {
+  try {
+    const r = await fetch(`/api/helpdesk/comments/?ticket=${encodeURIComponent(ticketId)}`);
+    if (!r.ok) return [];
+    const data = await r.json();
+    return data.comments || [];
+  } catch (e) { return []; }
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('active');
+}
+document.getElementById('modalClose').onclick = closeModal;
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target.id === 'modalBg') closeModal();
+});
+
+// ============================================================
+//  BOOT
+// ============================================================
+
+bootstrap();
+
+</script>
+</body>
+</html>

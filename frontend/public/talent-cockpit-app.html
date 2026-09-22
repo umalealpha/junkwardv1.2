@@ -1,0 +1,1249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alpha Direct — Talent Cockpit · Development Dialogue</title>
+<style>
+:root{
+  --navy:#0D1B2A; --navy-2:#16293f; --navy-ink:#091320; --orange:#F4A623; --orange-2:#d98f16;
+  --ink:#141a2e; --muted:#5b6784; --dim:#8b95af; --line:#e2e7f2; --line-2:#eef1f8;
+  --bg:#f4f6fb; --card:#ffffff;
+  --ok:#1f9d57; --ok-bg:#e6f6ee; --warn:#c78a06; --warn-bg:#fdf3dd; --danger:#d23b3b; --danger-bg:#fbe7e7;
+  --info:#3d6dcc; --info-bg:#e8eefb; --slate:#7683a0; --slate-bg:#eef1f7;
+  --shadow:0 1px 2px rgba(20,34,79,.06),0 8px 24px rgba(20,34,79,.06);
+  --shadow-lg:0 12px 40px rgba(20,34,79,.18);
+  --r:12px; --r-sm:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Segoe UI",Inter,system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink);
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.01em}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- app bar ---------- */
+.appbar{background:linear-gradient(100deg,var(--navy-ink),var(--navy) 60%);color:#fff;padding:0 20px;height:60px;
+  display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:40}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 2px 8px rgba(244,124,32,.4)}
+.brand h1{font-size:15.5px;line-height:1.1}
+.brand .sub{font-size:11px;color:#aebbe4;margin-top:1px}
+.tabs{display:flex;gap:2px;margin-left:14px;background:rgba(255,255,255,.08);padding:4px;border-radius:10px}
+.tab{border:0;background:transparent;color:#c4cdea;font-size:13px;font-weight:600;padding:7px 14px;border-radius:7px}
+.tab.active{background:#fff;color:var(--navy)}
+.tab:hover:not(.active){color:#fff}
+.actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#fff;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{background:rgba(255,255,255,.16)}
+.btn.solid{background:var(--orange);border-color:var(--orange)}
+.btn.solid:hover{background:var(--orange-2)}
+.conf{background:#7a1f1f;color:#fff;font-size:10.5px;font-weight:700;padding:5px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap}
+
+/* ---------- KPI row ---------- */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px 20px 4px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;box-shadow:var(--shadow)}
+.kpi .lab{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.kpi .val{font-size:26px;font-weight:800;color:var(--navy);margin-top:5px;line-height:1}
+.kpi .val small{font-size:14px;color:var(--muted);font-weight:700}
+.kpi .foot{font-size:11.5px;color:var(--muted);margin-top:5px}
+.kpi.accent{border-top:3px solid var(--orange)}
+.dot-ok{color:var(--ok)} .dot-warn{color:var(--warn)} .dot-danger{color:var(--danger)}
+
+/* ---------- layout ---------- */
+.main{padding:12px 20px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.view{display:none}
+.view.active{display:block}
+.section-h{display:flex;align-items:center;gap:10px;margin:8px 2px 12px}
+.section-h h2{font-size:16px;color:var(--navy)}
+.section-h .hint{font-size:12.5px;color:var(--muted)}
+.section-h .sp{margin-left:auto}
+
+/* ---------- box grid ---------- */
+.gridwrap{display:grid;grid-template-columns:1fr 300px;gap:16px}
+.gridbox{position:relative;padding:14px 14px 40px 56px}
+.axis-y{position:absolute;left:12px;top:14px;bottom:40px;width:24px;display:flex;align-items:center;justify-content:center}
+.axis-y span{transform:rotate(-90deg);white-space:nowrap;font-weight:800;color:var(--navy);font-size:12px;letter-spacing:.6px}
+.axis-x{position:absolute;left:56px;right:14px;bottom:12px;text-align:center;font-weight:800;color:var(--navy);font-size:12px;letter-spacing:.6px}
+.grid{position:relative;width:100%;aspect-ratio:1.15/1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;
+  border:1.5px solid var(--navy);border-radius:10px;overflow:hidden;touch-action:none;user-select:none}
+.cell{border:1px dashed #ccd5ec;padding:9px 10px;position:relative}
+.cell .cn{font-weight:700;font-size:12.5px;color:#2a3552}
+.cell .cd{font-size:10px;color:#4a5678;margin-top:2px}
+.z1{background:rgba(31,157,87,.05)}.z2{background:rgba(31,157,87,.10)}.z3{background:rgba(31,157,87,.17)}
+.z4{background:rgba(244,124,32,.04)}.z5{background:rgba(244,124,32,.08)}.z6{background:rgba(244,124,32,.13)}
+.z7{background:rgba(210,59,59,.05)}.z8{background:rgba(210,59,59,.10)}.z9{background:rgba(210,59,59,.16)}
+.pin{position:absolute;width:40px;height:40px;border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:13px;cursor:grab;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2.5px solid #fff;z-index:5;transition:box-shadow .12s}
+.pin:hover{box-shadow:0 5px 14px rgba(0,0,0,.4)}
+.pin.sel{outline:3px solid var(--navy);outline-offset:1px;z-index:12}
+.pin.dragging{cursor:grabbing;transform:translate(-50%,-50%) scale(1.12);z-index:30}
+.pin.unscored{border-style:dashed}
+.pin .tag{position:absolute;top:42px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--navy-ink);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;pointer-events:none}
+.legend{padding:14px 16px}
+.legend h3{font-size:13px;color:var(--navy);margin-bottom:10px}
+.lg-row{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.lg-row:hover{background:var(--line-2)}
+.lg-row.sel{background:var(--info-bg);border-color:var(--navy)}
+.lg-dot{width:15px;height:15px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px #cdd6ea}
+.lg-row .sc{margin-left:auto;font-weight:700;color:var(--navy);font-size:12px}
+
+/* ---------- people cards ---------- */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;box-shadow:var(--shadow);cursor:pointer;transition:transform .1s,box-shadow .1s;position:relative}
+.pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.pcard .top{display:flex;gap:12px;align-items:center}
+.avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex:none}
+.pcard .nm{font-size:15px;font-weight:700;color:var(--ink)}
+.pcard .po{font-size:11.5px;color:var(--muted);margin-top:1px}
+.pcard .row{display:flex;gap:8px;margin-top:12px}
+.stat{flex:1;background:var(--line-2);border-radius:9px;padding:8px 10px}
+.stat .l{font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.stat .v{font-size:16px;font-weight:800;color:var(--navy);margin-top:2px}
+.pcard .tgt{margin-top:12px}
+.tgt .tl{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px}
+.chip.box{background:var(--navy);color:#fff}
+.chipdel{position:absolute;top:10px;right:10px;border:0;background:transparent;color:var(--dim);font-size:16px;line-height:1;padding:2px 5px;border-radius:6px}
+.chipdel:hover{background:var(--danger-bg);color:var(--danger)}
+
+/* progress bars */
+.pbar{height:8px;background:#e9edf6;border-radius:6px;overflow:hidden}
+.pbar>i{display:block;height:100%;width:100%;border-radius:6px;background:var(--navy);transform-origin:left;transform:scaleX(0)}
+.pbar.ok>i{background:var(--ok)} .pbar.warn>i{background:var(--warn)} .pbar.info>i{background:var(--info)}
+
+/* status chips */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st.ontrack{color:var(--ok);background:var(--ok-bg)} .st.atrisk{color:var(--warn);background:var(--warn-bg)}
+.st.notstarted{color:var(--slate);background:var(--slate-bg)} .st.done{color:var(--info);background:var(--info-bg)}
+.st.overdue{color:var(--danger);background:var(--danger-bg)}
+
+/* ---------- targets table ---------- */
+.filterbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.fbtn{border:1px solid var(--line);background:#fff;color:var(--muted);font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px}
+.fbtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+table.tt{width:100%;border-collapse:collapse;font-size:13px}
+table.tt th{text-align:left;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:60px;background:var(--card)}
+table.tt td{padding:11px 12px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+table.tt tr:hover td{background:var(--line-2)}
+.owncell{display:flex;align-items:center;gap:9px}
+.mini{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;flex:none}
+.pcombo{display:flex;align-items:center;gap:9px;min-width:120px}
+.pcombo .pbar{flex:1}
+.tright{text-align:right}
+.linkbtn{border:0;background:transparent;color:var(--navy);font-weight:600;font-size:12.5px;text-decoration:underline;text-underline-offset:2px}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(18,34,79,.34);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,94vw);background:#fff;box-shadow:var(--shadow-lg);
+  transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);z-index:60;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.dhead{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;gap:13px;align-items:center}
+.dhead .avatar{width:48px;height:48px;font-size:18px}
+.dhead .nmwrap{flex:1;min-width:0}
+.dhead input.name{font-size:18px;font-weight:800;color:var(--ink);border:1px solid transparent;border-radius:7px;padding:3px 6px;width:100%;background:transparent}
+.dhead input.name:hover{background:var(--line-2)} .dhead input.name:focus{background:#fff;border-color:var(--navy);outline:none}
+.dhead .po{font-size:12px;color:var(--muted);padding-left:6px}
+.xbtn{border:0;background:var(--line-2);width:34px;height:34px;border-radius:9px;font-size:18px;color:var(--muted);flex:none}
+.xbtn:hover{background:var(--danger-bg);color:var(--danger)}
+.dtabs{display:flex;gap:2px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.dtab{border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;padding:9px 12px;border-bottom:2px solid transparent}
+.dtab.active{color:var(--navy);border-color:var(--orange)}
+.dbody{padding:18px 20px;overflow:auto;flex:1}
+.dpane{display:none} .dpane.active{display:block}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;color:var(--ink);background:#ffff}
+.field textarea{min-height:96px;resize:vertical;line-height:1.5}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(29,50,112,.1)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.slider-row{display:flex;align-items:center;gap:12px}
+.slider-row input[type=range]{flex:1;accent-color:var(--orange)}
+.slider-row .rv{font-weight:800;color:var(--navy);min-width:44px;text-align:right}
+.trow{border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:11px;background:#fdfdff}
+.trow .r1{display:flex;gap:8px;align-items:flex-start}
+.trow .r1 textarea{min-height:40px}
+.trow .r2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:9px;align-items:center}
+.trow .r2 .small{font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;display:block}
+.trow .r2 input,.trow .r2 select{padding:7px 9px;font-size:12.5px}
+.tdel{border:0;background:var(--line-2);color:var(--muted);width:30px;height:30px;border-radius:8px;font-size:15px;flex:none}
+.tdel:hover{background:var(--danger-bg);color:var(--danger)}
+.addrow{border:1.5px dashed var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:13px;width:100%;padding:10px;border-radius:10px}
+.addrow:hover{background:var(--line-2)}
+.overview-hd{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
+.bignum{font-size:34px;font-weight:800;color:var(--navy);line-height:1}
+.placenow{font-size:13px;font-weight:700;color:var(--orange);margin:4px 0 12px}
+.meta{font-size:12px;color:var(--muted);line-height:1.6}
+.sbar-row{display:flex;justify-content:space-between;font-size:12px;color:#3a4666;margin-bottom:3px}
+.foot{font-size:11px;color:var(--muted);padding:6px 20px 30px;line-height:1.6}
+.danger-link{color:var(--danger);border:0;background:transparent;font-weight:600;font-size:12.5px;text-decoration:underline;padding:0;margin-top:6px}
+/* development dialogue form */
+.ddgrp{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:#fdfdff}
+.ddgrp-h{font-size:13.5px;font-weight:800;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.wpill{font-size:10.5px;font-weight:700;color:var(--orange);background:var(--warn-bg);padding:2px 8px;border-radius:20px}
+.ddrow{border-left:3px solid var(--orange);padding:2px 0 2px 12px;margin-bottom:16px}
+.ddrow-h{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:7px}
+.ddl{display:block;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin:8px 0 4px}
+.ddrow textarea,.ddrow input,.ddgrp .field textarea,.ddgrp .field input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px;color:var(--ink);background:#fff}
+.ddrow textarea{min-height:42px;resize:vertical;line-height:1.45}
+.ddrow textarea.tall{min-height:78px}
+.ddrow textarea:focus,.ddrow input:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(29,50,112,.1)}
+.ddscores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.ddscores:has(>div:nth-child(4)){grid-template-columns:repeat(4,1fr)}
+.ddscores>div{min-width:0}
+.ddscores input{text-align:center;font-variant-numeric:tabular-nums}
+.ddscores input.ro{background:var(--line-2);color:var(--navy);font-weight:800;border-color:var(--line-2)}
+.ddtot{background:var(--navy);color:#fff;border-radius:10px;padding:11px 14px;font-size:13px;font-weight:600;margin:2px 0 16px}
+.ddtot b{color:#fff} .ddtot b.big{color:#ffd9b8;font-size:17px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.gridwrap{grid-template-columns:1fr}}
+
+/* ---- employee picker (board [DD]) ---- */
+#pickerModal{position:fixed;inset:0;background:rgba(11,11,59,.55);display:none;
+  align-items:center;justify-content:center;z-index:9999;padding:16px}
+.pk-card{background:#fff;border-radius:14px;width:100%;max-width:560px;max-height:80vh;
+  display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden}
+.pk-head{background:#0B0B3B;color:#fff;padding:14px 18px;display:flex;align-items:center;
+  justify-content:space-between}
+.pk-head h3{margin:0;font-size:14px;font-weight:700}
+.pk-x{background:none;border:0;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.pk-body{padding:14px 18px;display:flex;flex-direction:column;gap:10px;min-height:0}
+#pickerSearch{width:100%;padding:9px 12px;border:1px solid #D8DCE3;border-radius:8px;font-size:14px}
+#pickerList{overflow-y:auto;min-height:120px;max-height:48vh;display:flex;flex-direction:column;gap:2px}
+.pk-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;
+  text-align:left;padding:9px 11px;border:0;border-radius:8px;background:transparent;cursor:pointer}
+.pk-row:hover{background:#F3F5F9}
+.pk-nm{font-size:14px;color:#0B0B3B;font-weight:600}
+.pk-sub{font-size:12px;color:#6B7280}
+.pk-has{opacity:.6}
+.pk-link{background:none;border:0;padding:0;color:#F47C20;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit}
+.pk-tag{font-size:11px;color:#92400E;background:#FEF3C7;border-radius:5px;padding:1px 6px;margin-top:2px}
+.pk-msg{padding:16px;color:#6B7280;font-size:13px;text-align:center}
+.pk-err{color:#991B1B;background:#FEE2E2;border-radius:8px}
+.pk-foot{padding:10px 18px;border-top:1px solid #EEF0F4;font-size:12px;color:#6B7280}
+
+/* ================= Development Dialogue (All Employees) — filters + motion =================
+   CFO 19-Sep-2026: "improve it, filter, 10 different animations". Every animation moves
+   transform/opacity only and is switched off under prefers-reduced-motion. */
+.cfbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 20px 2px}
+.cfbar .cfgroup{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cfbar .cflab{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.cfsearch{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:12.5px;color:var(--ink);min-width:190px}
+.cfsearch:focus{outline:2px solid var(--navy);outline-offset:1px}
+.cfsel{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 10px;font-size:12px;color:var(--muted);font-weight:600}
+.cfchip{border:1px solid var(--line);background:#fff;color:var(--muted);font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;
+  transition:transform .14s cubic-bezier(.2,.8,.2,1),background .14s,color .14s}
+.cfchip b{color:var(--navy);margin-left:4px}
+.cfchip[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.cfchip[aria-pressed="true"] b{color:#fff}
+.cfchip:hover{transform:translateY(-1px)}
+.cfchip:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.cfclear{border:0;background:transparent;color:var(--orange-2);font-size:12px;font-weight:700;text-decoration:underline}
+.cfmini{display:grid;grid-template-columns:repeat(3,14px);grid-template-rows:repeat(3,14px);gap:2px}
+.cfmini button{border:1px solid var(--line);border-radius:3px;background:#fff;padding:0;width:14px;height:14px}
+.cfmini button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy)}
+.cfcount{font-size:12px;color:var(--muted);margin-left:auto}
+
+/* empty + no-result states (Fable item 3) */
+.emptystate{text-align:center;color:var(--muted);font-size:13.5px;padding:34px 16px}
+.emptystate b{display:block;color:var(--navy);font-size:15px;margin-bottom:4px}
+
+/* save confirmation pill (animation 9) */
+#gridStatus{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ok);
+  background:var(--ok-bg);border-radius:20px;padding:4px 11px;opacity:0;transform:translateX(8px)}
+#gridStatus.show{opacity:1;transform:translateX(0)}
+
+.pin.dimmed{opacity:.18;transform:translate(-50%,-50%) scale(.92);pointer-events:none}
+.pin.linked{transform:translate(-50%,-50%) scale(1.15);z-index:14}
+.pin.linked .tag{opacity:1}
+.pin .tag{opacity:0}
+.pin:hover .tag,.pin.sel .tag{opacity:1}
+.pin:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.cell.hot::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 2px var(--navy);opacity:0;border-radius:2px}
+.cell.hot.on::after{opacity:1}
+.lg-row.linked{background:var(--line-2)}
+.pcard.dimmed{opacity:.35}
+
+@media (prefers-reduced-motion: no-preference){
+  .pin{transition:opacity .2s ease-out,transform .18s cubic-bezier(.34,1.2,.64,1),box-shadow .12s}
+  .pin .tag{transition:opacity .14s ease-out}
+  .pin.enter{animation:pinIn .26s cubic-bezier(.2,.8,.2,1) both}
+  .pin.dropped{animation:pinDrop .18s cubic-bezier(.34,1.2,.64,1)}
+  .cell.hot::after{transition:opacity .09s ease-out}
+  .cell.hot:not(.on)::after{transition-duration:.12s}
+  .view.enter{animation:viewIn .18s cubic-bezier(.2,.8,.2,1) both;animation-delay:.06s}
+  #gridStatus{transition:opacity .16s ease-out,transform .16s cubic-bezier(.2,.8,.2,1)}
+  .kpi.pulse{animation:kpiPulse .22s ease-out}
+  .pbar>i{transition:transform .36s cubic-bezier(.2,.8,.2,1)}
+  .drawer{transition:transform .22s cubic-bezier(.32,.72,0,1)}
+  .drawer.open .dpane.active>*{animation:paneIn .2s ease-out both}
+  .drawer.open .dpane.active>*:nth-child(1){animation-delay:.02s}
+  .drawer.open .dpane.active>*:nth-child(2){animation-delay:.04s}
+  .drawer.open .dpane.active>*:nth-child(3){animation-delay:.06s}
+  .drawer.open .dpane.active>*:nth-child(4){animation-delay:.08s}
+  .drawer.open .dpane.active>*:nth-child(5){animation-delay:.10s}
+  .drawer.open .dpane.active>*:nth-child(6){animation-delay:.12s}
+  .pcard{transition:transform .14s cubic-bezier(.2,.8,.2,1),box-shadow .14s,opacity .2s ease-out}
+}
+@keyframes pinIn{from{opacity:0;transform:translate(-50%,-50%) scale(.6)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes pinDrop{from{transform:translate(-50%,-50%) scale(1.12)}to{transform:translate(-50%,-50%) scale(1)}}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kpiPulse{0%{transform:scale(1)}45%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes paneIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* the CEO's monitor (Fable item 6) */
+@media (min-width:1600px){
+  .kpis,.cfbar,.main{max-width:1520px;margin-left:auto;margin-right:auto}
+  .gridwrap{grid-template-columns:minmax(0,1.3fr) 360px}
+}
+
+/* print (Fable item 5) */
+@media print{
+  .appbar .actions,.appbar .tabs,.scrim,.drawer,.cfbar .cfclear,.chipdel,#importFile{display:none !important}
+  .appbar{position:static;height:auto;padding:10px 0;background:#fff;color:var(--navy)}
+  .appbar .brand .sub{color:var(--muted)}
+  body{background:#fff}
+  .view{display:block !important;page-break-before:always}
+  #view-grid{page-break-before:auto}
+  .grid{width:190mm;height:190mm;aspect-ratio:auto}
+  .pgrid{grid-template-columns:1fr 1fr}
+  .card{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div class="appbar">
+  <div class="brand">
+    <div class="logo">AD</div>
+    <div><h1>Development Dialogue — All Employees</h1><div class="sub" id="asof">Performance · Potential · Job Descriptions · Targets</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-view="grid">Box Grid</button>
+    <button class="tab" data-view="people">People</button>
+    <button class="tab" data-view="targets">Targets</button>
+  </div>
+  <div class="actions">
+    <button class="btn solid" id="addPerson" title="Create a Development Dialogue for an employee">+ New dialogue</button>
+    <button class="btn" id="newPeriodAllBtn" style="border-color:var(--orange);color:var(--orange)">New period · all</button>
+    <button class="btn" id="exportBtn">Export</button>
+    <button class="btn" id="importBtn">Import</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+    <button class="btn" id="resetBtn">Reset</button>
+    <button class="btn" id="printBtn">Print</button>
+    <span class="conf">CONFIDENTIAL · HR &amp; CFO</span>
+  </div>
+</div>
+
+<div class="cfbar" id="cfbar" role="search" aria-label="Filter the dialogues"></div>
+<div class="kpis" id="kpis"></div>
+
+<div class="main">
+  <!-- GRID -->
+  <div class="view active" id="view-grid">
+    <div class="section-h"><h2>9-Box Talent Grid</h2><span class="hint">Drag any person. Placement saves automatically.</span><span class="sp"></span><span class="hint" id="gridStatus"></span></div>
+    <div class="gridwrap">
+      <div class="card gridbox">
+        <div class="axis-y"><span>PERFORMANCE →</span></div>
+        <div class="grid" id="grid">
+          <div class="cell z1"><div class="cn">Key contributor</div><div class="cd">High perf · low potential</div></div>
+          <div class="cell z2"><div class="cn">Strong performer</div><div class="cd">High perf · medium potential</div></div>
+          <div class="cell z3"><div class="cn">Star performer</div><div class="cd">High perf · high potential</div></div>
+          <div class="cell z4"><div class="cn">Acceptable performer</div><div class="cd">On target · low potential</div></div>
+          <div class="cell z5"><div class="cn">Core performer</div><div class="cd">On target · medium potential</div></div>
+          <div class="cell z6"><div class="cn">Rising star</div><div class="cd">On target · high potential</div></div>
+          <div class="cell z7"><div class="cn">Unsatisfactory</div><div class="cd">Below target · low potential</div></div>
+          <div class="cell z8"><div class="cn">Marginal performer</div><div class="cd">Below target · medium potential</div></div>
+          <div class="cell z9"><div class="cn">Emerging star</div><div class="cd">Below target · high potential</div></div>
+        </div>
+        <div class="axis-x">POTENTIAL →&nbsp;&nbsp;(Low · Medium · High)</div>
+        <div id="gridEmpty"></div>
+      </div>
+      <div class="card legend">
+        <h3>Team</h3>
+        <div id="legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PEOPLE -->
+  <div class="view" id="view-people">
+    <div class="section-h"><h2>People</h2><span class="hint">Click a card to view &amp; edit the full profile, job description and targets.</span></div>
+    <div class="pgrid" id="pgrid"></div>
+  </div>
+
+  <!-- TARGETS -->
+  <div class="view" id="view-targets">
+    <div class="section-h"><h2>Targets &amp; Progress</h2><span class="hint">Every target across the team. Click a target to edit it in the person's profile.</span></div>
+    <div class="filterbar" id="filterbar"></div>
+    <div class="card" style="padding:6px 4px"><table class="tt" id="ttable"></table></div>
+  </div>
+</div>
+
+<div class="foot" id="foot"></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Development Dialogue" tabindex="-1">
+  <div class="dhead" id="dhead"></div>
+  <div class="dtabs">
+    <button class="dtab active" data-pane="overview">Overview</button>
+    <button class="dtab" data-pane="dd">Development Dialogue</button>
+    <button class="dtab" data-pane="targets">Targets</button>
+  </div>
+  <div class="dbody">
+    <div class="dpane active" id="pane-overview"></div>
+    <div class="dpane" id="pane-dd"></div>
+    <div class="dpane" id="pane-targets"></div>
+  </div>
+</div>
+
+<div id="pickerModal" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+  <div class="pk-card">
+    <div class="pk-head">
+      <h3 id="pickerTitle">Create a Development Dialogue</h3>
+      <button class="pk-x" id="pickerClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="pk-body">
+      <input id="pickerSearch" type="search" autocomplete="off"
+             placeholder="Search by name, email, department or employee number" />
+      <div id="pickerList"></div>
+    </div>
+    <div class="pk-foot">Pick the employee this dialogue belongs to. Choosing them here links the
+      dialogue to their record, so they can open it themselves and they appear on the 9-box grid.
+      <br>Not on the payroll?
+      <button type="button" class="pk-link" id="addExternal">Add an external person instead</button></div>
+  </div>
+</div>
+<script>
+const SEED = [];  // omni: data comes from the server via postMessage
+const KEY = "adic_talent_cockpit_v2";
+
+/* Board [DD-2], 16-Sep-2026. Ten places read p.targets and every one assumed an
+   array. 34 of the 41 live dialogues have NO targets key in their stored
+   payload, so allTargets() threw "Cannot read properties of undefined (reading
+   'forEach')" TWICE on every page load, and whatever came after it in that call
+   stack never ran. Normalising once here fixes all ten, and keeps fixing them
+   when an eleventh is added. */
+function withTargets(people){
+  return (Array.isArray(people) ? people : []).map(function(p){
+    if (!Array.isArray(p.targets)) p.targets = [];
+    return p;
+  });
+}
+let STATE = withTargets(load());
+let sel = null;         // selected person id
+let curView = "grid";
+let curFilter = "all";
+let curTab = "overview";
+
+const EMBED = (window.parent && window.parent !== window);
+let SAVE_T = null;
+function load(){
+  try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.length) return s; }catch(e){}
+  return JSON.parse(JSON.stringify(SEED));
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(STATE)); }catch(e){}
+  if(EMBED){ clearTimeout(SAVE_T); SAVE_T=setTimeout(()=>{
+    window.parent.postMessage({type:'cockpit-save', people:STATE}, '*'); }, 700); }
+}
+window.addEventListener('message', ev=>{
+  const m = ev.data || {};
+  if(m.type==='cockpit-init' && Array.isArray(m.people)){
+    const keepSel = m.focus!=null ? m.focus : null;
+    STATE = withTargets(m.people); try{ localStorage.setItem(KEY, JSON.stringify(STATE)); }catch(e){}
+    sel=null; closeDrawer(); renderAll();
+    { const a=document.getElementById("asof");
+      if(a){ const periods=[...new Set(STATE.map(x=>x.periodLabel||x.period).filter(Boolean))];
+        a.textContent="Performance · Potential · Job Descriptions · Targets"
+          + (periods.length===1?(" · "+periods[0]):"")
+          + " · as at "+new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); } }
+    if(keepSel!=null && byId(keepSel)){ openDrawer(keepSel); }
+  }
+  if(m.type==='cockpit-history-result'){ renderHistoryPanel(m.periods||[]); }
+  if(m.type==='cockpit-employees-result'){ onEmployees(m.employees); }
+});
+function byId(id){ return STATE.find(p=>String(p.id)===String(id)); }
+function nextId(){ const nums=STATE.map(p=>+p.id).filter(n=>!isNaN(n)); return (nums.length?Math.max(...nums):-1)+1; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function round(v){ return Math.round(v*1000)/1000; }
+
+/* ---- bands + box name ---- */
+function bandPerf(y){ return y>=0.6667?"High":(y>=0.3333?"Medium":"Low"); }
+function bandPot(x){ return x<0.3333?"Low":(x<0.6667?"Medium":"High"); }
+const BOX={ "High|Low":"Key contributor","High|Medium":"Strong performer","High|High":"Star performer",
+ "Medium|Low":"Acceptable performer","Medium|Medium":"Core performer","Medium|High":"Rising star",
+ "Low|Low":"Unsatisfactory performer","Low|Medium":"Marginal performer","Low|High":"Emerging star"};
+function boxFor(p){ return BOX[bandPerf(p.performance)+"|"+bandPot(p.potential)]; }
+
+/* ---- target status helpers ---- */
+function isOverdue(t){ if(t.status==="Done")return false; if(!t.due)return false; return new Date(t.due) < new Date(new Date().toDateString()); }
+function stClass(t){ if(isOverdue(t))return "overdue"; return {"On track":"ontrack","At risk":"atrisk","Not started":"notstarted","Done":"done"}[t.status]||"notstarted"; }
+function stLabel(t){ return isOverdue(t)?"Overdue":t.status; }
+function fmtDate(d){ if(!d)return "—"; const x=new Date(d); if(isNaN(x))return d; return x.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); }
+function allTargets(){ const a=[]; visible().forEach(p=>p.targets.forEach(t=>a.push({t,p}))); return a; }
+
+
+/* ================= FILTERS (CFO 19-Sep-2026) =================
+   One bar drives the Box Grid, People, Targets and the KPIs. Filters NEVER touch
+   STATE: a filtered-out pin is faded, not removed, so drag targets and saves are
+   untouched. The URL hash mirrors the filter so a view can be bookmarked. */
+const FILTERS={q:"",dept:"",period:"",company:"",grade:"",manager:"",box:"",scored:"all",signoff:"all"};
+const FKEYS=["q","dept","period","company","grade","manager","box","scored","signoff"];
+function fActive(){ return FKEYS.some(k=>FILTERS[k] && FILTERS[k]!=="all"); }
+function personDept(p){ return (p.deptCanonical||p.dept||"").trim(); }
+function isSigned(p){ const s=p.signoff||{}; return !!(s.employee||s.manager||s.hr); }
+function matches(p){
+  const q=FILTERS.q.trim().toLowerCase();
+  if(q && !((p.name||"")+" "+(p.position||"")).toLowerCase().includes(q)) return false;
+  if(FILTERS.dept && personDept(p)!==FILTERS.dept) return false;
+  if(FILTERS.period && (p.periodLabel||p.period||"")!==FILTERS.period) return false;
+  if(FILTERS.company && (p.company||"")!==FILTERS.company) return false;
+  if(FILTERS.grade && (p.grade||"")!==FILTERS.grade) return false;
+  if(FILTERS.manager && (p.manager||p.supervisor||"")!==FILTERS.manager) return false;
+  if(FILTERS.box && boxFor(p)!==FILTERS.box) return false;
+  if(FILTERS.scored==="scored" && p.overall==null) return false;
+  if(FILTERS.scored==="unscored" && p.overall!=null) return false;
+  if(FILTERS.signoff==="signed" && !isSigned(p)) return false;
+  if(FILTERS.signoff==="open" && (isSigned(p)||p.locked)) return false;
+  if(FILTERS.signoff==="locked" && !p.locked) return false;
+  return true;
+}
+/** The people every view and KPI reads. STATE itself is never filtered. */
+function visible(){ return STATE.filter(matches); }
+function uniq(fn){ return [...new Set(STATE.map(fn).filter(v=>v&&String(v).trim()))].sort(); }
+function writeHash(){
+  const on=FKEYS.filter(k=>FILTERS[k]&&FILTERS[k]!=="all").map(k=>k+"="+encodeURIComponent(FILTERS[k]));
+  try{ history.replaceState(null,"",on.length?("#"+on.join("&")):location.pathname+location.search); }catch(e){}
+}
+function readHash(){
+  const h=(location.hash||"").replace(/^#/,""); if(!h) return;
+  h.split("&").forEach(part=>{ const [k,v]=part.split("="); if(FKEYS.includes(k)) FILTERS[k]=decodeURIComponent(v||""); });
+}
+function setFilter(key,value){
+  FILTERS[key]=(FILTERS[key]===value && key!=="q" && key!=="scored" && key!=="signoff")?"":value;
+  writeHash(); renderCockpitFilters(); renderKPIs(); renderCurrentView();
+}
+function clearFilters(){ FKEYS.forEach(k=>FILTERS[k]=(k==="scored"||k==="signoff")?"all":"");
+  writeHash(); renderCockpitFilters(); renderKPIs(); renderCurrentView(); }
+function chip(label,count,pressed,attr){
+  return '<button class="cfchip" aria-pressed="'+(pressed?"true":"false")+'" '+attr+'>'+esc(label)+
+         (count==null?"":' <b>'+count+'</b>')+'</button>';
+}
+function selectFor(key,label,values){
+  if(!values.length) return '<select class="cfsel" disabled title="Not available on these dialogues yet"><option>'+esc(label)+'</option></select>';
+  return '<select class="cfsel" data-sel="'+key+'"><option value="">'+esc(label)+' · all</option>'+
+    values.map(v=>'<option value="'+esc(v)+'"'+(FILTERS[key]===v?" selected":"")+'>'+esc(v)+'</option>').join("")+'</select>';
+}
+function renderCockpitFilters(){
+  const bar=document.getElementById("cfbar"); if(!bar) return;
+  const shown=visible().length;
+  const boxes=Object.values(BOX);
+  bar.innerHTML=
+    '<input class="cfsearch" id="cfq" type="search" placeholder="Search name or position" value="'+esc(FILTERS.q)+'" aria-label="Search name or position">'
+    + selectFor("period","Period",uniq(p=>p.periodLabel||p.period))
+    + selectFor("dept","Department",uniq(personDept))
+    + selectFor("company","Entity",uniq(p=>p.company))
+    + selectFor("grade","Grade",uniq(p=>p.grade))
+    + selectFor("manager","Manager",uniq(p=>p.manager||p.supervisor))
+    + '<span class="cfgroup"><span class="cflab">Box</span><span class="cfmini" role="group" aria-label="Filter by 9-box placement">'
+    + [6,7,8,3,4,5,0,1,2].map(i=>{ const b=boxes[i]||""; return '<button data-box="'+esc(b)+'" aria-pressed="'+(FILTERS.box===b?"true":"false")+'" title="'+esc(b)+'" aria-label="'+esc(b)+'"></button>'; }).join("")
+    + '</span></span>'
+    + '<span class="cfgroup">'+chip("Scored",null,FILTERS.scored==="scored",'data-scored="scored"')
+    + chip("Unscored",null,FILTERS.scored==="unscored",'data-scored="unscored"')+'</span>'
+    + '<span class="cfgroup">'+chip("Signed off",null,FILTERS.signoff==="signed",'data-signoff="signed"')
+    + chip("Open",null,FILTERS.signoff==="open",'data-signoff="open"')
+    + chip("Locked",null,FILTERS.signoff==="locked",'data-signoff="locked"')+'</span>'
+    + (fActive()?'<button class="cfclear" id="cfclear">Clear filters</button>':'')
+    + '<span class="cfcount">'+shown+(fActive()?" of "+STATE.length:"")+' '+(shown===1?"person":"people")+'</span>';
+  const q=document.getElementById("cfq");
+  q.oninput=()=>{ clearTimeout(q._t); q._t=setTimeout(()=>{ FILTERS.q=q.value; writeHash(); renderKPIs(); renderCurrentView(); renderFilterCount(); },150); };
+  bar.querySelectorAll("[data-sel]").forEach(el=>el.onchange=()=>setFilter(el.dataset.sel,el.value));
+  bar.querySelectorAll("[data-box]").forEach(el=>el.onclick=()=>setFilter("box",el.dataset.box));
+  bar.querySelectorAll("[data-scored]").forEach(el=>el.onclick=()=>setFilter("scored",FILTERS.scored===el.dataset.scored?"all":el.dataset.scored));
+  bar.querySelectorAll("[data-signoff]").forEach(el=>el.onclick=()=>setFilter("signoff",FILTERS.signoff===el.dataset.signoff?"all":el.dataset.signoff));
+  const cl=document.getElementById("cfclear"); if(cl) cl.onclick=clearFilters;
+}
+function renderFilterCount(){
+  const el=document.querySelector(".cfcount"); if(!el) return;
+  const shown=visible().length;
+  el.textContent=shown+(fActive()?" of "+STATE.length:"")+" "+(shown===1?"person":"people");
+}
+function renderCurrentView(){ if(curView==="grid")renderGrid(); if(curView==="people")renderPeople(); if(curView==="targets")renderTargets(); }
+
+/* ================= KPIs ================= */
+function renderKPIs(){
+  const PEOPLE=visible();
+  const scored=PEOPLE.filter(p=>p.overall!=null);
+  const avgPerf= scored.length? Math.round(scored.reduce((s,p)=>s+p.overall,0)/scored.length*10)/10 : "—";
+  const ts=allTargets();
+  const onTrack=ts.filter(o=>!isOverdue(o.t)&&o.t.status==="On track").length;
+  const risk=ts.filter(o=>isOverdue(o.t)||o.t.status==="At risk").length;
+  const done=ts.filter(o=>o.t.status==="Done").length;
+  const avgProg= ts.length? Math.round(ts.reduce((s,o)=>s+(+o.t.progress||0),0)/ts.length) : 0;
+  const K=[
+    {lab:"Headcount",val:PEOPLE.length,foot:(fActive()?"of "+STATE.length+" people":"people tracked"),accent:true},
+    {lab:"Avg performance",val:(avgPerf==="—"?"—":avgPerf+"%"),foot:scored.length+" scored"},
+    {lab:"Targets on track",val:onTrack,foot:'<span class="dot-ok">●</span> of '+ts.length+" targets"},
+    {lab:"At risk / overdue",val:risk,foot:'<span class="dot-danger">●</span> need attention'},
+    {lab:"Avg progress",val:avgProg+"%",foot:done+" done"},
+  ];
+  const host=document.getElementById("kpis");
+  const before=[...host.querySelectorAll(".kpi .val")].map(n=>n.textContent);
+  host.innerHTML = K.map(k=>
+    '<div class="kpi'+(k.accent?" accent":"")+'"><div class="lab">'+k.lab+'</div><div class="val">'+k.val+'</div><div class="foot">'+k.foot+'</div></div>').join("");
+  // Animation 6 — a tile whose number changed counts up and gives one soft pulse.
+  if(before.length===K.length && !REDUCED){
+    host.querySelectorAll(".kpi").forEach((tile,i)=>{
+      const now=tile.querySelector(".val").textContent;
+      if(before[i]!==now){ tile.classList.add("pulse"); setTimeout(()=>tile.classList.remove("pulse"),240); countUp(tile.querySelector(".val"), before[i], now); }
+    });
+  }
+}
+const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Roll a KPI's digits from one value to the next; anything non-numeric just swaps. */
+function countUp(node, from, to){
+  const a=parseFloat(String(from).replace(/[^0-9.\-]/g,"")), b=parseFloat(String(to).replace(/[^0-9.\-]/g,""));
+  if(isNaN(a)||isNaN(b)||a===b) return;
+  const suffix=String(to).replace(/^[0-9.\-]+/,""), dp=(String(to).split(".")[1]||"").replace(/\D.*$/,"").length;
+  const t0=performance.now();
+  (function step(now){
+    const k=Math.min(1,(now-t0)/400), e=1-Math.pow(1-k,3);
+    node.textContent=(a+(b-a)*e).toFixed(dp)+suffix;
+    if(k<1) requestAnimationFrame(step); else node.textContent=to;
+  })(t0);
+}
+
+/* ================= GRID ================= */
+const grid=document.getElementById("grid");
+function renderGrid(){
+  const first = !grid.querySelector(".pin");
+  grid.querySelectorAll(".pin").forEach(n=>n.remove());
+  STATE.forEach((p,i)=>{
+    const pin=document.createElement("button");
+    pin.type="button";
+    // A pin is a control, not a decoration: it must be tabbable and nudgeable.
+    pin.className="pin"+(p.overall==null?" unscored":"")+(sel===p.id?" sel":"")+(matches(p)?"":" dimmed")+((first&&!REDUCED)?" enter":"");
+    if(first&&!REDUCED) pin.style.animationDelay=(Math.min(i,24)*12)+"ms";
+    pin.style.background=p.color; pin.style.left=(p.potential*100)+"%"; pin.style.top=((1-p.performance)*100)+"%";
+    pin.setAttribute("aria-label",p.name+" — "+boxFor(p)+(p.overall!=null?", "+p.overall+"%":", not scored")+(matches(p)?". Arrow keys move.":". Hidden by the current filter."));
+    if(!matches(p)) pin.tabIndex=-1;  // a faded person is out of the keyboard order too
+    pin.innerHTML=esc(p.initials)+'<span class="tag">'+esc(p.name.split(" ")[0])+'</span>';
+    grid.appendChild(pin);
+    drag(pin,p);
+    nudge(pin,p);
+    pin.addEventListener("mouseenter",()=>linkLegend(p.id,true));
+    pin.addEventListener("mouseleave",()=>linkLegend(p.id,false));
+  });
+  const box=document.getElementById("gridEmpty");
+  if(box) box.innerHTML = STATE.length===0
+    ? '<div class="emptystate"><b>No dialogues yet</b>Press “+ New dialogue” to start one for an employee.</div>'
+    : (visible().length===0 ? '<div class="emptystate"><b>Nothing matches these filters</b>Clear the filters to see everyone again.</div>' : '');
+  renderLegend();
+}
+/** Animation 8 — hovering a pin lights its legend row, and the other way round. */
+function linkLegend(id,on){
+  const row=document.querySelector('.lg-row[data-id="'+id+'"]'); if(row) row.classList.toggle("linked",on);
+  const pins=[...grid.querySelectorAll(".pin")], idx=STATE.findIndex(x=>x.id===id);
+  if(pins[idx]) pins[idx].classList.toggle("linked",on);
+}
+/** Keyboard placement: arrows nudge 2%, Enter opens the dialogue. */
+function nudge(pin,p){
+  pin.addEventListener("keydown",e=>{
+    if(!matches(p)) return;   // never move someone the filter is hiding
+    const step=e.shiftKey?0.10:0.02;
+    let dx=0,dy=0;
+    if(e.key==="ArrowLeft")dx=-step; else if(e.key==="ArrowRight")dx=step;
+    else if(e.key==="ArrowUp")dy=step; else if(e.key==="ArrowDown")dy=-step;
+    else if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openDrawer(p.id); return; }
+    else return;
+    e.preventDefault();
+    p.potential=round(Math.max(0.02,Math.min(0.98,p.potential+dx)));
+    p.performance=round(Math.max(0.02,Math.min(0.98,p.performance+dy)));
+    pin.style.left=(p.potential*100)+"%"; pin.style.top=((1-p.performance)*100)+"%";
+    pin.setAttribute("aria-label",p.name+" — "+boxFor(p));
+    save(); showSaved(p);
+  });
+}
+function renderLegend(){
+  const people=visible();
+  document.getElementById("legend").innerHTML = people.length ? people.map(p=>
+    '<button type="button" class="lg-row'+(sel===p.id?" sel":"")+'" data-id="'+p.id+'" style="width:100%;text-align:left;background:none"><span class="lg-dot" style="background:'+p.color+'"></span><span>'+esc(p.name)+'</span><span class="sc">'+(p.overall!=null?p.overall+"%":"—")+'</span></button>').join("")
+    : '<div class="emptystate" style="padding:18px 6px">Nobody matches these filters.</div>';
+  document.querySelectorAll(".lg-row").forEach(r=>{
+    r.onclick=()=>openDrawer(+r.dataset.id);
+    r.addEventListener("mouseenter",()=>linkLegend(+r.dataset.id,true));
+    r.addEventListener("mouseleave",()=>linkLegend(+r.dataset.id,false));
+    r.addEventListener("focus",()=>linkLegend(+r.dataset.id,true));
+    r.addEventListener("blur",()=>linkLegend(+r.dataset.id,false));
+  });
+}
+function drag(pin,p){
+  // Pointer capture, and pointer events ONLY. The old code also bound
+  // mousemove/mouseup and never captured, so on a tablet the pin was lost the
+  // moment the finger left it — the CEO reads this page on an iPad.
+  pin.addEventListener("pointerdown",e=>{
+    e.preventDefault(); selectPin(p.id); pin.classList.add("dragging");
+    try{ pin.setPointerCapture(e.pointerId); }catch(x){}
+    const move=ev=>{
+      const r=grid.getBoundingClientRect();
+      let x=Math.max(0.02,Math.min(0.98,(ev.clientX-r.left)/r.width));
+      let y=Math.max(0.02,Math.min(0.98,1-(ev.clientY-r.top)/r.height));
+      p.potential=round(x); p.performance=round(y);
+      pin.style.left=(x*100)+"%"; pin.style.top=((1-y)*100)+"%";
+      hotCell(ev);
+      if(sel===p.id && curTab==="overview") renderPane();
+    };
+    const up=ev=>{
+      pin.removeEventListener("pointermove",move); pin.removeEventListener("pointerup",up);
+      pin.removeEventListener("pointercancel",up);
+      try{ pin.releasePointerCapture(ev.pointerId); }catch(x){}
+      pin.classList.remove("dragging"); hotCell(null);
+      if(!REDUCED){ pin.classList.add("dropped"); setTimeout(()=>pin.classList.remove("dropped"),190); }
+      save(); showSaved(p);
+    };
+    pin.addEventListener("pointermove",move); pin.addEventListener("pointerup",up);
+    pin.addEventListener("pointercancel",up);
+  });
+}
+/** Animation 7 — ring the cell the pin is currently over. */
+function hotCell(ev){
+  grid.querySelectorAll(".cell.hot").forEach(c=>{ c.classList.remove("on"); c.classList.remove("hot"); });
+  if(!ev) return;
+  const cells=[...grid.querySelectorAll(".cell")];
+  const hit=cells.find(c=>{ const r=c.getBoundingClientRect();
+    return ev.clientX>=r.left&&ev.clientX<=r.right&&ev.clientY>=r.top&&ev.clientY<=r.bottom; });
+  if(hit){ hit.classList.add("hot"); requestAnimationFrame(()=>hit.classList.add("on")); }
+}
+/** Animation 9 — the save confirmation slides in, holds, fades. */
+let SAVED_T=null;
+function showSaved(p){
+  const el=document.getElementById("gridStatus"); if(!el) return;
+  el.textContent="Saved · "+p.name+" → "+boxFor(p);
+  el.classList.add("show");
+  clearTimeout(SAVED_T); SAVED_T=setTimeout(()=>el.classList.remove("show"),2400);
+}
+function selectPin(id){ sel=id; document.querySelectorAll(".pin").forEach(n=>n.classList.remove("sel"));
+  renderGrid(); openDrawer(id); }
+
+/* ================= PEOPLE ================= */
+function renderPeople(){
+  const people=visible();
+  if(!people.length){
+    document.getElementById("pgrid").innerHTML = STATE.length
+      ? '<div class="emptystate" style="grid-column:1/-1"><b>Nothing matches these filters</b>Clear them to see everyone again.</div>'
+      : '<div class="emptystate" style="grid-column:1/-1"><b>No dialogues yet</b>Press “+ New dialogue” to start one for an employee.</div>';
+    return;
+  }
+  document.getElementById("pgrid").innerHTML = people.map(p=>{
+    const prog = p.targets.length? Math.round(p.targets.reduce((s,t)=>s+(+t.progress||0),0)/p.targets.length):0;
+    const risk = p.targets.filter(t=>isOverdue(t)||t.status==="At risk").length;
+    return '<div class="pcard" data-id="'+p.id+'">'
+      +'<button class="chipdel" data-del="'+p.id+'" title="Remove">&times;</button>'
+      +'<div class="top"><div class="avatar" style="background:'+p.color+'">'+esc(p.initials)+'</div>'
+      +'<div><div class="nm">'+esc(p.name)+'</div><div class="po">'+esc(p.position||"—")+' · '+esc(p.dept||"")+'</div></div></div>'
+      +'<div class="row"><div class="stat"><div class="l">Performance</div><div class="v">'+(p.overall!=null?p.overall+"%":"—")+'</div></div>'
+      +'<div class="stat"><div class="l">Placement</div><div class="v" style="font-size:12.5px;line-height:1.3;padding-top:2px">'+boxFor(p)+'</div></div></div>'
+      +'<div class="tgt"><div class="tl"><span>'+p.targets.length+' targets'+(risk?' · <span style="color:var(--danger);font-weight:700">'+risk+' at risk</span>':'')+'</span><span>'+prog+'%</span></div>'
+      +'<div class="pbar '+(prog>=67?'ok':prog>=34?'info':'warn')+'"><i style="transform:scaleX('+(prog/100)+')"></i></div></div>'
+      +'</div>';
+  }).join("");
+  document.querySelectorAll(".pcard").forEach(c=>c.onclick=e=>{ if(e.target.dataset.del)return; openDrawer(+c.dataset.id); });
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); removePerson(+b.dataset.del); });
+}
+
+/* ================= TARGETS ================= */
+function renderFilters(){
+  const ts=allTargets();
+  const counts={all:ts.length,"On track":0,"At risk":0,"Not started":0,Done:0,Overdue:0};
+  ts.forEach(o=>{ counts[o.t.status]=(counts[o.t.status]||0)+1; if(isOverdue(o.t))counts.Overdue++; });
+  const fs=["all","On track","At risk","Overdue","Not started","Done"];
+  document.getElementById("filterbar").innerHTML=fs.map(f=>
+    '<button class="fbtn'+(curFilter===f?" active":"")+'" data-f="'+f+'">'+(f==="all"?"All":f)+' <b>'+(counts[f]||0)+'</b></button>').join("");
+  document.querySelectorAll(".fbtn").forEach(b=>b.onclick=()=>{ curFilter=b.dataset.f; renderTargets(); });
+}
+function renderTargets(){
+  renderFilters();
+  let rows=allTargets();
+  if(curFilter!=="all") rows = rows.filter(o=> curFilter==="Overdue"? isOverdue(o.t) : (o.t.status===curFilter && !(curFilter==="On track"&&isOverdue(o.t))) );
+  rows.sort((a,b)=> (a.t.due||"9999").localeCompare(b.t.due||"9999"));
+  const head='<thead><tr><th>Target</th><th>Owner</th><th>Due</th><th>Status</th><th style="width:170px">Progress</th><th></th></tr></thead>';
+  const body='<tbody>'+ (rows.length? rows.map(o=>{
+    const t=o.t,p=o.p;
+    return '<tr><td style="max-width:360px">'+esc(t.title)+'</td>'
+      +'<td><div class="owncell"><span class="mini" style="background:'+p.color+'">'+esc(p.initials)+'</span>'+esc(p.name.split(" ")[0])+'</div></td>'
+      +'<td class="tnum">'+fmtDate(t.due)+'</td>'
+      +'<td><span class="st '+stClass(t)+'">'+stLabel(t)+'</span></td>'
+      +'<td><div class="pcombo"><div class="pbar '+(t.progress>=67?'ok':t.progress>=34?'info':'warn')+'"><i style="transform:scaleX('+((+t.progress||0)/100)+')"></i></div><b class="tnum">'+(+t.progress||0)+'%</b></div></td>'
+      +'<td class="tright"><button class="linkbtn" data-open="'+p.id+'">Edit</button></td></tr>';
+  }).join("") : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:22px">'+(fActive()?"No targets for the people in these filters.":"No targets in this filter.")+'</td></tr>')+'</tbody>';
+  document.getElementById("ttable").innerHTML=head+body;
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ openDrawer(+b.dataset.open); switchTab("targets"); });
+}
+
+/* ================= DRAWER ================= */
+let DRAWER_OPENER=null;
+function openDrawer(id){ sel=id; curTab="overview";
+  DRAWER_OPENER=document.activeElement;
+  document.querySelectorAll(".dtab").forEach(t=>t.classList.toggle("active",t.dataset.pane==="overview"));
+  document.querySelectorAll(".dpane").forEach(p=>p.classList.remove("active"));
+  document.getElementById("pane-overview").classList.add("active");
+  document.getElementById("scrim").classList.add("open");
+  document.getElementById("drawer").classList.add("open");
+  renderHead(); renderPane(); if(curView==="grid")renderGrid();
+  const d=document.getElementById("drawer");
+  const firstField=d.querySelector("input,select,textarea,button");
+  (firstField||d).focus({preventScroll:true});
+}
+function closeDrawer(){
+  const wasOpen=document.getElementById("drawer").classList.contains("open");
+  document.getElementById("scrim").classList.remove("open");
+  document.getElementById("drawer").classList.remove("open");
+  // Opening the drawer re-renders the grid, so the pin that opened it is a NEW
+  // element by now — returning focus to the stale node would drop the keyboard
+  // user back on <body>. Find the live pin for the same person instead.
+  if(wasOpen){
+    let back = (DRAWER_OPENER && document.contains(DRAWER_OPENER)) ? DRAWER_OPENER : null;
+    if(!back && sel!=null){
+      const i=STATE.findIndex(x=>x.id===sel);
+      back=[...document.querySelectorAll(".pin")][i] || document.querySelector('.lg-row[data-id="'+sel+'"]');
+    }
+    if(back) back.focus({preventScroll:true});
+  }
+  DRAWER_OPENER=null;
+}
+// Esc closes whatever is on top; Tab stays inside the drawer while it is open.
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    const picker=document.getElementById("pickerModal");
+    if(picker && picker.style.display && picker.style.display!=="none"){ closePickerModal(); return; }
+    if(document.getElementById("drawer").classList.contains("open")){ closeDrawer(); }
+    return;
+  }
+  if(e.key!=="Tab") return;
+  const d=document.getElementById("drawer");
+  if(!d.classList.contains("open")) return;
+  const f=[...d.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])')]
+          .filter(el=>el.offsetParent!==null);
+  if(!f.length) return;
+  const first=f[0], last=f[f.length-1];
+  if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+});
+function switchTab(name){ curTab=name;
+  document.querySelectorAll(".dtab").forEach(t=>t.classList.toggle("active",t.dataset.pane===name));
+  document.querySelectorAll(".dpane").forEach(p=>p.classList.remove("active"));
+  document.getElementById("pane-"+name).classList.add("active"); renderPane(); }
+
+function renderHead(){
+  const p=byId(sel);
+  const per = p.periodLabel || p.period || '';
+  const so = p.signoff || {};
+  const lockChip = p.locked ? ' <span class="chip box" style="background:var(--ok);font-size:10px">SIGNED · LOCKED</span>' : '';
+  const soLine = (so.employee||so.manager||so.moderator)
+    ? '<div class="po" style="font-size:10.5px">Signed: '
+       +(so.employee?'employee ':'')+(so.manager?'· manager ':'')+(so.moderator?'· moderator':'')+'</div>' : '';
+  const perLine = per ? '<div class="po" style="color:var(--orange);font-weight:700">Period: '+esc(per)+lockChip+'</div>'+soLine : '';
+  const periodBtns = EMBED
+    ? '<button class="btn" id="signBtn" style="border-color:var(--ok);color:var(--ok)">Sign off</button>'
+      +'<button class="btn" id="newPeriodBtn" style="border-color:var(--orange);color:var(--orange)">+ New period</button>'
+      +'<button class="btn" id="histBtn" style="border-color:var(--line);color:var(--muted)">History</button>'
+    : '';
+  document.getElementById("dhead").innerHTML=
+    '<div class="avatar" style="background:'+p.color+'">'+esc(p.initials)+'</div>'
+    +'<div class="nmwrap"><input class="name" id="f-name" value="'+esc(p.name)+'">'
+      +'<div class="po">'+esc(p.position||"")+'</div>'+perLine+'</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'+periodBtns
+    +'<button class="xbtn" id="closeD">&times;</button></div>';
+  document.getElementById("closeD").onclick=closeDrawer;
+  document.getElementById("f-name").onchange=e=>{ p.name=e.target.value.trim()||p.name; p.initials=initials(p.name); commit(); renderHead(); };
+  const nb=document.getElementById("newPeriodBtn"); if(nb) nb.onclick=()=>startNewPeriod(p);
+  const hb=document.getElementById("histBtn"); if(hb) hb.onclick=()=>{ window.parent.postMessage({type:'cockpit-history', key:(p.personKey||p.id)}, '*'); };
+  const sb=document.getElementById("signBtn"); if(sb) sb.onclick=()=>{
+    if(p.locked){ alert('This review is already signed off and locked.'); return; }
+    if(confirm('Sign off '+p.name+"'s review for "+(per||'this period')+"? This LOCKS the review — no more edits.")){
+      window.parent.postMessage({type:'cockpit-sign', ref:p.id, role:'manager'}, '*');
+    }
+  };
+}
+/* new-period: small inline prompt, then ask the parent (omni) to copy → server */
+function startNewPeriod(p){
+  const now = p.periodLabel || p.period || '';
+  const suggested = now ? '' : 'FY27';
+  const modal=document.createElement('div');
+  modal.className='scrim open'; modal.style.zIndex=200;
+  modal.innerHTML='<div style="background:#fff;max-width:420px;margin:14vh auto;padding:20px;border-radius:14px;box-shadow:var(--shadow-lg)">'
+    +'<h3 style="color:var(--navy);margin-bottom:6px">Start a new period for '+esc(p.name)+'</h3>'
+    +'<p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Copies this dialogue into a new period to re-assess. The current one ('+esc(now||'—')+') is kept on record.</p>'
+    +'<label class="ddl">New period name</label>'
+    +'<input id="npInput" placeholder="e.g. FY27 or Jul 2026 - Jun 2027" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px" value="'+suggested+'">'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+    +'<button class="btn" id="npCancel" style="border-color:var(--line);color:var(--muted)">Cancel</button>'
+    +'<button class="btn solid" id="npGo">Create new period</button></div></div>';
+  document.body.appendChild(modal);
+  const inp=modal.querySelector('#npInput'); inp.focus();
+  modal.querySelector('#npCancel').onclick=()=>modal.remove();
+  modal.querySelector('#npGo').onclick=()=>{
+    const period=inp.value.trim(); if(!period){ inp.focus(); return; }
+    window.parent.postMessage({type:'cockpit-new-period', ref:p.id, period:period}, '*');
+    modal.remove();
+  };
+}
+function renderHistoryPanel(periods){
+  const modal=document.createElement('div');
+  modal.className='scrim open'; modal.style.zIndex=200;
+  let rows = periods.length ? periods.map(pr=>
+    '<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line-2)">'
+    +'<span style="font-weight:700;color:var(--navy)">'+esc(pr.period||'—')+'</span>'
+    +(pr.is_current?'<span class="chip box" style="background:var(--ok);font-size:10px">current</span>':'<span class="chip box" style="background:var(--slate);font-size:10px">archived</span>')
+    +'<span style="margin-left:auto;font-weight:800;color:var(--navy)" class="tnum">'+(pr.overall!=null?pr.overall+'%':'—')+'</span>'
+    +'<span style="font-size:11px;color:var(--muted)">'+esc(pr.rating||'')+'</span></div>'
+  ).join('') : '<div style="color:var(--muted);font-size:13px;padding:8px">No earlier periods on record.</div>';
+  modal.innerHTML='<div style="background:#fff;max-width:460px;margin:12vh auto;padding:20px;border-radius:14px;box-shadow:var(--shadow-lg);max-height:70vh;overflow:auto">'
+    +'<h3 style="color:var(--navy);margin-bottom:10px">Period history</h3>'+rows
+    +'<div style="text-align:right;margin-top:14px"><button class="btn solid" id="hClose">Close</button></div></div>';
+  document.body.appendChild(modal);
+  modal.querySelector('#hClose').onclick=()=>modal.remove();
+}
+function initials(n){ const a=n.split(" ").filter(Boolean); return ((a[0]||" ")[0]+(a.length>1?a[a.length-1][0]:"")).toUpperCase(); }
+
+function renderPane(){
+  const p=byId(sel);
+  if(curTab==="overview") renderOverview(p);
+  if(curTab==="dd") renderDD(p);
+  if(curTab==="targets") renderTargetsPane(p);
+}
+function renderOverview(p){
+  const secs=p.sections||{}; const L={"Leadership":"Leadership","Business":"Business","Building Relationship":"Building Relationship","Self Related/ Personal":"Self & Personal"};
+  let sb=""; Object.keys(L).forEach(k=>{ if(secs[k]!=null){ const w=Math.min(100,secs[k]/20*100);
+    sb+='<div class="sbar-row"><span>'+L[k]+'</span><span class="tnum">'+secs[k]+'%</span></div><div class="pbar info" style="margin-bottom:9px"><i style="width:'+w+'%"></i></div>'; } });
+  const head = p.overall!=null? '<span class="bignum tnum">'+p.overall+'%</span>'+(p.rating?' <span class="chip box" style="background:var(--navy)">'+esc(p.rating)+'</span>':'')
+                              : '<span class="chip box" style="background:var(--orange)">'+esc(p.rating||"Narrative memo")+'</span>';
+  document.getElementById("pane-overview").innerHTML=
+    '<div class="overview-hd"><div>'+head+'<div class="placenow">Placement: '+boxFor(p)+'</div></div></div>'
+    +'<div class="two"><div class="field"><label>Position</label><input id="f-pos" value="'+esc(p.position)+'"></div>'
+    +'<div class="field"><label>Department</label><input id="f-dept" value="'+esc(p.dept)+'"></div></div>'
+    +'<div class="two"><div class="field"><label>Review period</label><input id="f-period" value="'+esc(p.period)+'"></div>'
+    +'<div class="field"><label>Supervisor</label><input id="f-sup" value="'+esc(p.supervisor)+'"></div></div>'
+    +'<div class="field"><label>Overall performance score (%)</label><div class="slider-row"><input type="range" min="0" max="100" step="0.1" id="f-ov" value="'+(p.overall!=null?p.overall:'')+'"><span class="rv tnum" id="ov-v">'+(p.overall!=null?p.overall+"%":"—")+'</span></div></div>'
+    +'<div class="field"><label>Performance (grid, vertical)</label><div class="slider-row"><input type="range" min="0" max="100" id="f-perf" value="'+Math.round(p.performance*100)+'"><span class="rv tnum" id="perf-v">'+bandPerf(p.performance)+'</span></div></div>'
+    +'<div class="field"><label>Potential (grid, horizontal)</label><div class="slider-row"><input type="range" min="0" max="100" id="f-pot" value="'+Math.round(p.potential*100)+'"><span class="rv tnum" id="pot-v">'+bandPot(p.potential)+'</span></div></div>'
+    + (sb?'<div class="field"><label>Competency scores</label>'+sb+'</div>':'')
+    +'<div class="field"><label>Job description</label><textarea id="f-jd" style="min-height:130px" placeholder="Role, key responsibilities and scope...">'+esc(p.jd)+'</textarea></div>'
+    +'<div class="meta" style="margin-bottom:12px">The full scored review — leadership style (SBI), competency scores, value behaviours, development plan — is on the <b>Development Dialogue</b> tab, matching your Excel sheet exactly.</div>'
+    +'<button class="danger-link" id="delP">Remove this person</button>';
+  bind("f-jd",v=>p.jd=v,true);
+  bind("f-pos",v=>p.position=v,true); bind("f-dept",v=>p.dept=v,true);
+  bind("f-period",v=>p.period=v,true); bind("f-sup",v=>p.supervisor=v,true);
+  const ov=document.getElementById("f-ov");
+  ov.oninput=e=>{ p.overall=e.target.value===""?null:+e.target.value; document.getElementById("ov-v").textContent=(p.overall!=null?p.overall+"%":"—"); };
+  ov.onchange=()=>commit();
+  const pf=document.getElementById("f-perf"); pf.oninput=e=>{ p.performance=round(e.target.value/100); document.getElementById("perf-v").textContent=bandPerf(p.performance); };
+  pf.onchange=()=>{ commit(); if(curView==="grid")renderGrid(); renderOverview(p); };
+  const pt=document.getElementById("f-pot"); pt.oninput=e=>{ p.potential=round(e.target.value/100); document.getElementById("pot-v").textContent=bandPot(p.potential); };
+  pt.onchange=()=>{ commit(); if(curView==="grid")renderGrid(); renderOverview(p); };
+  document.getElementById("delP").onclick=()=>removePerson(p.id);
+}
+/* ===== Development Dialogue — faithful to the PMS Alpha Direct Excel sheet ===== */
+function pct(v){ return (v==null||v==="")?"":Math.round(v*1000)/10; }
+function dnum(v){ if(v===""||v==null)return null; const n=+v; return isNaN(n)?null:n; }
+/* recompute rolls-up exactly as the workbook: weighted = employee×weight; Section B = Σ weighted;
+   values raw total = Σ(raw×weight); values score = rawTotal×0.2; overall = Section B + values score */
+function computeScores(p){
+  const dd=p.dd; if(!dd) return;
+  let sb=0, any=false;
+  dd.sections.forEach(sec=> sec.rows.forEach(r=>{
+    if(r.employee!=null && r.weight!=null){ r.weighted=Math.round(r.employee*r.weight*10000)/10000; sb+=r.weighted; any=true; }
+    else r.weighted=null;
+  }));
+  dd.sectionB = any? Math.round(sb*10000)/10000 : null;
+  let raw=0, vany=false;
+  dd.values.forEach(v=>{ if(v.raw!=null && v.weight!=null){ v.weighted=Math.round(v.raw*v.weight*10000)/10000; raw+=v.weighted; vany=true; } else v.weighted=null; });
+  dd.valuesRaw = vany? Math.round(raw*10000)/10000 : null;
+  dd.valuesScore = vany? Math.round(raw*0.2*10000)/10000 : null;
+  const oa = (dd.sectionB||0) + (dd.valuesScore||0);
+  dd.overallAll = (any||vany)? Math.round(oa*10000)/10000 : null;
+  if(dd.overallAll!=null){ p.overall = Math.round(dd.overallAll*1000)/10; }
+}
+function renderDD(p){
+  const dd=p.dd;
+  const el=document.getElementById("pane-dd");
+  if(!dd){ el.innerHTML='<div class="meta">No dialogue structure for this person yet.</div>'; return; }
+  computeScores(p);
+  let h='';
+  // employee details
+  h+='<div class="ddgrp"><div class="ddgrp-h">Employee details</div>'
+    +'<div class="two"><div class="field"><label>Department</label><input data-d="department" value="'+esc(dd.details.department)+'"></div>'
+    +'<div class="field"><label>Position</label><input data-d="position" value="'+esc(dd.details.position)+'"></div></div>'
+    +'<div class="two"><div class="field"><label>Date appointed</label><input data-d="dateAppointed" value="'+esc(dd.details.dateAppointed)+'"></div>'
+    +'<div class="field"><label>Reviewed period</label><input data-d="reviewedPeriod" value="'+esc(dd.details.reviewedPeriod)+'"></div></div>'
+    +'<div class="two"><div class="field"><label>Supervisor (position)</label><input data-d="supPos" value="'+esc(dd.details.supPos)+'"></div>'
+    +'<div class="field"><label>Supervisor (name)</label><input data-d="supName" value="'+esc(dd.details.supName)+'"></div></div></div>';
+  // competency sections
+  dd.sections.forEach((sec,si)=>{
+    h+='<div class="ddgrp"><div class="ddgrp-h">'+esc(sec.name)+(sec.weight!=null?' <span class="wpill">weight '+pct(sec.weight)+'%</span>':'')+'</div>';
+    if(!sec.rows.length){ h+='<div class="meta">No entries.</div>'; }
+    sec.rows.forEach((r,ri)=>{
+      h+='<div class="ddrow"><div class="ddrow-h">'+esc(r.perspective)+'</div>'
+        +'<label class="ddl">Attributes</label><textarea data-s="'+si+'" data-r="'+ri+'" data-k="attributes">'+esc(r.attributes)+'</textarea>'
+        +'<label class="ddl">SBI — Situation, Behaviour &amp; Impact (leadership style / evidence)</label><textarea class="tall" data-s="'+si+'" data-r="'+ri+'" data-k="sbi">'+esc(r.sbi)+'</textarea>'
+        +'<div class="ddscores"><div><span class="ddl">Target</span><input data-s="'+si+'" data-r="'+ri+'" data-k="target" value="'+esc(r.target)+'"></div>'
+        +'<div><span class="ddl">Start</span><input data-s="'+si+'" data-r="'+ri+'" data-k="start" value="'+esc(r.start)+'"></div>'
+        +'<div><span class="ddl">Finish</span><input data-s="'+si+'" data-r="'+ri+'" data-k="finish" value="'+esc(r.finish)+'"></div></div>'
+        +'<div class="ddscores"><div><span class="ddl">Manager</span><input type="number" step="0.05" min="0" max="1" data-s="'+si+'" data-r="'+ri+'" data-k="manager" value="'+(r.manager==null?"":r.manager)+'"></div>'
+        +'<div><span class="ddl">Employee</span><input type="number" step="0.05" min="0" max="1" data-s="'+si+'" data-r="'+ri+'" data-k="employee" value="'+(r.employee==null?"":r.employee)+'"></div>'
+        +'<div><span class="ddl">Weight</span><input type="number" step="0.05" min="0" max="1" data-s="'+si+'" data-r="'+ri+'" data-k="weight" value="'+(r.weight==null?"":r.weight)+'"></div>'
+        +'<div><span class="ddl">Weighted</span><input class="ro" tabindex="-1" readonly value="'+(r.weighted==null?"":r.weighted)+'"></div></div>'
+        +'<label class="ddl">Comments</label><textarea data-s="'+si+'" data-r="'+ri+'" data-k="comments">'+esc(r.comments)+'</textarea>'
+        +'</div>';
+    });
+    h+='</div>';
+  });
+  h+='<div class="ddtot">Overall Score (Section B): <b class="tnum">'+(dd.sectionB==null?"—":pct(dd.sectionB)+"%")+'</b></div>';
+  // value supporting behaviours
+  h+='<div class="ddgrp"><div class="ddgrp-h">Value Supporting Behaviours</div>';
+  dd.values.forEach((v,vi)=>{
+    h+='<div class="ddrow"><div class="ddrow-h">'+esc(v.value)+'</div>'
+      +'<label class="ddl">Value supporting behaviours</label><textarea data-v="'+vi+'" data-k="behaviours">'+esc(v.behaviours)+'</textarea>'
+      +'<label class="ddl">Self assessment note</label><textarea data-v="'+vi+'" data-k="selfText">'+esc(v.selfText)+'</textarea>'
+      +'<div class="ddscores"><div><span class="ddl">Self</span><input type="number" step="0.05" min="0" max="1" data-v="'+vi+'" data-k="self" value="'+(v.self==null?"":v.self)+'"></div>'
+      +'<div><span class="ddl">Manager</span><input type="number" step="0.05" min="0" max="1" data-v="'+vi+'" data-k="manager" value="'+(v.manager==null?"":v.manager)+'"></div>'
+      +'<div><span class="ddl">Raw</span><input type="number" step="0.05" min="0" max="1" data-v="'+vi+'" data-k="raw" value="'+(v.raw==null?"":v.raw)+'"></div>'
+      +'<div><span class="ddl">Weight</span><input type="number" step="0.05" min="0" max="1" data-v="'+vi+'" data-k="weight" value="'+(v.weight==null?"":v.weight)+'"></div>'
+      +'<div><span class="ddl">Weighted</span><input class="ro" tabindex="-1" readonly value="'+(v.weighted==null?"":v.weighted)+'"></div></div>'
+      +'<label class="ddl">Comments</label><textarea data-v="'+vi+'" data-k="comments">'+esc(v.comments)+'</textarea>'
+      +'</div>';
+  });
+  h+='</div>';
+  h+='<div class="ddtot">Value Behaviours score: <b class="tnum">'+(dd.valuesScore==null?"—":pct(dd.valuesScore)+"%")+'</b> &nbsp;·&nbsp; Overall Score (All Sections): <b class="tnum big">'+(dd.overallAll==null?"—":pct(dd.overallAll)+"%")+'</b></div>';
+  // rating + narrative sections
+  h+='<div class="ddgrp"><div class="field"><label>Overall rating</label><select data-t0="rating">'
+    +["","1 : Below Expectations","2 : Partially Meets Expectations","3 : Meets Expectations","4 : Exceeds Expectations","5 : Outstanding"].map(o=>'<option'+(dd.rating===o?" selected":"")+'>'+o+'</option>').join("")
+    +(dd.rating&&dd.rating.indexOf(":")<0?'<option selected>'+esc(dd.rating)+'</option>':'')+'</select></div>'
+    +'<div class="field"><label>Personal Development Plan</label><textarea data-t0="pdp" style="min-height:80px">'+esc(dd.pdp)+'</textarea></div>'
+    +'<div class="two"><div class="field"><label>Career aspirations &amp; goals</label><textarea data-t0="careerAspirations" style="min-height:80px">'+esc(dd.careerAspirations)+'</textarea></div>'
+    +'<div class="field"><label>Manager\'s comments</label><textarea data-t0="managersComments" style="min-height:80px">'+esc(dd.managersComments)+'</textarea></div></div>'
+    +'<div class="two"><div class="field"><label>Development priorities</label><textarea data-t0="developmentPriorities" style="min-height:80px">'+esc(dd.developmentPriorities)+'</textarea></div>'
+    +'<div class="field"><label>Development measures</label><textarea data-t0="developmentMeasures" style="min-height:80px">'+esc(dd.developmentMeasures)+'</textarea></div></div></div>';
+  el.innerHTML=h;
+  // wire details
+  el.querySelectorAll('[data-d]').forEach(inp=>inp.onchange=()=>{ dd.details[inp.dataset.d]=inp.value; commit(false); });
+  // wire competency rows
+  el.querySelectorAll('[data-s]').forEach(inp=>{
+    const si=+inp.dataset.s, ri=+inp.dataset.r, k=inp.dataset.k;
+    inp.onchange=()=>{ const row=dd.sections[si].rows[ri];
+      row[k]= (["manager","employee","weight"].includes(k))? dnum(inp.value) : inp.value;
+      if(["manager","employee","weight"].includes(k)){ computeScores(p); renderDD(p); commit(); if(curView==="grid")renderGrid(); }
+      else commit(false); };
+  });
+  // wire value rows
+  el.querySelectorAll('[data-v]').forEach(inp=>{
+    const vi=+inp.dataset.v, k=inp.dataset.k;
+    inp.onchange=()=>{ const v=dd.values[vi];
+      v[k]= (["self","manager","raw","weight"].includes(k))? dnum(inp.value) : inp.value;
+      if(["raw","weight"].includes(k)){ computeScores(p); renderDD(p); commit(); if(curView==="grid")renderGrid(); }
+      else commit(false); };
+  });
+  // wire narrative
+  el.querySelectorAll('[data-t0]').forEach(inp=>inp.onchange=()=>{ dd[inp.dataset.t0]=inp.value;
+    if(inp.dataset.t0==="rating"){ p.rating=inp.value; } commit(true); });
+}
+function renderTargetsPane(p){
+  let html=p.targets.map((t,i)=>
+    '<div class="trow"><div class="r1"><textarea data-t="'+i+'" data-k="title" placeholder="Target...">'+esc(t.title)+'</textarea>'
+    +'<button class="tdel" data-del="'+i+'" title="Delete target">&times;</button></div>'
+    +'<div class="r2"><div><span class="small">Due date</span><input type="date" data-t="'+i+'" data-k="due" value="'+esc(t.due)+'"></div>'
+    +'<div><span class="small">Status</span><select data-t="'+i+'" data-k="status">'+["On track","At risk","Not started","Done"].map(s=>'<option'+(t.status===s?" selected":"")+'>'+s+'</option>').join("")+'</select></div>'
+    +'<div><span class="small">Progress '+(+t.progress||0)+'%</span><input type="range" min="0" max="100" data-t="'+i+'" data-k="progress" value="'+(+t.progress||0)+'"></div></div></div>'
+  ).join("");
+  html+='<button class="addrow" id="addT">+ Add target</button>';
+  document.getElementById("pane-targets").innerHTML=html;
+  document.querySelectorAll('#pane-targets [data-k]').forEach(el=>{
+    const i=+el.dataset.t,k=el.dataset.k;
+    const h=()=>{ p.targets[i][k]= k==="progress"? +el.value : el.value; commit(false); if(k==="progress"){ el.previousElementSibling; } };
+    if(el.type==="range"){ el.oninput=()=>{ p.targets[i][k]=+el.value; el.parentElement.querySelector(".small").textContent="Progress "+el.value+"%"; }; el.onchange=()=>commit(false); }
+    else el.onchange=h;
+  });
+  document.querySelectorAll('#pane-targets [data-del]').forEach(b=>b.onclick=()=>{ if(confirm("Delete this target?")){ p.targets.splice(+b.dataset.del,1); commit(); renderTargetsPane(p); } });
+  document.getElementById("addT").onclick=()=>{ p.targets.push({id:p.id+"-"+Date.now(),title:"",owner:p.name,due:"",status:"Not started",progress:0}); commit(); renderTargetsPane(p); };
+}
+function bind(id,setter,live){ const el=document.getElementById(id); if(!el)return;
+  el.onchange=()=>{ setter(el.value); commit(false); }; }
+
+/* commit: save + refresh dependent views/KPIs (rerender=true also refreshes current list view) */
+function commit(rerender=true){ save(); renderKPIs();
+  if(rerender){ if(curView==="people")renderPeople(); if(curView==="targets")renderTargets(); if(curView==="grid")renderLegend(); } }
+
+/* ================= add / remove person ================= */
+// White initials sit on these, so every one clears 4.5:1 (the old #C7A008 and
+// #00A3A3 did not — CFO/Fable review 19-Sep-2026).
+const PCOLORS=["#C25E0A","#1F7A44","#2F55A8","#8E2A6C","#B26A00","#0B7A7A","#B32F2F","#54399F","#0E6E6E"];
+
+function initialsOf(name){
+  return String(name||"").trim().split(/\s+/).slice(0,2)
+    .map(w=>w.charAt(0).toUpperCase()).join("") || "??";
+}
+
+/* Board [DD], CFO QC 14-Sep-2026. "+ Add person" used to mint a blank record
+   called "New team member" with NO email — so the dialogue came out orphaned:
+   the person could not open their own (that looks up by email) and the 9-box
+   grid could not place them. You cannot create a real employee's dialogue that
+   way at all, which is what the screen exists for. This picker replaces it. */
+function makePerson(fields){
+  const p={id:fields.id, name:fields.name||"", initials:initialsOf(fields.name),
+    color:PCOLORS[STATE.length%PCOLORS.length],
+    dept:fields.dept||"", position:fields.position||"", jd:"", period:"",
+    supervisor:"", performance:0.5, potential:0.5, overall:null, rating:"",
+    sections:{}, notes:"", targets:[]};
+  if(fields.email) p.email=fields.email;
+  STATE.push(p); commit(); if(curView==="grid")renderGrid();
+  openDrawer(p.id);
+  return p;
+}
+
+/* The blank path still exists — for a genuine non-payroll person — but it is
+   now labelled and warns, instead of being the only way to add anybody. */
+function addExternalPerson(){
+  if(!confirm("This creates an UNLINKED record for someone who is not on the payroll.\n\n"
+      +"They will not be able to open their own dialogue, and they will not appear on the "
+      +"9-box grid.\n\nFor a real employee, use + Create Development Dialogue instead.\n\nContinue?")) return;
+  makePerson({id:nextId(), name:"External person", dept:"", position:""});
+}
+
+var EMPLOYEES=null, EMPLOYEES_STATE="idle";
+function addPerson(){
+  if(!EMBED){ // standalone preview has no server to ask
+    addExternalPerson(); return;
+  }
+  openPickerModal();
+  if(EMPLOYEES===null && EMPLOYEES_STATE!=="loading"){
+    EMPLOYEES_STATE="loading";
+    window.parent.postMessage({type:'cockpit-employees'}, '*');
+    // If the parent never answers, fall to the error state rather than sitting
+    // on "Loading..." for ever with no way to retry.
+    setTimeout(function(){ if(EMPLOYEES_STATE==="loading") onEmployees(null); }, 10000);
+  } else { renderPickerList(); }
+}
+
+function onEmployees(list){
+  // null means the lookup FAILED. Rendering an empty list here would read as
+  // "there are no staff", which is the fake all-clear this screen must not show.
+  if(list===null){ EMPLOYEES_STATE="error"; }
+  else { EMPLOYEES=list; EMPLOYEES_STATE="ready"; }
+  renderPickerList();
+}
+
+function openPickerModal(){
+  var m=document.getElementById("pickerModal");
+  m.style.display="flex";
+  var q=document.getElementById("pickerSearch"); q.value=""; setTimeout(function(){q.focus();},50);
+  renderPickerList();
+}
+function closePickerModal(){ document.getElementById("pickerModal").style.display="none"; }
+
+function renderPickerList(){
+  var box=document.getElementById("pickerList");
+  if(!box) return;
+  if(EMPLOYEES_STATE==="loading"){ box.innerHTML='<div class="pk-msg">Loading the staff list…</div>'; return; }
+  if(EMPLOYEES_STATE==="error"){
+    box.innerHTML='<div class="pk-msg pk-err">The staff list could not be loaded, so nobody can be '
+      +'chosen right now. Close this and try again — do not use External person for an employee.</div>';
+    return;
+  }
+  var q=(document.getElementById("pickerSearch").value||"").trim().toLowerCase();
+  var rows=(EMPLOYEES||[]).filter(function(e){
+    if(!q) return true;
+    return (e.name||"").toLowerCase().indexOf(q)>=0
+        || (e.email||"").toLowerCase().indexOf(q)>=0
+        || (e.department||"").toLowerCase().indexOf(q)>=0
+        || (e.employee_no||"").toLowerCase().indexOf(q)>=0;
+  });
+  if(!rows.length){
+    box.innerHTML='<div class="pk-msg">'+(q?'Nobody matches "'+q.replace(/</g,"&lt;")+'".':'No staff to show.')+'</div>';
+    return;
+  }
+  box.innerHTML=rows.slice(0,200).map(function(e){
+    var sub=[e.position,e.department,e.employee_no].filter(Boolean).join(" · ");
+    return '<button class="pk-row'+(e.has_dialogue?' pk-has':'')+'" data-email="'
+      +String(e.email).replace(/"/g,"&quot;")+'">'
+      +'<span class="pk-nm">'+String(e.name).replace(/</g,"&lt;")+'</span>'
+      +'<span class="pk-sub">'+String(sub).replace(/</g,"&lt;")+'</span>'
+      +(e.has_dialogue?'<span class="pk-tag">already has one</span>':'')
+      +'</button>';
+  }).join("");
+  Array.prototype.forEach.call(box.querySelectorAll(".pk-row"), function(b){
+    b.onclick=function(){ pickEmployee(b.getAttribute("data-email")); };
+  });
+}
+
+function pickEmployee(email){
+  var e=(EMPLOYEES||[]).find(function(x){ return x.email===email; });
+  if(!e) return;
+  // Creating a SECOND dialogue for someone who already has a current one is
+  // refused, not confirmed. The save path looks a row up by ref and replaces
+  // its payload, so a colliding ref would overwrite a real appraisal with a
+  // blank one. Rolling into a fresh period is what "New period" is for.
+  if(e.has_dialogue){
+    alert(e.name+" already has a current dialogue.\n\nOpen it from the list and use "
+      +"\"New period\" to start their next review — that keeps the old one on record. "
+      +"Creating a second one here would overwrite it.");
+    return;
+  }
+  // The server reads the owner email out of the id (it splits on '::'), so the
+  // id MUST carry the email or the dialogue orphans. The suffix only has to be
+  // unique — there is no period field on this screen at creation time.
+  closePickerModal();
+  makePerson({ id: e.email + "::new-" + Date.now(), name: e.name, email: e.email,
+               dept: e.department, position: e.position });
+}
+function removePerson(id){ const p=byId(id); if(!confirm('Remove "'+p.name+'" from the cockpit? This deletes their current dialogue.'))return;
+  if(EMBED){ window.parent.postMessage({type:'cockpit-delete', ref:id}, '*'); return; } // parent deletes on server, then reloads
+  STATE=STATE.filter(x=>String(x.id)!==String(id)); if(sel===id){ sel=null; closeDrawer(); }
+  commit(); if(curView==="grid")renderGrid(); }
+
+/* ================= view switching ================= */
+function setView(v){ curView=v;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
+  document.querySelectorAll(".view").forEach(x=>{ x.classList.remove("active"); x.classList.remove("enter"); });
+  const pane=document.getElementById("view-"+v);
+  pane.classList.add("active");
+  if(!REDUCED){ void pane.offsetWidth; pane.classList.add("enter"); }
+  if(v==="grid")renderGrid(); if(v==="people")renderPeople(); if(v==="targets")renderTargets();
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setView(t.dataset.view));
+document.querySelectorAll(".dtab").forEach(t=>t.onclick=()=>switchTab(t.dataset.pane));
+document.getElementById("scrim").onclick=closeDrawer;
+document.getElementById("addPerson").onclick=addPerson;
+document.getElementById("addExternal").onclick=function(){ closePickerModal(); addExternalPerson(); };
+document.getElementById("pickerClose").onclick=closePickerModal;
+document.getElementById("pickerSearch").oninput=renderPickerList;
+document.getElementById("pickerModal").addEventListener("click",function(ev){
+  if(ev.target && ev.target.id==="pickerModal") closePickerModal(); });
+{ const npa=document.getElementById("newPeriodAllBtn"); if(npa) npa.onclick=()=>{
+  if(!EMBED){ alert("Available in omni."); return; }
+  const period=prompt("Open a NEW period for EVERYONE shown. Name the new period (e.g. FY27):");
+  if(period && period.trim()){ window.parent.postMessage({type:'cockpit-new-period-all', period:period.trim()}, '*'); }
+}; }
+document.getElementById("resetBtn").onclick=()=>{ if(EMBED){ if(confirm("Reload the saved dialogues from omni? Any unsaved change on screen is discarded.")){ window.parent.postMessage({type:'cockpit-reset'}, '*'); } return; } if(confirm("Reset the cockpit to the original dialogue data? Your edits and added people will be lost.")){ STATE=JSON.parse(JSON.stringify(SEED)); save(); closeDrawer(); renderAll(); } };
+document.getElementById("printBtn").onclick=()=>window.print();
+document.getElementById("exportBtn").onclick=()=>{ const blob=new Blob([JSON.stringify({saved:new Date().toISOString(),data:STATE},null,1)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="talent-cockpit-backup.json"; a.click(); };
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=e=>{ const f=e.target.files[0]; if(!f)return; const rd=new FileReader();
+  rd.onload=()=>{ try{ const j=JSON.parse(rd.result); const arr=j.data||j; if(Array.isArray(arr)&&arr.length){ STATE=withTargets(arr); save(); closeDrawer(); renderAll(); } else alert("That file has no cockpit data."); }catch(x){ alert("Could not read that file."); } };
+  rd.readAsText(f); };
+
+document.getElementById("foot").textContent=
+  "Everything here is editable — add people, edit the Development Dialogue exactly like the sheet, add and track targets. Changes save automatically in omni (the HRIS system of record) — not just this browser. Use Export for an extra backup. Confidential — HR, the individual, and the CFO only.";
+
+function renderAll(){ renderCockpitFilters(); renderKPIs(); setView(curView); }
+readHash();
+renderAll();
+if(EMBED){ window.parent.postMessage({type:'cockpit-ready'}, '*'); }
+</script>
+
+</body>
+</html>

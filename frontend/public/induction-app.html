@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alpha Direct Induction</title>
+<!--
+  The induction player. Slides, then the exam, then the certificate.
+
+  This file owns the EXPERIENCE only. It holds no data of its own and talks to
+  the host page (frontend/src/app/(dashboard)/hris/induction/page.tsx) over
+  postMessage; the host owns auth and calls the Omni API. Same pattern as
+  talent-cockpit-app.html, and for the same reason: Omni sends
+  X-Frame-Options: DENY, so the host mounts this via srcDoc.
+
+  Messages IN : init | paper | result | error
+  Messages OUT: ready | heartbeat | start-exam | submit | download-certificate
+-->
+<style>
+  :root{
+    --navy:#0B0B3B; --navy-2:#15154f; --orange:#F07F00; --orange-soft:#ffb35c;
+    --ink:#14142b; --muted:#6a6a85; --line:#e6e6ef; --bg:#f6f6fb; --card:#ffffff;
+    --ok:#0f8a5f; --bad:#c2381f;
+    --r-lg:20px; --r-md:12px; --r-sm:8px;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --dur:460ms;
+    --shadow:0 1px 2px rgba(11,11,59,.05), 0 12px 32px -12px rgba(11,11,59,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:400 16px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:20px 16px 56px}
+
+  /* ── progress rail ─────────────────────────────────────────── */
+  .rail{position:sticky;top:0;z-index:20;background:var(--bg);padding:6px 0 14px}
+  .rail-track{height:5px;border-radius:99px;background:var(--line);overflow:hidden}
+  .rail-fill{height:100%;width:0;border-radius:99px;
+    background:linear-gradient(90deg,var(--navy),var(--orange));
+    transition:width var(--dur) var(--ease)}
+  .rail-meta{display:flex;justify-content:space-between;gap:12px;
+    margin-top:8px;font-size:12.5px;color:var(--muted);letter-spacing:.01em}
+  .rail-meta b{color:var(--ink);font-weight:600}
+
+  /* ── slide ─────────────────────────────────────────────────── */
+  .stage{position:relative;min-height:430px}
+  .slide{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    box-shadow:var(--shadow);overflow:hidden;
+    animation:rise var(--dur) var(--ease) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.994)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide,.q{animation:none}
+    .rail-fill{transition:none}
+  }
+  .slide-top{
+    background:
+      radial-gradient(120% 140% at 88% -30%, rgba(240,127,0,.32) 0%, transparent 58%),
+      linear-gradient(135deg,var(--navy) 0%, var(--navy-2) 100%);
+    color:#fff;padding:30px 34px 26px;position:relative;
+  }
+  .kicker{display:inline-flex;align-items:center;gap:8px;
+    font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:#fff;opacity:.82}
+  .kicker .dot{width:5px;height:5px;border-radius:99px;background:var(--orange-soft)}
+  h1{margin:12px 0 0;font-size:clamp(23px,3.4vw,34px);line-height:1.15;
+    font-weight:650;letter-spacing:-.022em;color:#fff}
+  .clause{position:absolute;right:26px;bottom:20px;font-size:11.5px;
+    color:#fff;opacity:.62;font-variant-numeric:tabular-nums}
+  .slide-body{padding:28px 34px 32px}
+  ul{margin:0;padding:0;list-style:none;display:grid;gap:15px}
+  li{display:grid;grid-template-columns:22px 1fr;gap:13px;align-items:start;
+    font-size:16.5px;line-height:1.55;
+    animation:fadein 420ms var(--ease) both}
+  li:nth-child(1){animation-delay:60ms}  li:nth-child(2){animation-delay:115ms}
+  li:nth-child(3){animation-delay:170ms} li:nth-child(4){animation-delay:225ms}
+  li:nth-child(5){animation-delay:280ms} li:nth-child(6){animation-delay:335ms}
+  @keyframes fadein{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  .tick{margin-top:6px;width:22px;height:22px;border-radius:99px;
+    background:rgba(240,127,0,.13);display:grid;place-items:center}
+  .tick i{width:7px;height:7px;border-radius:99px;background:var(--orange)}
+  strong{font-weight:650}
+
+  /* ── controls ──────────────────────────────────────────────── */
+  .bar{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+  .spacer{flex:1}
+  button{
+    font:inherit;font-weight:560;font-size:15px;border-radius:var(--r-md);
+    padding:11px 20px;border:1px solid transparent;cursor:pointer;
+    transition:transform 140ms var(--ease),background 160ms,box-shadow 160ms,opacity 160ms;
+  }
+  button:active:not(:disabled){transform:scale(.978)}
+  button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+  .primary{background:var(--navy);color:#fff}
+  .primary:hover:not(:disabled){background:#191960;box-shadow:0 8px 22px -10px rgba(11,11,59,.6)}
+  .accent{background:var(--orange);color:#1b1000}
+  .accent:hover:not(:disabled){background:#ff9220;box-shadow:0 8px 22px -10px rgba(240,127,0,.7)}
+  .ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .ghost:hover:not(:disabled){background:#eeeef6}
+  button:disabled{opacity:.42;cursor:not-allowed}
+  .hint{font-size:13px;color:var(--muted)}
+
+  .dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:18px}
+  .dots i{width:7px;height:7px;border-radius:99px;background:var(--line);
+    transition:background 200ms,transform 200ms var(--ease);cursor:pointer}
+  .dots i.done{background:var(--orange-soft)}
+  .dots i.here{background:var(--navy);transform:scale(1.5)}
+
+  /* ── exam ──────────────────────────────────────────────────── */
+  .exam-head{display:flex;justify-content:space-between;align-items:baseline;
+    gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .exam-head h2{margin:0;font-size:22px;letter-spacing:-.02em;font-weight:650}
+  .pill{font-size:12.5px;font-weight:650;padding:5px 11px;border-radius:99px;
+    background:rgba(11,11,59,.07);color:var(--navy);font-variant-numeric:tabular-nums}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+    padding:20px 22px;margin-bottom:14px;animation:rise 340ms var(--ease) both}
+  .q.unanswered.flagged{border-color:#f0c9a0;background:#fffaf4}
+  .q-n{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted)}
+  .q-stem{margin:7px 0 15px;font-size:16.5px;font-weight:560;line-height:1.5}
+  .opts{display:grid;gap:9px}
+  .opt{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;
+    border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;
+    cursor:pointer;transition:border-color 150ms,background 150ms,transform 140ms var(--ease)}
+  .opt:hover{border-color:#c9c9dd;background:#fafaff}
+  .opt:active{transform:scale(.995)}
+  .opt input{margin:0;appearance:none;width:18px;height:18px;border-radius:99px;
+    border:1.8px solid #c3c3d6;margin-top:2px;transition:border-color 150ms}
+  .opt input:checked{border:5.5px solid var(--orange)}
+  .opt:has(input:checked){border-color:var(--orange);background:#fff8f0}
+  .opt:focus-within{outline:2px solid var(--orange);outline-offset:2px}
+
+  /* ── result ────────────────────────────────────────────────── */
+  .result{background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden;
+    animation:rise 520ms var(--ease) both;text-align:center}
+  .result-top{padding:42px 32px 34px;color:#fff;
+    background:radial-gradient(120% 150% at 50% -40%, rgba(240,127,0,.4) 0%, transparent 60%),
+      linear-gradient(135deg,var(--navy),var(--navy-2))}
+  .result.fail .result-top{background:linear-gradient(135deg,#4a1f16,#6b2a1c)}
+  .score{font-size:60px;font-weight:700;letter-spacing:-.04em;line-height:1;
+    font-variant-numeric:tabular-nums}
+  .result-top p{margin:12px 0 0;opacity:.9;font-size:15.5px}
+  .result-body{padding:28px 32px 32px;display:grid;gap:16px;justify-items:center}
+  .topics{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .topics span{font-size:13px;padding:6px 12px;border-radius:99px;
+    background:#f2f2f8;color:var(--ink)}
+
+  .note{background:#fff8f0;border:1px solid #f4dcc0;border-radius:var(--r-md);
+    padding:13px 16px;font-size:14px;color:#7a4a10;margin-top:16px}
+  .err{background:#fdf1ef;border:1px solid #f3cfc8;border-radius:var(--r-md);
+    padding:13px 16px;font-size:14px;color:#8a2c19;margin-top:16px}
+  .load{display:grid;place-items:center;min-height:340px;color:var(--muted);gap:14px}
+  .spin{width:26px;height:26px;border:2.5px solid var(--line);
+    border-top-color:var(--navy);border-radius:99px;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  @media (max-width:560px){
+    .wrap{padding:14px 12px 44px}
+    .slide-top{padding:24px 20px 22px}
+    .slide-body{padding:22px 20px 26px}
+    .clause{position:static;display:block;margin-top:12px;opacity:.7}
+    .q{padding:17px 16px}
+    .bar button{flex:1 1 auto}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="load"><div class="spin"></div><div>Loading your induction…</div></div>
+</div>
+
+<script>
+'use strict';
+(function () {
+  var S = {
+    course: null, slides: [], view: 'loading',
+    i: 0, seen: {}, dwell: 0, unlocked: false, gateReason: '',
+    paper: [], answers: {}, attemptId: null, paperNo: null,
+    result: null, error: '', submitting: false, showFlags: false
+  };
+  var root = document.getElementById('root');
+  var HEARTBEAT_MS = 15000, MAX_TICK = 20;
+
+  function send(type, payload) {
+    parent.postMessage(Object.assign({ source: 'induction', type: type }, payload || {}), '*');
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  // The deck emphasises a few words with **bold**; nothing else is interpreted.
+  function inline(s) {
+    return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+  function bullets(md) {
+    return String(md || '').split('\n')
+      .map(function (l) { return l.replace(/^\s*-\s?/, '').trim(); })
+      .filter(Boolean);
+  }
+  function mmss(sec) {
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /* ── views ───────────────────────────────────────────────── */
+
+  function viewSlides() {
+    var n = S.slides.length, sl = S.slides[S.i] || {};
+    var seenCount = Object.keys(S.seen).length;
+    var pct = n ? Math.round(seenCount / n * 100) : 0;
+    var last = S.i >= n - 1;
+
+    return '' +
+      '<div class="rail"><div class="rail-track"><div class="rail-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="rail-meta"><span>Slide <b>' + (S.i + 1) + '</b> of <b>' + n + '</b></span>' +
+        '<span>Time on the material <b>' + mmss(S.dwell) + '</b></span></div></div>' +
+      '<div class="stage"><article class="slide" key="' + S.i + '">' +
+        '<div class="slide-top"><span class="kicker"><span class="dot"></span>' +
+          esc(S.course ? S.course.title : 'Induction') + '</span>' +
+          '<h1>' + esc(sl.title || '') + '</h1>' +
+          (sl.section_ref ? '<span class="clause">Conditions of Service &middot; clause ' + esc(sl.section_ref) + '</span>' : '') +
+        '</div>' +
+        '<div class="slide-body"><ul>' +
+          bullets(sl.body_md).map(function (b) {
+            return '<li><span class="tick"><i></i></span><span>' + inline(b) + '</span></li>';
+          }).join('') +
+        '</ul></div>' +
+      '</article></div>' +
+      '<div class="bar">' +
+        '<button class="ghost" id="prev"' + (S.i === 0 ? ' disabled' : '') + '>Back</button>' +
+        (last
+          ? '<button class="accent" id="toexam"' + (S.unlocked ? '' : ' disabled') + '>Start the exam</button>'
+          : '<button class="primary" id="next">Next</button>') +
+        '<div class="spacer"></div>' +
+        '<span class="hint">' + (S.unlocked
+            ? 'You can start the exam whenever you are ready.'
+            : esc(S.gateReason || 'Read every slide to unlock the exam.')) + '</span>' +
+      '</div>' +
+      '<div class="dots">' + S.slides.map(function (_, k) {
+        return '<i data-go="' + k + '" class="' + (k === S.i ? 'here' : (S.seen[k + 1] ? 'done' : '')) + '"></i>';
+      }).join('') + '</div>' +
+      (S.error ? '<div class="err">' + esc(S.error) + '</div>' : '');
+  }
+
+  function viewExam() {
+    var answered = Object.keys(S.answers).length, total = S.paper.length;
+    return '' +
+      '<div class="rail"><div class="rail-track"><div class="rail-fill" style="width:' +
+        (total ? Math.round(answered / total * 100) : 0) + '%"></div></div>' +
+        '<div class="rail-meta"><span>Answered <b>' + answered + '</b> of <b>' + total + '</b></span>' +
+        '<span>Paper <b>' + esc(S.paperNo || '—') + '</b> &middot; pass mark <b>' +
+        esc(S.course ? S.course.pass_mark : 80) + '%</b></span></div></div>' +
+      '<div class="exam-head"><h2>Induction exam</h2>' +
+        '<span class="pill">Your paper is not the same as your neighbour&rsquo;s</span></div>' +
+      '<p class="hint" style="margin:0 0 18px">Answer every question, then submit. ' +
+        'You can change an answer before you submit.</p>' +
+      S.paper.map(function (q) {
+        var chosen = S.answers[q.id];
+        var un = chosen === undefined;
+        return '<div class="q' + (un ? ' unanswered' : '') + (un && S.showFlags ? ' flagged' : '') + '">' +
+          '<div class="q-n">Question ' + q.number + '</div>' +
+          '<div class="q-stem">' + esc(q.stem) + '</div>' +
+          '<div class="opts">' + (q.options || []).map(function (o, k) {
+            return '<label class="opt"><input type="radio" name="q_' + esc(q.id) + '" value="' + k + '"' +
+              (chosen === k ? ' checked' : '') + ' data-q="' + esc(q.id) + '"><span>' + esc(o) + '</span></label>';
+          }).join('') + '</div></div>';
+      }).join('') +
+      (S.showFlags && answered < total
+        ? '<div class="note">' + (total - answered) + ' question(s) still need an answer — they are highlighted above.</div>'
+        : '') +
+      (S.error ? '<div class="err">' + esc(S.error) + '</div>' : '') +
+      '<div class="bar"><button class="accent" id="submit"' + (S.submitting ? ' disabled' : '') + '>' +
+        (S.submitting ? 'Marking…' : 'Submit my answers') + '</button>' +
+        '<div class="spacer"></div><span class="hint">Answered ' + answered + ' of ' + total + '</span></div>';
+  }
+
+  function viewResult() {
+    var r = S.result || {}, pass = !!r.passed;
+    return '<div class="result' + (pass ? '' : ' fail') + '">' +
+      '<div class="result-top"><div class="score">' + esc(r.percent) + '%</div>' +
+        '<p>' + (pass
+          ? 'You passed. ' + esc(r.score) + ' correct — well done.'
+          : 'Not this time. You needed ' + esc(r.pass_mark) + '%.') + '</p></div>' +
+      '<div class="result-body">' +
+        (pass
+          ? '<p style="margin:0;max-width:52ch">Your certificate confirms that you completed the induction and understood the Conditions of Service in full. It has been recorded against your employee file.</p>' +
+            '<button class="accent" id="cert">Download my certificate</button>'
+          : '<p style="margin:0;max-width:52ch">Go back over the material and sit it again — you get a different paper each time.</p>' +
+            (r.review_topics && r.review_topics.length
+              ? '<div><div class="hint" style="margin-bottom:8px">Worth re-reading:</div>' +
+                '<div class="topics">' + r.review_topics.map(function (t) {
+                  return '<span>' + esc(t) + '</span>';
+                }).join('') + '</div></div>'
+              : '') +
+            '<button class="primary" id="again">Read the slides again</button>') +
+      '</div></div>';
+  }
+
+  function render() {
+    if (S.view === 'loading') {
+      root.innerHTML = '<div class="load"><div class="spin"></div><div>Loading your induction…</div></div>';
+      return;
+    }
+    if (S.view === 'error') {
+      root.innerHTML = '<div class="err">' + esc(S.error) + '</div>';
+      return;
+    }
+    root.innerHTML = S.view === 'slides' ? viewSlides()
+      : S.view === 'exam' ? viewExam() : viewResult();
+    wire();
+  }
+
+  function wire() {
+    var el;
+    if ((el = document.getElementById('next'))) el.onclick = function () { go(S.i + 1); };
+    if ((el = document.getElementById('prev'))) el.onclick = function () { go(S.i - 1); };
+    if ((el = document.getElementById('toexam'))) el.onclick = startExam;
+    if ((el = document.getElementById('submit'))) el.onclick = submit;
+    if ((el = document.getElementById('again'))) el.onclick = function () {
+      S.view = 'slides'; S.i = 0; S.result = null; S.answers = {}; S.showFlags = false; render();
+    };
+    if ((el = document.getElementById('cert'))) el.onclick = function () {
+      send('download-certificate', { certificateId: S.result.certificate_id });
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.dots i'), function (d) {
+      d.onclick = function () { go(parseInt(d.getAttribute('data-go'), 10)); };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.opt input'), function (inp) {
+      inp.onchange = function () {
+        S.answers[inp.getAttribute('data-q')] = parseInt(inp.value, 10);
+        // Repaint only the counters — re-rendering the list would lose focus.
+        var answered = Object.keys(S.answers).length, total = S.paper.length;
+        var fill = document.querySelector('.rail-fill');
+        if (fill) fill.style.width = (total ? Math.round(answered / total * 100) : 0) + '%';
+        var meta = document.querySelector('.rail-meta span b');
+        if (meta) meta.textContent = answered;
+        var hint = document.querySelector('.bar .hint');
+        if (hint) hint.textContent = 'Answered ' + answered + ' of ' + total;
+        inp.closest('.q').classList.remove('unanswered', 'flagged');
+      };
+    });
+  }
+
+  function go(k) {
+    if (k < 0 || k >= S.slides.length) return;
+    S.i = k; S.seen[k + 1] = true;
+    render();
+    beat(0);                                   // record the slide as opened at once
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+  }
+
+  function startExam() { send('start-exam', {}); }
+
+  function submit() {
+    if (Object.keys(S.answers).length < S.paper.length && !S.showFlags) {
+      S.showFlags = true; S.error = ''; render();
+      return;
+    }
+    S.submitting = true; S.error = ''; render();
+    send('submit', { attemptId: S.attemptId, answers: S.answers });
+  }
+
+  /* ── dwell heartbeat ─────────────────────────────────────── */
+  // Only while the tab is genuinely visible, and only in small increments —
+  // the server credits at most 20 seconds per beat, so the reading gate cannot
+  // be skipped by leaving the tab open in the background or by one big post.
+  var lastBeat = Date.now();
+  function beat(seconds) {
+    var tick = seconds;
+    if (tick === undefined) {
+      tick = Math.round((Date.now() - lastBeat) / 1000);
+      if (document.visibilityState !== 'visible') tick = 0;
+    }
+    lastBeat = Date.now();
+    tick = Math.max(0, Math.min(MAX_TICK, tick));
+    send('heartbeat', { seconds: tick, slidesSeen: Object.keys(S.seen).map(Number) });
+  }
+  setInterval(function () { if (S.view === 'slides') beat(); }, HEARTBEAT_MS);
+  document.addEventListener('visibilitychange', function () { lastBeat = Date.now(); });
+
+  /* ── host messages ───────────────────────────────────────── */
+  window.addEventListener('message', function (ev) {
+    var d = ev.data;
+    if (!d || d.target !== 'induction') return;
+
+    if (d.type === 'init') {
+      S.course = d.course; S.slides = d.slides || [];
+      S.dwell = d.dwell || 0;
+      S.seen = {};
+      (d.slidesSeen || []).forEach(function (n) { S.seen[n] = true; });
+      S.unlocked = !!d.unlocked; S.gateReason = d.reason || '';
+      if (!S.seen[1]) S.seen[1] = true;
+      S.view = S.slides.length ? 'slides' : 'error';
+      if (!S.slides.length) S.error = 'This course has no slides yet.';
+      render();
+    } else if (d.type === 'progress') {
+      S.dwell = d.dwell || S.dwell;
+      S.unlocked = !!d.unlocked; S.gateReason = d.reason || '';
+      if (S.view === 'slides') {
+        var t = document.querySelector('.rail-meta span:last-child b');
+        if (t) t.textContent = mmss(S.dwell);
+        var btn = document.getElementById('toexam');
+        if (btn) btn.disabled = !S.unlocked;
+        var hint = document.querySelector('.bar .hint');
+        if (hint) hint.textContent = S.unlocked
+          ? 'You can start the exam whenever you are ready.'
+          : (S.gateReason || 'Read every slide to unlock the exam.');
+      }
+    } else if (d.type === 'paper') {
+      S.paper = d.paper || []; S.attemptId = d.attemptId; S.paperNo = d.paperNumber;
+      S.answers = {}; S.showFlags = false; S.error = '';
+      S.view = 'exam'; render();
+      window.scrollTo(0, 0);
+    } else if (d.type === 'result') {
+      S.result = d.result; S.submitting = false; S.view = 'result'; render();
+      window.scrollTo(0, 0);
+    } else if (d.type === 'error') {
+      S.error = d.message || 'Something went wrong.';
+      S.submitting = false;
+      if (S.view === 'loading') S.view = 'error';
+      render();
+    }
+  });
+
+  send('ready', {});
+})();
+</script>
+</body>
+</html>
