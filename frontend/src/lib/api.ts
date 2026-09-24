@@ -10639,6 +10639,11 @@ export async function updateVaultSecret(id: string, input: VaultSecretInput): Pr
 export async function deleteVaultSecret(id: string): Promise<void> {
   await apiFetch(`/admin/vault/${id}/`, { method: 'DELETE' })
 }
+export interface VaultShareLink { url: string; expires_at: string; recipient: string }
+/** One-time hand-over link (CFO 2026-09-21): the recipient opens it, presses a button, sees the value once, link dies. */
+export async function shareVaultSecret(id: string, recipient: string, hours = 24): Promise<VaultShareLink> {
+  return apiFetch<VaultShareLink>(`/admin/vault/${id}/share/`, { method: 'POST', body: JSON.stringify({ recipient, hours }) })
+}
 export async function revealVaultSecret(id: string): Promise<{ id: string; name: string; username: string; secret: string }> {
   return apiFetch<{ id: string; name: string; username: string; secret: string }>(`/admin/vault/${id}/reveal/`, { method: 'POST' })
 }

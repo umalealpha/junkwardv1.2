@@ -244,9 +244,15 @@ def letter_html(request, pk):
         return Response({"detail": "Claims team only."}, status=403)
     from .letters import render_html
 
-    return HttpResponse(
-        render_html(l.kind, processor.render_context(l)), content_type="text/html"
-    )
+    try:
+        body = render_html(l.kind, processor.render_context(l))
+    except ValueError as exc:
+        # The letter refuses rather than printing a figure it cannot stand
+        # behind (B9). Say why in plain words instead of a server error, and
+        # log it — a refused letter is a thing somebody has to act on.
+        log.warning("letter %s not rendered (html): %s", pk, exc)
+        return Response({"detail": str(exc)}, status=409)
+    return HttpResponse(body, content_type="text/html")
 
 
 @api_view(["GET"])
@@ -257,9 +263,12 @@ def letter_pdf(request, pk):
         return Response({"detail": "Claims team only."}, status=403)
     from .letters import render_pdf
 
-    resp = HttpResponse(
-        render_pdf(l.kind, processor.render_context(l)), content_type="application/pdf"
-    )
+    try:
+        pdf = render_pdf(l.kind, processor.render_context(l))
+    except ValueError as exc:
+        log.warning("letter %s not rendered (pdf): %s", pk, exc)
+        return Response({"detail": str(exc)}, status=409)
+    resp = HttpResponse(pdf, content_type="application/pdf")
     resp["Content-Disposition"] = f'inline; filename="{l.kind}-{l.case.claim_ref}.pdf"'
     return resp
 

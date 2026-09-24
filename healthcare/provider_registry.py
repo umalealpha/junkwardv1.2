@@ -83,6 +83,22 @@ _IMPORT_FIELDS = [
 ]
 
 
+# The sheet's yes/no columns arrive in four spellings of two answers — on
+# 21-Sep-2026 production held NO (257), Yes (17), YES (10), No (7) in the
+# sticker column alone, so anything counting "YES" saw 10 of 27. Canonicalise
+# on the way in, by ALLOWLIST: an answer we do not recognise is preserved
+# verbatim rather than mangled into a wrong one.
+_YESNO_FIELDS = ("adh_acceptance", "welcome_pack", "sticker_displayed",
+                 "provider_orientation")
+_YESNO_CANON = {"yes": "YES", "no": "NO", "na": "NA", "n/a": "NA"}
+
+
+def canon_yesno(v: Any) -> str:
+    """'Yes'/'yes'/' YES ' -> 'YES'. Anything unrecognised comes back as-is."""
+    s = str(v or "").strip()
+    return _YESNO_CANON.get(s.lower(), s)
+
+
 def _norm_header(v: Any) -> str:
     return " ".join(str(v or "").strip().lower().split())
 
@@ -168,6 +184,8 @@ def parse_sheet(file_obj, dropped: list | None = None) -> tuple[list[dict], list
             val = r[i] if i < len(r) else None
             if field == "practice_number":
                 rec[field] = normalise_practice_number(val)
+            elif field in _YESNO_FIELDS:
+                rec[field] = canon_yesno(_cell(val))
             else:
                 rec[field] = _cell(val)
         # skip fully-empty rows (no note recorded — a truly blank row is not a loss)
@@ -177,7 +195,8 @@ def parse_sheet(file_obj, dropped: list | None = None) -> tuple[list[dict], list
         if not rec.get("practice_number"):
             blank_key += 1
             if dropped is not None:
-                dropped.append({"row": rownum, "reason": "no practice number", "name": name})
+                dropped.append({"row": rownum, "kind": "not_imported",
+                                "reason": "no practice number", "name": name})
             continue
         pn = rec["practice_number"]
         if pn in seen_pn:
@@ -187,6 +206,10 @@ def parse_sheet(file_obj, dropped: list | None = None) -> tuple[list[dict], list
             if dropped is not None:
                 dropped.append({
                     "row": rownum,
+                    # This row IS imported — it overwrites the earlier one — so it
+                    # is not a row lost from the file. Kept apart from
+                    # "not_imported" so the row count cannot double-count it.
+                    "kind": "overwrites_earlier",
                     "reason": f"duplicate practice number {pn} (first seen on row {seen_pn[pn]}); "
                               "the later row overwrites the earlier",
                     "name": name,
@@ -224,6 +247,19 @@ def preview_import(file_obj) -> dict:
             "The last occurrence wins."
         )
 
+    # Classify one entry PER PRACTICE NUMBER, not per sheet row. A repeated
+    # practice number is one provider written once (the last row wins, exactly
+    # as commit_import writes it) — counting the rows instead reported two new
+    # providers for a file that creates one, so the totals on screen did not
+    # add up to the file the user uploaded.
+    # Counted BEFORE the dedupe below, so "you uploaded a file with N rows"
+    # stays the user's file and not our tidied version of it.
+    rows_in_file = len(rows) + sum(1 for d in dropped if d.get("kind") == "not_imported")
+    deduped: dict[str, dict] = {}
+    for row in rows:
+        deduped[row["practice_number"]] = row
+    rows = list(deduped.values())
+
     new_rows, changed_rows, unchanged = [], [], 0
     for row in rows:
         pn = row["practice_number"]
@@ -246,6 +282,11 @@ def preview_import(file_obj) -> dict:
 
     return {
         "total_rows": len(rows),
+        # How many data rows the file actually held, so the screen can say
+        # "you uploaded a file with N rows" and be right. `total_rows` counts
+        # only what could be matched, and a duplicate appears in BOTH `rows`
+        # and `dropped`, so the two cannot simply be added.
+        "file_rows": rows_in_file,
         "new": new_rows,
         "changed": changed_rows,
         "unchanged": unchanged,
@@ -281,14 +322,18 @@ def commit_import(rows: list[dict], *, source_file: str = "", user=None) -> dict
             for f in _IMPORT_FIELDS:
                 if f in row:
                     setattr(obj, f, row.get(f, "") or "")
-            # Migration seed (CREATE only): the team's existing "ADH Acceptance
-            # (Ready) = YES" IS their prior QC sign-off, so carry it in as the
-            # first qc_confirmed on a brand-new record — otherwise day-one
-            # readiness reads as 0 and every prior YES shows as a mismatch. On a
-            # RE-import of an existing record we never touch qc_confirmed, so an
-            # in-system QC decision is authoritative and never clobbered.
-            if is_new and (row.get("adh_acceptance", "") or "").strip().upper() == "YES":
-                obj.qc_confirmed = True
+            # QC is NEVER granted by the spreadsheet. A create-time seed used to
+            # copy "ADH Acceptance (Ready) = YES" into qc_confirmed to give the
+            # registry a day-one readiness number. The cost only became visible
+            # on 21-Sep-2026: readiness then answered out of the same column it
+            # was meant to check, so the tile could not disagree with the sheet
+            # (222 rows said YES; 222 counted ready). Ritah Tonkope's ruling is
+            # that QC "validates AFA's readiness status rather than
+            # independently override it" — a validation that is auto-granted
+            # validates nothing. A new provider now arrives NOT QC-confirmed and
+            # surfaces in `ready_mismatch` as work to do, which is what the next
+            # AFA load of ~213 providers needs. qc_confirmed is set only by a
+            # person, in Omni.
             obj.source_file = source_file or obj.source_file
             obj.last_imported_at = now
             obj.save(audit_user=user, audit_description=(
@@ -380,6 +425,11 @@ def dashboard_counts() -> dict:
         "afa_registered": sum(1 for p in providers if p.afa_registered == "Yes"),
         "afa_pending": sum(1 for p in providers if p.afa_registered == "Pending"),
         "adh_ready": sum(1 for p in providers if p.adh_ready),
+        # AFA's own readiness claim, counted straight off their column and kept
+        # BESIDE our derived number rather than blended into it. Two numbers
+        # that agree are evidence; one number that cannot disagree is not.
+        "afa_says_ready": sum(1 for p in providers
+                              if (p.adh_acceptance or "").strip().upper() == "YES"),
         "registered_not_qc": sum(1 for p in providers if p.afa_registered == "Yes" and not p.qc_confirmed_flag),
         "mismatches": sum(1 for p in providers if p.ready_mismatch),
         "pending_applications": ServiceProviderApplication.objects.filter(status="pending").count(),

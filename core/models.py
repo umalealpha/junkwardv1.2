@@ -1944,6 +1944,42 @@ class VaultSecret(BaseModel):
         return decrypt(self.secret_ciphertext)
 
 
+
+class VaultShareLink(BaseModel):
+    """A one-time hand-over link for ONE vault secret (CFO 2026-09-21: "why don't
+    you send him a secure link"). The CFO mints it from the vault; the recipient
+    opens the page and presses a button; the secret is shown ONCE and the link
+    dies. Only a hash of the token is stored, so the database cannot reproduce
+    the link. Opening is a POST behind a button on purpose: mail scanners
+    (Outlook Safe Links and friends) pre-fetch every URL with a GET and would
+    otherwise burn the link before the human ever saw it."""
+
+    secret      = models.ForeignKey(VaultSecret, on_delete=models.CASCADE,
+                                    related_name='share_links')
+    token_hash  = models.CharField(max_length=64, unique=True, editable=False)
+    recipient   = models.CharField(max_length=200, blank=True, default='',
+                                   help_text='Who the link was made for (audit trail only).')
+    created_by  = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name='vault_share_links_created')
+    expires_at  = models.DateTimeField()
+    opened_at   = models.DateTimeField(null=True, blank=True)
+    opened_from = models.CharField(max_length=64, blank=True, default='')
+
+    class Meta(BaseModel.Meta):
+        verbose_name = 'Vault Share Link'
+
+    def __str__(self):
+        return f'share of {self.secret_id} for {self.recipient or "?"}'
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        import hashlib
+        return hashlib.sha256((token or '').encode()).hexdigest()
+
+    def is_live(self) -> bool:
+        from django.utils import timezone as _tz
+        return self.opened_at is None and self.expires_at > _tz.now()
+
 # ---------------------------------------------------------------------------
 # Team chat — lightweight in-app chatroom (CFO directive 2026-06-09)
 # ---------------------------------------------------------------------------

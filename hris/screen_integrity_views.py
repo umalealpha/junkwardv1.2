@@ -23,6 +23,8 @@ from rest_framework.response import Response
 
 from core.hris_access import hris_role
 from integrations.models import ScreenIntegrityScan
+from integrations.td_screenshot_integrity import (
+    PHANTOM_DAY_PCT, PHANTOM_HOURS_MIN, IDLE_DAY_PCT, IDLE_HOURS_MIN)
 from django.utils import timezone
 
 _VIEW_ROLES = {'hr', 'admin', 'ceo', 'superadmin'}
@@ -33,8 +35,36 @@ def _can_view(user) -> bool:
     return hris_role(user) in _VIEW_ROLES
 
 
+def _raised_by(f) -> str:
+    """Which rule put this row on the screen: 'typing', 'idle' or 'both'.
+
+    Decided HERE, from the detector's own constants, because the screen must show
+    only the numbers belonging to the rule that fired — an idle-raised row printing
+    "frozen-typing 0.5%" in red reads as an accusation it is not making. The
+    frontend must never re-derive this by comparing percentages against its own
+    copy of the thresholds: the day someone tunes IDLE_DAY_PCT in Python, a
+    duplicated 60 in a .tsx file silently starts hiding the wrong block.
+    """
+    # BOTH legs of each rule, exactly as _classify gates them. Copying only the
+    # percentage leg diverges on a SHORT day: 3.6 tracked hours at 25% frozen-typing
+    # is 0.9h, below the typing rule's own floor, so that rule never fired — but a
+    # percentage-only check would still print "frozen-typing 25%" in the suspicion
+    # tone beside the name, which is the accusation this whole function exists to
+    # stop. The /2 is the watch tier, the lowest bar at which a rule can raise a row.
+    typing = (float(f.frozen_typing_pct or 0) >= PHANTOM_DAY_PCT * 100
+              and float(f.frozen_typing_hours or 0) >= PHANTOM_HOURS_MIN / 2)
+    idle   = (float(getattr(f, 'idle_frozen_pct', 0) or 0) >= IDLE_DAY_PCT * 100
+              and float(getattr(f, 'idle_frozen_hours', 0) or 0) >= IDLE_HOURS_MIN / 2)
+    if typing and idle:
+        return 'both'
+    if idle:
+        return 'idle'
+    return 'typing'      # the original rule, and the safe default for old rows
+
+
 def _flag_json(f) -> dict:
     return {
+        'raised_by':           _raised_by(f),
         'name':                f.name or '—',
         'suspicion':           f.suspicion,
         'shots':               f.shots,
@@ -42,8 +72,20 @@ def _flag_json(f) -> dict:
         'frozen_typing_hours': float(f.frozen_typing_hours),
         'mouse_dead_pct':      float(f.mouse_dead_pct),
         'identical_pct':       float(f.identical_pct),
+        'idle_frozen_pct':     float(getattr(f, 'idle_frozen_pct', 0) or 0),
+        'idle_frozen_hours':   float(getattr(f, 'idle_frozen_hours', 0) or 0),
         'reasons':             list(f.reasons or []),
     }
+
+
+def _flag_weight(f):
+    """Sort key: the credited hours behind WHICHEVER rule raised the row. A row
+    raised by the idle rule has frozen_typing_hours = 0 by definition, so sorting
+    on that column alone would bury the worst idle cases under every typing case.
+    Suspicious always outranks watch."""
+    hours = max(float(getattr(f, 'frozen_typing_hours', 0) or 0),
+                float(getattr(f, 'idle_frozen_hours', 0) or 0))
+    return (0 if f.suspicion == 'suspicious' else 1, -hours)
 
 
 def _scan_json(scan) -> dict:
@@ -55,7 +97,7 @@ def _scan_json(scan) -> dict:
         'status':         scan.status,
         'note':           scan.note,
         'ran_at':         scan.ran_at.isoformat() if scan.ran_at else None,
-        'flags':          [_flag_json(f) for f in scan.flags.all()],
+        'flags':          [_flag_json(f) for f in sorted(scan.flags.all(), key=_flag_weight)],
     }
 
 

@@ -34,10 +34,11 @@ const FONT_B = "'Open Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif"
 interface Provider {
   id: string; practice_number: string; name: string; discipline: string; town: string
   contract_status: string; afa_registered: string; qc_confirmed: boolean
-  adh_ready: boolean; ready_mismatch: boolean
+  adh_ready: boolean; ready_mismatch: boolean; adh_acceptance: string
 }
 interface Counts {
   total: number; afa_registered: number; afa_pending: number; adh_ready: number
+  afa_says_ready: number
   registered_not_qc: number; mismatches: number; pending_applications: number
   by_discipline: Record<string, number>
 }
@@ -86,7 +87,12 @@ export default function ProviderDashboardPage() {
     { key: 'total', label: 'Total providers', count: counts.total, pctText: '100%', pred: () => true },
     { key: 'afa_registered', label: 'AFA-registered', count: counts.afa_registered, pctText: `${pct(counts.afa_registered)}%`, pred: p => p.afa_registered === 'Yes' },
     { key: 'afa_pending', label: 'AFA registration pending', count: counts.afa_pending, pctText: `${pct(counts.afa_pending)}%`, pred: p => p.afa_registered === 'Pending' },
-    { key: 'adh_ready', label: 'ADH-ready (QC-confirmed or team-accepted)', count: counts.adh_ready, pctText: `${pct(counts.adh_ready)}%`, pred: p => p.adh_ready },
+    // Two readiness numbers, deliberately side by side. The top one is AFA's
+    // own claim off their column; the one below is our own check (contract
+    // signed AND a person QC-confirmed). Blending them hid that the second was
+    // fed by the first, so it could never disagree — see provider_registry.
+    { key: 'afa_says_ready', label: 'AFA says ready (their list)', count: counts.afa_says_ready, pctText: `${pct(counts.afa_says_ready)}%`, pred: p => (p.adh_acceptance || '').trim().toUpperCase() === 'YES' },
+    { key: 'adh_ready', label: 'ADH-ready, verified by us (signed + QC)', count: counts.adh_ready, pctText: `${pct(counts.adh_ready)}%`, pred: p => p.adh_ready },
     { key: 'registered_not_qc', label: "Registered but not yet QC'd", count: counts.registered_not_qc, pctText: `${pct(counts.registered_not_qc)}%`, pred: p => p.afa_registered === 'Yes' && !p.qc_confirmed },
     { key: 'mismatches', label: 'Readiness mismatches', count: counts.mismatches, pctText: `${pct(counts.mismatches)}%`, pred: p => p.ready_mismatch, alert: true },
     { key: 'pending_applications', label: 'New applications (pending review)', count: counts.pending_applications, pctText: '—', pred: () => false },

@@ -28,6 +28,16 @@ class IntegrationEvent(BaseModel):
         CLAIM_APPROVED         = 'claim_approved',         'Claim Approved'
         COMMISSION_CALCULATED  = 'commission_calculated',  'Commission Calculated'
         BANK_TRANSACTION       = 'bank_transaction',       'Bank Transaction'
+        # The six names Graphite's locked claims specification fires
+        # (CFO board item B2, 21-Sep-2026). They are handed straight to the
+        # claims machine in claims_automation, which already owns the claim
+        # lifecycle — a second claims engine here would be the wrong answer.
+        CLAIM_REGISTERED       = 'claim_registered',       'Claim Registered'
+        FORM_SUBMITTED         = 'form_submitted',         'Customer Form Submitted'
+        PREMIUM_CHECKED        = 'premium_checked',        'Premium Checked'
+        ASSESSMENT_RECEIVED    = 'assessment_received',    'Assessment Received'
+        WRITE_OFF_FLAGGED      = 'write_off_flagged',      'Write-off Flagged'
+        DECISION_RECORDED      = 'decision_recorded',      'Decision Recorded'
 
     class Status(models.TextChoices):
         RECEIVED   = 'received',   'Received'
@@ -498,9 +508,17 @@ class ScreenIntegrityFlag(BaseModel):
     frozen_typing_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     mouse_dead_pct      = models.DecimalField(max_digits=5, decimal_places=1, default=0)
     identical_pct       = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    # The idle-frozen twin rule (2026-09-21). A row raised by THAT rule has
+    # frozen_typing_* = 0 by definition, so without its own columns the screen
+    # would show a manager "suspicious - 0%, 0.0h" and read as a glitch.
+    idle_frozen_pct     = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    idle_frozen_hours   = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     reasons       = models.JSONField(default=list, blank=True)
 
     class Meta(BaseModel.Meta):
+        # Ordering only breaks ties inside a day; the API sorts by the credited
+        # hours behind whichever rule fired, so an idle flag is never buried
+        # under a typing flag just because its frozen_typing_pct is 0.
         ordering = ['-day', 'suspicion', '-frozen_typing_pct']
         indexes = [models.Index(fields=['day', 'suspicion'])]
         constraints = [

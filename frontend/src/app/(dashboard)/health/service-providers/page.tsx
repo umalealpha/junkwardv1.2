@@ -69,6 +69,9 @@ interface PreviewResp {
   duplicates: string[]
   warnings: string[]
   source_file: string
+  file_rows: number
+  dropped_count: number
+  dropped: { row: number; name: string; kind: string; reason: string }[]
 }
 
 const READINESS_TABS: { key: string; label: string }[] = [
@@ -540,6 +543,47 @@ export default function ServiceProvidersPage() {
                 <div className="text-xl font-semibold text-gray-600">{preview.unchanged}</div>
                 <div className="text-xs text-gray-500">Unchanged</div>
               </div>
+            </div>
+            {/* What the file actually contained, and what did not go in. The
+                three tiles above only ever add up to the rows we could match,
+                so on their own they cannot show a row that went missing. */}
+            <div className="mb-3 rounded-lg border p-2.5 text-xs" style={{ borderColor: '#EEF0F2' }}>
+              {(() => {
+                const dropped = preview.dropped ?? []
+                const dupes = dropped.filter(d => d.kind === 'overwrites_earlier').length
+                const noKey = dropped.filter(d => d.kind === 'not_imported').length
+                const providers = preview.new.length + preview.changed.length + preview.unchanged
+                const fileRows = preview.file_rows ?? (providers + dupes + noKey)
+                // The three numbers must ACCOUNT for the file, or the box is
+                // just another number to distrust. They tie by construction:
+                // file = providers + repeats + unmatchable.
+                return (
+                  <div className="text-gray-700">
+                    <div>You uploaded a file with <b>{fileRows}</b> rows.</div>
+                    <ul className="mt-1.5 space-y-0.5">
+                      <li><b>{providers}</b> provider{providers === 1 ? '' : 's'} will be written — {preview.new.length} new, {preview.changed.length} changed, {preview.unchanged} unchanged.</li>
+                      {dupes > 0 && (
+                        <li><b className="text-amber-700">{dupes}</b> row{dupes === 1 ? ' is a repeat' : 's are repeats'} of a practice number that appears earlier in your own file. The later row wins, so {dupes === 1 ? 'it does' : 'they do'} not add {dupes === 1 ? 'a provider' : 'providers'}.</li>
+                      )}
+                      {noKey > 0 && (
+                        <li><b className="text-amber-700">{noKey}</b> row{noKey === 1 ? ' has' : 's have'} no practice number, so {noKey === 1 ? 'it cannot' : 'they cannot'} be matched to a provider and {noKey === 1 ? 'is' : 'are'} not imported.</li>
+                      )}
+                    </ul>
+                    <div className="mt-1.5 text-gray-500">
+                      {fileRows} = {providers}{dupes > 0 ? ` + ${dupes}` : ''}{noKey > 0 ? ` + ${noKey}` : ''}. Every row in your file is accounted for above.
+                    </div>
+                  </div>
+                )
+              })()}
+              {(preview.dropped?.length ?? 0) > 0 && (
+                <div className="mt-2 max-h-40 overflow-y-auto border-t pt-2" style={{ borderColor: '#F3F4F6' }}>
+                  {preview.dropped.map((d, i) => (
+                    <div key={i} className="py-1 text-gray-600">
+                      Row {d.row}{d.name ? ` — ${d.name}` : ''}: {d.reason}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             {preview.warnings.length > 0 && (
               <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">

@@ -83,7 +83,13 @@ class ClaimsAutomationTests(TestCase):
     def setUpTestData(cls):
         cls.root = User.objects.create_superuser("root", "root@x.co", "x")
         Company.objects.create(code="ADIC", name="Alpha Direct Insurance Company")
-        cls.manager = User.objects.create_user("wangu", "wangu@example.com", "x")
+        # B10: the decline is signed by a NAMED Claims Manager, so the fixture
+        # carries a full name — a letter signed with a bare username is not a
+        # signature, and the renderer now refuses one.
+        cls.manager = User.objects.create_user(
+            "wangu", "wangu@example.com", "x",
+            first_name="Test", last_name="Manager",
+        )
         UserProfile.objects.create(
             user=cls.manager, title=UserProfile.Title.CLAIMS_MANAGER, is_active=True
         )
@@ -255,10 +261,65 @@ class ClaimsAutomationTests(TestCase):
         )  # the non-allow-listed host was never fetched
         self.assertEqual(ClaimLetter.objects.get().kind, "repudiation")
 
+    def test_registering_a_claim_stamps_the_notification_date(self, _ai):
+        """B1/B5 — the date every clock counts from.
+
+        The function existed and NOTHING CALLED IT, so every clock 3 would have
+        read 'unknown' for ever while the commit message said it was wired.
+        """
+        f = facts()
+        f["claim"] = dict(f.get("claim") or {}, notification_date="2026-09-07")
+        self.push(event("claim_registered", "nd1", facts=f))
+        case = ClaimCase.objects.get(claim_ref="G2026000777")
+        self.assertEqual(str(case.notification_date), "2026-09-07")
+
+    def test_a_claim_with_no_notification_date_says_so_and_does_not_guess(self, _ai):
+        self.push(event("claim_registered", "nd2"))
+        case = ClaimCase.objects.get(claim_ref="G2026000777")
+        self.assertIsNone(case.notification_date)
+        ev = ClaimAutomationEvent.objects.get(idempotency_key="nd2")
+        self.assertTrue(
+            any("will read 'unknown'" in a for a in ev.actions),
+            f"the handler must say the clocks cannot be measured; got {ev.actions}",
+        )
+
+    def test_an_unreadable_notification_date_is_refused_not_guessed(self, _ai):
+        f = facts()
+        f["claim"] = dict(f.get("claim") or {}, notification_date="not a date")
+        self.push(event("claim_registered", "nd3", facts=f))
+        case = ClaimCase.objects.get(claim_ref="G2026000777")
+        self.assertIsNone(case.notification_date)
+
     @override_settings(CLAIMS_LETTER_WORDING_APPROVED=True)
-    def test_signed_off_wording_sends_the_letter_with_pdf_and_no_exco_copy(self, _ai):
+    def test_a_decline_with_no_clause_on_file_is_not_sent(self, _ai):
+        """B10 (CFO 21-Sep-2026) — the decline quotes the policy clause word for
+        word. Graphite does not send the clause yet (that is B11), so the letter
+        refuses to be produced, says why, and stays awaiting. A half-empty
+        decline reaching a customer is the worse bug."""
         self.push(
             event("claim_form_submitted", "k4", answers={"driver_licence": "n/a"})
+        )
+        letter = ClaimLetter.objects.get()
+        self.client.force_login(self.manager)
+        self.client.post(f"/api/v1/claims-automation/letters/{letter.id}/approve/")
+        letter.refresh_from_db()
+        self.assertEqual(letter.status, "awaiting")
+        self.assertIn("Not sent", letter.decision_note)
+        self.assertIn("word for word", letter.decision_note)
+        self.assertEqual([m for m in mail.outbox if "client@example.com" in m.to], [])
+
+    @override_settings(CLAIMS_LETTER_WORDING_APPROVED=True)
+    def test_signed_off_wording_sends_the_letter_with_pdf_and_no_exco_copy(self, _ai):
+        f = facts()
+        f["policy"] = dict(f.get("policy") or {}, **{
+            "section": "Section 3 - General Exceptions",
+            "clause_number": "3.2(a)",
+            "clause_text": "The Company shall not be liable while the vehicle is "
+                           "being driven by any person not holding a licence.",
+        })
+        self.push(
+            event("claim_form_submitted", "k4",
+                  answers={"driver_licence": "n/a"}, facts=f)
         )
         letter = ClaimLetter.objects.get()
         self.client.force_login(self.manager)

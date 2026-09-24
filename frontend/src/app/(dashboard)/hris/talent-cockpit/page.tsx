@@ -26,6 +26,9 @@ type Person = Record<string, unknown>
 export default function TalentCockpitPage() {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const canManageRef = useRef(false)
+  // The refs the frame was last initialised with, so a save can tell a NEW
+  // person from an edit to one already on screen.
+  const knownRefs = useRef<Set<string>>(new Set())
   const [status, setStatus] = useState('Loading…')
   const [doc, setDoc] = useState('')
 
@@ -58,7 +61,12 @@ export default function TalentCockpitPage() {
       const d = await r.json()
       canManageRef.current = !!d.can_manage
       const people: Person[] = Array.isArray(d.people) ? d.people : []
-      iframeRef.current?.contentWindow?.postMessage({ type: 'cockpit-init', people, focus }, '*')
+      knownRefs.current = new Set(
+        people.map((p) => String((p as { _ref?: string; id?: string })._ref ?? p.id ?? '')))
+      // D1 greeting + T9 canonical nine-box come straight from the server so the
+      // live review never invents either.
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'cockpit-init', people, focus, me: d.me, nineBox: d.nine_box }, '*')
       setStatus(
         `${people.length} ${people.length === 1 ? 'dialogue' : 'dialogues'} loaded` +
           (d.can_manage ? '' : ' · read-only'),
@@ -152,6 +160,9 @@ export default function TalentCockpitPage() {
 
   const doSign = useCallback(async (ref: string, role: string) => {
     setStatus('Signing…')
+    // Let any save already on the wire for this person finish FIRST. Without
+    // this the backend can lock on the sign and then reject the save.
+    try { await inFlightSaves.current.get(ref) } catch { /* already reported */ }
     try {
       const r = await authedHrisFetch('/hris/api/talent/sign/', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -178,10 +189,77 @@ export default function TalentCockpitPage() {
         body: JSON.stringify({ people }),
       })
       if (!r.ok) throw new Error('HTTP ' + r.status)
+      // A NEW person is enriched server-side on this save — it is given the blank
+      // competency framework to score. The frame still holds its own pre-save
+      // copy, which has none, so the review would open with no competencies
+      // until the manager reloaded. Re-read only when a ref we have never seen
+      // was saved: keying off anything the id itself carries would re-init on
+      // every autosave and clobber what is being typed.
+      const created = people
+        .map((p) => String((p as { _ref?: string; id?: string })._ref ?? p.id ?? ''))
+        .find((ref) => ref && !knownRefs.current.has(ref))
       const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      if (created) await pushInit(created)
       setStatus('Saved ✓ ' + t)
     } catch {
       setStatus('Save failed — check connection and retry')
+    }
+  }, [pushInit])
+
+  // Live review: save ONE section, merged server-side so the other sections are
+  // never touched (T1). The frame sends {ref, part, index/rows/values/fields}.
+  /* A save and a sign are two independent requests. Ordering the postMessages
+     is not enough: the sign can still reach the backend first, lock the record,
+     and the save is then rejected — the manager's last edit lost behind a
+     screen that already reads "signed". doSign AWAITS whatever is on the wire
+     for that person. (Post-launch QC, 21-Sep-2026.) */
+  const inFlightSaves = useRef<Map<string, Promise<unknown>>>(new Map())
+
+  const saveSection = useCallback(async (msg: Record<string, unknown>) => {
+    // Tell the review whether the save actually landed — it stamps "Saved HH:MM"
+    // only from this reply, never from the moment it posted (#3).
+    const confirm = (ok: boolean) =>
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'cockpit-section-saved', ok, part: msg.part, index: msg.index }, '*')
+    if (!canManageRef.current) { setStatus('Read-only — only HR / CFO can save changes'); confirm(false); return }
+    const ref = String(msg.ref || '')
+    const started = (async () => {
+    try {
+      const r = await authedHrisFetch('/hris/api/talent/save-section/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      const t = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      setStatus('Saved ✓ ' + t)
+      confirm(true)
+    } catch {
+      setStatus('Save failed — check connection and retry')
+      confirm(false)
+    }
+    })()
+    if (ref) {
+      const chain = (inFlightSaves.current.get(ref) || Promise.resolve())
+        .catch(() => {}).then(() => started)
+      inFlightSaves.current.set(ref, chain)
+      await chain
+      if (inFlightSaves.current.get(ref) === chain) inFlightSaves.current.delete(ref)
+    } else {
+      await started
+    }
+  }, [])
+
+  // The moderator records a challenge alongside a signed review (D4).
+  const moderatorChallenge = useCallback(async (msg: Record<string, unknown>) => {
+    try {
+      const r = await authedHrisFetch('/hris/api/talent/moderator-challenge/', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg),
+      })
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      setStatus('Challenge recorded ✓')
+    } catch {
+      setStatus('Could not record the challenge — retry')
     }
   }, [])
 
@@ -192,6 +270,8 @@ export default function TalentCockpitPage() {
       const m = (ev.data || {}) as { type?: string; people?: Person[]; ref?: string; period?: string; key?: string; role?: string }
       if (m.type === 'cockpit-ready') pushInit()
       else if (m.type === 'cockpit-save') saveAll(m.people || [])
+      else if (m.type === 'cockpit-save-section') saveSection(m as Record<string, unknown>)
+      else if (m.type === 'cockpit-moderator-challenge') moderatorChallenge(m as Record<string, unknown>)
       else if (m.type === 'cockpit-reset') pushInit()
       else if (m.type === 'cockpit-new-period' && m.ref && m.period) newPeriod(m.ref, m.period)
       else if (m.type === 'cockpit-new-period-all' && m.period) newPeriodAll(m.period)
@@ -202,7 +282,7 @@ export default function TalentCockpitPage() {
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
-  }, [pushInit, saveAll, newPeriod, newPeriodAll, doSign, doDelete, loadHistory, loadEmployees])
+  }, [pushInit, saveAll, saveSection, moderatorChallenge, newPeriod, newPeriodAll, doSign, doDelete, loadHistory, loadEmployees])
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
@@ -231,6 +311,7 @@ export default function TalentCockpitPage() {
         srcDoc={doc}
         onLoad={() => pushInit()}
         title="Development Dialogue — Talent Cockpit"
+        allowFullScreen
         className="w-full flex-1 border-0"
         style={{ minHeight: 'calc(100vh - 112px)' }}
       />

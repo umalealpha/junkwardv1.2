@@ -6,6 +6,9 @@ Endpoints (mounted in alpha_finance/api_router.py):
   PATCH  /api/v1/admin/vault/<uuid>/     update fields and/or rotate `secret`
   DELETE /api/v1/admin/vault/<uuid>/     delete
   POST   /api/v1/admin/vault/<uuid>/reveal/  return plaintext ONCE (writes an AuditLog)
+  POST   /api/v1/admin/vault/<uuid>/share/   mint a ONE-TIME hand-over link {recipient?, hours?}
+  GET    /api/v1/vault-share/<token>/        public page with a 'Show once' button (nothing revealed)
+  POST   /api/v1/vault-share/<token>/        reveal ONCE + kill the link (HTML page)
 
 Access: CFO authority only — superuser OR is_administrator OR title=CFO
 (reuses core.api_key_views._can_manage_keys). The plaintext secret is NEVER
@@ -13,10 +16,13 @@ returned by list; only by the explicit reveal endpoint, which is audit-logged.
 """
 from __future__ import annotations
 
+from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.html import escape
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from core.api_key_views import _can_manage_keys
@@ -176,6 +182,133 @@ def vault_qc_get(request, name):
     _audit(request.user, obj, 'download', f'QC agent read vault secret "{obj.name}"')
     return Response({'name': obj.name, 'username': obj.username, 'url': obj.url, 'secret': obj.reveal()})
 
+
+
+# ── One-time hand-over link (CFO 2026-09-21) ─────────────────────────────────
+SHARE_DEFAULT_HOURS = 24
+SHARE_MAX_HOURS     = 72
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def vault_share(request, pk):
+    """Mint a one-time link for this secret. CFO authority only. The token is
+    returned exactly once here and only its hash is stored."""
+    if not _can_manage_keys(request.user):
+        return _denied()
+    import secrets as _secrets
+    from datetime import timedelta
+
+    from django.conf import settings
+
+    from core.models import VaultSecret, VaultShareLink
+    obj = VaultSecret.objects.filter(pk=pk).first()
+    if not obj:
+        return Response({'detail': 'Not found.'}, status=404)
+    body = request.data or {}
+    try:
+        hours = int(body.get('hours') or SHARE_DEFAULT_HOURS)
+    except (TypeError, ValueError):
+        hours = SHARE_DEFAULT_HOURS
+    hours = max(1, min(hours, SHARE_MAX_HOURS))
+    token = _secrets.token_urlsafe(32)
+    link = VaultShareLink.objects.create(
+        secret=obj, token_hash=VaultShareLink.hash_token(token),
+        recipient=(body.get('recipient') or '').strip()[:200],
+        created_by=request.user,
+        expires_at=timezone.now() + timedelta(hours=hours),
+    )
+    _audit(request.user, obj, 'create',
+           f'Minted one-time share link for vault secret "{obj.name}" '
+           f'(recipient: {link.recipient or "unspecified"}, {hours}h)')
+    base = getattr(settings, 'PUBLIC_BASE_URL', '').rstrip('/')
+    return Response({
+        'url':        f'{base}/api/v1/vault-share/{token}/',
+        'expires_at': link.expires_at.isoformat(),
+        'recipient':  link.recipient,
+    }, status=status.HTTP_201_CREATED)
+
+
+_SHARE_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Alpha Direct - one-time secret</title>
+<style>body{font-family:'Book Antiqua',Palatino,Georgia,serif;background:#F6F7F9;color:#0D1B2A;margin:0;padding:32px 16px}
+.card{max-width:560px;margin:0 auto;background:#fff;border-top:4px solid #F4A623;border-radius:8px;padding:28px 28px 24px;box-shadow:0 2px 10px rgba(13,27,42,.08)}
+h1{font-size:20px;margin:0 0 6px}p{line-height:1.5;margin:8px 0}.muted{color:#6B7280;font-size:13px}
+button{background:#0D1B2A;color:#fff;border:0;border-radius:6px;padding:12px 18px;font-size:15px;cursor:pointer;margin-top:10px}
+.secret{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;background:#F1F5F9;border:1px solid #E5E7EB;border-radius:6px;padding:14px;word-break:break-all;user-select:all;margin-top:12px}
+.warn{color:#B91C1C}</style></head><body><div class="card">%s
+<p class="muted" style="margin-top:22px">Alpha Direct Insurance Company (Pty) Ltd - Omni Secrets Vault</p></div></body></html>"""
+
+
+def _share_page(inner: str, code: int = 200) -> HttpResponse:
+    resp = HttpResponse(_SHARE_PAGE % inner, status=code, content_type='text/html; charset=utf-8')
+    resp['Cache-Control'] = 'no-store, max-age=0'
+    resp['Referrer-Policy'] = 'no-referrer'
+    resp['X-Robots-Tag'] = 'noindex, nofollow'
+    return resp
+
+
+_DEAD = ('<h1>This link has already been used or has expired.</h1>'
+         '<p>A one-time link only opens once. Ask the sender for a new one.</p>')
+
+
+@csrf_exempt
+@api_view(['GET', 'POST'])
+@authentication_classes([])   # no session auth: DRF's SessionAuthentication would
+                              # enforce CSRF on a recipient who is signed into Omni
+@permission_classes([AllowAny])
+def vault_share_open(request, token):
+    """The recipient's page. GET only shows a button (so a mail scanner's
+    pre-fetch cannot burn the link). POST reveals the secret exactly once,
+    inside one database lock, and the link is dead from then on."""
+    from django.db import transaction
+
+    from core.models import VaultShareLink
+    h = VaultShareLink.hash_token(token)
+    if request.method == 'GET':
+        link = VaultShareLink.objects.filter(token_hash=h).select_related('secret').first()
+        if not link:
+            return _share_page('<h1>This link is not valid.</h1><p>Check it was copied in full, or ask the sender for a new one.</p>', 404)
+        if not link.is_live():
+            return _share_page(_DEAD, 410)
+        when = timezone.localtime(link.expires_at).strftime('%d %b %Y %H:%M')
+        return _share_page(
+            f'<h1>{escape(link.secret.name)}</h1>'
+            '<p>This is a one-time hand-over from the Alpha Direct Secrets Vault. '
+            'The value is shown <strong>once</strong>. Have a safe place ready to paste it, then press the button.</p>'
+            '<form method="post"><button type="submit">Show it once</button></form>'
+            f'<p class="muted">Link valid until {when} (Botswana time).</p>')
+
+    with transaction.atomic():
+        link = (VaultShareLink.objects.select_for_update()
+                .filter(token_hash=h).select_related('secret').first())
+        if not link:
+            return _share_page('<h1>This link is not valid.</h1>', 404)
+        if not link.is_live():
+            return _share_page(_DEAD, 410)
+        sec = link.secret
+        value = sec.reveal()
+        if not value:
+            # Nothing to show (empty or undecryptable). Never spend the one
+            # chance on an empty box: leave the link live and say so.
+            transaction.set_rollback(True)
+            return _share_page('<h1>The value could not be produced.</h1>'
+                               '<p>The link is still valid. Ask the sender to check the vault entry.</p>', 500)
+        ip = (request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR') or '').split(',')[0].strip()[:64]
+        link.opened_at = timezone.now()
+        link.opened_from = ip
+        link.save(update_fields=['opened_at', 'opened_from', 'updated_at'])
+        sec.last_revealed_at = link.opened_at
+        sec.save(update_fields=['last_revealed_at', 'updated_at'])
+    _audit(None, sec, 'download',
+           f'One-time share link OPENED for vault secret "{sec.name}" '
+           f'(recipient: {link.recipient or "unspecified"}, from {ip or "unknown"})')
+    return _share_page(
+        f'<h1>{escape(sec.name)}</h1>'
+        '<p class="warn"><strong>Shown once.</strong> This link is now dead. Copy the value now.</p>'
+        f'<div class="secret">{escape(value)}</div>'
+        f'<p class="muted">{len(value)} characters. Do not forward it by email or chat.</p>')
 
 def _audit(user, obj, action, description, record_id=None):
     try:

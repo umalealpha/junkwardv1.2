@@ -387,10 +387,13 @@ def parse_inhouse_summary(path, period_label):
     return out
 
 
-def import_inhouse(path, period_label, commit=True, submit=False):
+def import_inhouse(path, period_label, commit=True, submit=False, user=None, _pairs=None):
     """Load an in-house summary workbook: one submission per agent, a single line
-    carrying their gross for the month (in-house has no per-policy detail)."""
-    pairs = parse_inhouse_summary(path, period_label)
+    carrying their gross for the month (in-house has no per-policy detail).
+
+    `user` is the person doing the upload — required when submit=True, because a
+    submission must record who submitted it (b6ccaa38). `_pairs` is a test hook."""
+    pairs = _pairs if _pairs is not None else parse_inhouse_summary(path, period_label)
     if not commit:
         return {'agents': len(pairs), 'gross': str(sum((g for _, g in pairs), Decimal('0.00')))}
     from . import service
@@ -414,7 +417,7 @@ def import_inhouse(path, period_label, commit=True, submit=False):
                 transaction_type='new_business', commission_amount=gross)
             service.recompute_submission(sub)
             if submit:
-                service.submit(sub, None)
+                service.submit(sub, user)
             created += 1
     return {'agents': len(pairs), 'created': created}
 
@@ -429,7 +432,7 @@ def derive_agent_name(path):
     return nm or base
 
 
-def import_workbook(path, group_key, period_label, agent_name=None, commit=True, submit=False):
+def import_workbook(path, group_key, period_label, agent_name=None, commit=True, submit=False, user=None):
     """Parse + (optionally) create the agent's submission for the month.
     agent_name defaults to the leading word of the file name. With submit=True
     the loaded submission is pushed into the review chain (→ 1st review) so a
@@ -471,7 +474,7 @@ def import_workbook(path, group_key, period_label, agent_name=None, commit=True,
         from . import service
         service.recompute_submission(sub)
         if submit:
-            service.submit(sub, None)   # → submitted (1st review); submitted_by=system
+            service.submit(sub, user)   # -> submitted (1st review); records the uploader (b6ccaa38)
     return {'agent': agent_name, 'lines': len(lines), 'group': eff_group.key,
             'group_mismatch': mismatch, 'status': sub.status,
             'submission_id': str(sub.id),

@@ -13,14 +13,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   getToken, getMe,
-  listVaultSecrets, createVaultSecret, updateVaultSecret, deleteVaultSecret, revealVaultSecret,
+  listVaultSecrets, createVaultSecret, updateVaultSecret, deleteVaultSecret, revealVaultSecret, shareVaultSecret,
 } from '@/lib/api'
-import type { VaultSecretRow } from '@/lib/api'
+import type { VaultSecretRow, VaultShareLink } from '@/lib/api'
 import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Modal, ModalBody, ModalFooter } from '@/components/ui/modal'
-import { ShieldCheck, Plus, Trash2, Copy, Eye, EyeOff, Lock, RefreshCw, KeyRound, AlertTriangle, ClipboardPaste, Wand2, Check, X } from 'lucide-react'
+import { ShieldCheck, Plus, Trash2, Copy, Eye, EyeOff, Lock, RefreshCw, KeyRound, AlertTriangle, ClipboardPaste, Wand2, Check, X, Send } from 'lucide-react'
 
 const CATEGORIES = [
   { id: 'hris',     label: 'HRIS' },
@@ -162,6 +162,10 @@ export default function SecretsVaultPage() {
   const [deleteText, setDeleteText] = useState('')
   const [deleteBusy, setDeleteBusy] = useState(false)
 
+  // Share once (CFO 2026-09-21): a one-time link for someone who is not a vault user.
+  const [shareLink, setShareLink] = useState<(VaultShareLink & { name: string }) | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+
   // Smart Paste — parse a credentials email in the browser
   const [smartText, setSmartText] = useState('')
   const [systemLabel, setSystemLabel] = useState('')
@@ -286,6 +290,16 @@ export default function SecretsVaultPage() {
     if (next == null || next === '') return
     try { await updateVaultSecret(row.id, { secret: next }); await load() }
     catch (e) { setError(e instanceof Error ? e.message : 'Rotate failed') }
+  }
+
+  async function doShare(row: VaultSecretRow) {
+    const who = window.prompt(`Share "${row.name}" once. Who is it for? (name or email, for the audit trail)`)
+    if (who == null) return
+    try {
+      const r = await shareVaultSecret(row.id, who.trim(), 24)
+      setShareLink({ ...r, name: row.name }); setShareCopied(false)
+      await load()
+    } catch (e) { setError(e instanceof Error ? e.message : 'Share failed') }
   }
 
   function doDelete(row: VaultSecretRow) {
@@ -492,6 +506,9 @@ export default function SecretsVaultPage() {
                             <button title="Copy" onClick={() => doCopy(row)} className="p-1.5 rounded hover:bg-[#F3F4F6]">
                               <Copy className={`w-4 h-4 ${copiedId === row.id ? 'text-[#16A34A]' : ''}`} />
                             </button>
+                            <button title="Share once (one-time link)" onClick={() => doShare(row)} className="p-1.5 rounded hover:bg-[#F3F4F6]">
+                              <Send className="w-4 h-4" />
+                            </button>
                             <button title="Rotate (set new value)" onClick={() => doRotate(row)} className="p-1.5 rounded hover:bg-[#F3F4F6]">
                               <RefreshCw className="w-4 h-4" />
                             </button>
@@ -562,6 +579,36 @@ export default function SecretsVaultPage() {
             onClick={confirmDelete}
           >
             Delete permanently
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <Modal
+        open={!!shareLink}
+        onOpenChange={(v) => { if (!v) setShareLink(null) }}
+        title="One-time link ready"
+        description="Send this link on its own. Whoever opens it sees the value once."
+      >
+        <ModalBody className="space-y-3">
+          <p className="text-sm text-[#374151]">
+            <span className="font-semibold text-[#0D1B2A]">{shareLink?.name}</span>
+            {shareLink?.recipient ? <> for <span className="font-semibold">{shareLink.recipient}</span></> : null}.
+            Whoever opens this link sees the value <strong>once</strong>, then the link is dead.
+            It expires {shareLink ? new Date(shareLink.expires_at).toLocaleString() : ''}.
+          </p>
+          <div className="font-mono text-xs bg-[#F1F5F9] border border-[#E5E7EB] rounded-lg p-3 break-all select-all">{shareLink?.url}</div>
+          <p className="text-xs text-[#6B7280]">Send the link on its own. Do not put the value itself in email or chat.</p>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" size="sm" onClick={() => setShareLink(null)}>Close</Button>
+          <Button
+            size="sm"
+            onClick={async () => {
+              if (!shareLink) return
+              try { await navigator.clipboard.writeText(shareLink.url); setShareCopied(true) } catch { /* clipboard blocked; the link is selectable above */ }
+            }}
+          >
+            {shareCopied ? 'Copied' : 'Copy link'}
           </Button>
         </ModalFooter>
       </Modal>

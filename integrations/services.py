@@ -98,18 +98,44 @@ class EventProcessor:
     Call ``run(event)`` — returns the updated event.
     """
 
+    #: The claim-lifecycle names Graphite fires. Omni does not process these
+    #: here — the claims machine in claims_automation already owns the claim
+    #: lifecycle, so this door hands them straight over (CFO board item B2).
+    CLAIM_LIFECYCLE_TYPES = frozenset({
+        IntegrationEvent.EventType.CLAIM_REGISTERED,
+        IntegrationEvent.EventType.FORM_SUBMITTED,
+        IntegrationEvent.EventType.PREMIUM_CHECKED,
+        IntegrationEvent.EventType.ASSESSMENT_RECEIVED,
+        IntegrationEvent.EventType.WRITE_OFF_FLAGGED,
+        IntegrationEvent.EventType.DECISION_RECORDED,
+    })
+
     def run(self, event: IntegrationEvent) -> IntegrationEvent:
+        # A replayed event must not fire its rule a second time. The door is
+        # idempotent on the sender's own key, but the same stored row can be
+        # handed to the processor again by a retry or a sweep.
+        if event.status == IntegrationEvent.Status.PROCESSED:
+            return event
+
+        self._not_acted = None
+
         event.status = IntegrationEvent.Status.PROCESSING
         event.save(update_fields=['status'])
 
         try:
             with transaction.atomic():
                 result_type, result_obj = self._dispatch(event)
-            event.status      = IntegrationEvent.Status.PROCESSED
+            not_acted = getattr(self, '_not_acted', None)
+            event.status = (
+                IntegrationEvent.Status.SKIPPED if not_acted
+                else IntegrationEvent.Status.PROCESSED
+            )
             event.result_type = result_type
-            event.result_id   = result_obj.id
+            event.result_id   = result_obj.id if result_obj is not None else None
             event.processed_at = timezone.now()
-            event.error_message = None
+            # Keep the handler's plain-words note. Blanking it here is how
+            # "stored, not acted on" became a silent success.
+            event.error_message = not_acted
         except Exception as exc:
             log.exception('Failed to process event %s', event.id)
             event.status        = IntegrationEvent.Status.FAILED
@@ -133,12 +159,56 @@ class EventProcessor:
             IntegrationEvent.EventType.COMMISSION_CALCULATED:  self._commission_calculated,
             IntegrationEvent.EventType.POLICY_CANCELLED:      self._policy_cancelled,
         }
+        if event.event_type in self.CLAIM_LIFECYCLE_TYPES:
+            return self._claim_lifecycle(event)
         handler = handlers.get(event.event_type)
         if not handler:
             event.status = IntegrationEvent.Status.SKIPPED
             event.save(update_fields=['status'])
             raise ValueError(f"No handler for event type: {event.event_type}")
         return handler(event.event_data)
+
+    # ------------------------------------------------------------------
+    # the six claim-lifecycle names → the claims machine
+    # ------------------------------------------------------------------
+
+    def _claim_lifecycle(self, event: IntegrationEvent):
+        """Hand a claim event to claims_automation and record that we did.
+
+        Nothing is decided here and nothing moves money: claims_automation
+        writes notifications, tasks and drafts, every one of them behind its
+        own switch.
+        """
+        from django.conf import settings as dj
+
+        if not getattr(dj, 'CLAIMS_LIFECYCLE_FORWARD_EVENTS', False):
+            # Stored, not acted on. B14 — every piece behind its own switch, and
+            # nothing is switched on until it is armed. The event is safe on
+            # disk and can be replayed once the switch is flipped. SKIPPED is
+            # the honest status: 'processed' would claim we did something.
+            self._not_acted = (
+                'stored, not acted on: CLAIMS_LIFECYCLE_FORWARD_EVENTS is off'
+            )
+            return None, None
+
+        from claims_automation import processor
+
+        data = dict(event.event_data or {})
+        # Graphite's spec says "form submitted"; the claims machine has always
+        # called the same thing claim_form_submitted. Translate at the door
+        # rather than renaming a live enum underneath it.
+        etype = {'form_submitted': 'claim_form_submitted'}.get(
+            event.event_type, event.event_type
+        )
+        data['event_type'] = etype
+        # The DOOR's key is authoritative, never a value from inside the body:
+        # a caller able to set the downstream dedupe key could make two
+        # different events collide, or replay one under a fresh key.
+        data['idempotency_key'] = event.idempotency_key or str(event.id)
+        if not data.get('claim_ref'):
+            data['claim_ref'] = (data.get('claim') or {}).get('claim_ref') or ''
+        processor.receive(data, received_via=event.received_via or 'integrations')
+        return None, None
 
     # ------------------------------------------------------------------
     # policy_issued → customer invoice

@@ -8,8 +8,10 @@ session-block detector (td_integrity.py) misses.
 The heart of it, per Fable 5: **real typing changes the screen.** A weight held
 on a key feeds Time Doctor constant keystrokes with ZERO mouse and a screen that
 never changes — physically impossible for genuine work. Confirmed live on the
-Meduduetso Tlagae case (29-Aug-2026): Time Doctor's own UI marked 87 of 91
-screenshots "Identical", every one keyboard-full / mouse-empty.
+first real case (29-Aug-2026): Time Doctor's own UI marked 87 of 91 screenshots
+"Identical", every one keyboard-full / mouse-empty. Staff are NEVER named in this
+file — a person suspected of something is identified by case date in code and by
+name only in the flag records the Screen-Integrity screen holds (C5).
 
 Data source: Time Doctor `/api/1.0/files` gives, PER SCREENSHOT, a `meta` block
 with `keys` / `movements` / `clicks` (keyboard, mouse-move, mouse-click counts),
@@ -49,6 +51,22 @@ PHANTOM_DAY_PCT     = 0.25    # >= 25% of the day's shots are phantom -> flag
 KEYBOARD_ONLY_PCT   = 0.50    # >= 50% of ACTIVE intervals are keyboard-only
 PHANTOM_HOURS_MIN   = 2.0     # materiality floor — never a flag over 20 minutes
 DEFAULT_INTERVAL_MIN = 3.0    # Time Doctor screenshot cadence when unmeasurable
+
+# ---- The IDLE-frozen rule (CFO directive 2026-09-21, case ref TD-IDLE-2026-09-21).
+# The exact TWIN of the phantom-keystroke cheat above, and its mirror image: rather
+# than faking input onto a dead screen, the person supplies almost NO input at all
+# and lets Time Doctor keep crediting the clock. The rule above cannot see it — its
+# anchor is `keys >= KEYS_MIN` — so a 60-day back-scan returned 'clean' every single
+# day for someone whose own Time Doctor page read "Identical 131 of 187" and whose
+# credited day contained 219 keystrokes. The shortfall flow never catches it either,
+# because the hours are NOT short; they are full and hollow.
+#
+# A DEAD interval is one capture interval with NO keys, NO mouse movement and NO
+# clicks, on a screen unchanged from the one before it. Gated on share-of-day AND
+# credited hours, the same materiality logic as the typing rule, so a meeting, a
+# phone call or a genuine reading stretch never becomes an accusation on its own.
+IDLE_DAY_PCT      = 0.60      # >= 60% of the day's intervals dead AND frozen -> flag
+IDLE_HOURS_MIN    = 2.0       # materiality floor — never a flag over a long lunch
 
 
 def _parse_ts(v: Any) -> Optional[datetime]:
@@ -94,6 +112,8 @@ class ScreenSignal:
     frozen_typing_hours:  float = 0.0
     mouse_dead_pct:       float = 0.0    # of the frozen-typing intervals, share with NO mouse
     md5_exact_pct:        float = 0.0    # of frozen-typing intervals, share frozen by exact md5
+    idle_frozen_pct:      float = 0.0    # the TWIN cheat: no input at all on a frozen screen
+    idle_frozen_hours:    float = 0.0
     mean_keys_frozen:     Optional[float] = None
     productive_hours:     Optional[float] = None
     suspicion:            str = 'clean'          # clean | watch | suspicious
@@ -111,6 +131,8 @@ class ScreenSignal:
             'frozen_typing_hours': round(self.frozen_typing_hours, 2),
             'mouse_dead_pct':      round(self.mouse_dead_pct * 100, 1),
             'md5_exact_pct':       round(self.md5_exact_pct * 100, 1),
+            'idle_frozen_pct':     round(self.idle_frozen_pct * 100, 1),
+            'idle_frozen_hours':   round(self.idle_frozen_hours, 2),
             'suspicion':           self.suspicion,
             'reasons':             list(self.reasons),
         }
@@ -172,6 +194,7 @@ def _analyse_user(shots: List[Shot]) -> ScreenSignal:
 
     n_int = len(order)
     identical = keyboard_only = active = frozen_typing = frozen_no_mouse = frozen_exact = 0
+    idle_frozen = 0
     frozen_keys: List[int] = []
     for key in order:
         items = intervals[key]
@@ -188,6 +211,8 @@ def _analyse_user(shots: List[Shot]) -> ScreenSignal:
             keyboard_only += 1
         if all_unchanged:
             identical += 1
+        if all_unchanged and keys == 0 and moves == 0 and clicks == 0:
+            idle_frozen += 1
         if keys >= KEYS_MIN and all_unchanged:
             frozen_typing += 1
             frozen_keys.append(keys)
@@ -204,6 +229,8 @@ def _analyse_user(shots: List[Shot]) -> ScreenSignal:
     sig.frozen_typing_hours = round(frozen_typing * _median_interval_min(interval_times) / 60.0, 2)
     sig.mouse_dead_pct = (frozen_no_mouse / frozen_typing) if frozen_typing else 0.0
     sig.md5_exact_pct = (frozen_exact / frozen_typing) if frozen_typing else 0.0
+    sig.idle_frozen_pct = idle_frozen / n_int if n_int else 0.0
+    sig.idle_frozen_hours = round(idle_frozen * _median_interval_min(interval_times) / 60.0, 2)
     sig.mean_keys_frozen = round(statistics.mean(frozen_keys), 1) if frozen_keys else None
     return sig
 
@@ -225,6 +252,26 @@ def _classify(sig: ScreenSignal) -> None:
         sig.reasons.append(
             f'{sig.frozen_typing_pct*100:.0f}% typing on a frozen screen but below '
             f'the full flag gate ({sig.frozen_typing_hours:.1f}h) — worth a look')
+
+    # --- The idle twin (CFO directive 2026-09-21). Deliberately INDEPENDENT of the
+    # typing rule above: it can raise a day the typing rule called clean, and adds
+    # its own reason to a day already caught. It never downgrades an existing verdict.
+    idle_strong = (sig.idle_frozen_pct >= IDLE_DAY_PCT
+                   and sig.idle_frozen_hours >= IDLE_HOURS_MIN)
+    if idle_strong:
+        sig.suspicion = 'suspicious'
+        sig.reasons.append(
+            f'{sig.idle_frozen_pct*100:.0f}% of screenshots show NO typing, NO mouse '
+            f'and NO clicks on a screen that never changes — {sig.idle_frozen_hours:.1f}h '
+            f'of credited time with no sign of anyone using the machine. The hours were '
+            f'FULL, not short, so the shortfall check never saw it.')
+    elif (sig.idle_frozen_pct >= IDLE_DAY_PCT
+          and sig.idle_frozen_hours >= (IDLE_HOURS_MIN / 2)
+          and sig.suspicion == 'clean'):
+        sig.suspicion = 'watch'
+        sig.reasons.append(
+            f'{sig.idle_frozen_pct*100:.0f}% dead-and-frozen screenshots but only '
+            f'{sig.idle_frozen_hours:.1f}h of it — below the flag gate, worth a look')
 
 
 def analyze_day(files: List[Any], users: List[dict], *,

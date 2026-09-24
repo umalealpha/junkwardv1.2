@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Inter } from 'next/font/google'
+// LOCAL TEST ENV: next/font/google fetch removed (build behind TLS proxy). Fonts
+// are used only as CSS-variable classes with a system-ui fallback — stubbed below.
 import { CustomerShell } from './CustomerShell'
 
-const playfair = Playfair_Display({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-playfair', display: 'swap' })
-const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-inter', display: 'swap' })
+const playfair = { variable: '' }
+const inter = { variable: '' }
 
 /**
  * Customer app layout (route /m). A separate route group from (dashboard):

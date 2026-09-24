@@ -249,7 +249,7 @@ export const DESTS: Dest[] = [
   { label: 'Alerts & Reminders', href: '/hris/alerts', group: 'People', kw: 'contract review' },
   { label: '9-Box Grid', href: '/hris/ninebox', group: 'People', kw: 'talent 9 grid 9-grid nine grid nine box performance potential hipo succession' },
   { label: 'Succession', href: '/hris/succession', group: 'People' },
-  { label: 'Development Dialogue (mine)', href: '/hris/my-dialogue', group: 'People', kw: 'development dialogue dialog my own self assessment' },
+  { label: 'My Development Dialogue', href: '/hris/my-dialogue', group: 'People', kw: 'development dialogue dialog my own self assessment' },
   { label: 'Development Dialogue (my team)', href: '/hris/team-dialogues', group: 'People', kw: 'team dialogues development dialogue dialog manager sign off' },
   { label: 'Roster Flags (Unami decides)', href: '/hris/roster-flags', group: 'People',
     kw: 'not my report resigned left the company wrong team roster flag unami decide' },

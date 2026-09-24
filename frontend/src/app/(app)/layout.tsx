@@ -1,14 +1,12 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Kaushan_Script } from 'next/font/google'
+// LOCAL TEST ENV: next/font/google fetch removed (build behind TLS proxy). Fonts
+// are used only as CSS-variable classes with a system-ui fallback — stubbed below.
 import { AppShell } from './AppShell'
 import { APP_THEMES, DEFAULT_THEME } from './appThemes'
 import './app.css'
 
-const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-inter', display: 'swap' })
-// The splash wordmark's font, fixed by the CFO's supplied design (2026-09-08).
-// Loaded through next/font so it is self-hosted at build time — the app must
-// keep working with no call out to Google at runtime.
-const kaushan = Kaushan_Script({ subsets: ['latin'], weight: '400', variable: '--font-kaushan', display: 'swap' })
+const inter = { variable: '' }
+const kaushan = { variable: '' }
 
 /** Omni STAFF app (route /app). Own manifest so Add-to-Home-Screen installs
  * "Alpha Omni" launching at /app — not Alpha Nexus (/m) and not the desktop (/dashboard). */

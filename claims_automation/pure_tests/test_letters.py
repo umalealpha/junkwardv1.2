@@ -12,6 +12,10 @@ AOL = {
     "policy_number": "DOMG2026000001",
     "vehicle": "TOYOTA HILUX B123ABC",
     "date_of_loss": "2026-09-10",
+    # B9 (CFO 21-Sep-2026): the money block is exactly three lines — Total Claim,
+    # Less Excess worded as the policy states it, Total Claim Payable — and the
+    # excess is read from the policy, never defaulted.
+    "excess_wording": "Less Excess as per policy schedule (5% of claim, minimum P3,000)",
     "figures": {
         "lines": [
             {"label": "Sum insured", "amount": "100000.00"},
@@ -21,6 +25,9 @@ AOL = {
         "net_display": "95,000.00",
         "requires_review": True,
         "note": "",
+        "total_claim": "100000.00",
+        "excess": "5000.00",
+        "other_deductions": "0.00",
     },
     "draft": True,
 }
@@ -32,6 +39,14 @@ REP = {
     "reasons": [
         "The police report records that the driver was under the influence of alcohol."
     ],
+    # B10 (CFO 21-Sep-2026): a decline letter names the policy section, quotes the
+    # clause word for word with its own numbering, and is signed by the Claims
+    # Manager. It refuses to render without them.
+    "policy_section": "Section 3 - General Exceptions",
+    "clause_number": "3.2(a)",
+    "clause_text": "The Company shall not be liable while the vehicle is being "
+                   "driven by any person under the influence of intoxicating liquor.",
+    "claims_manager_name": "Test Manager",
     "draft": False,
 }
 
@@ -79,7 +94,9 @@ class LetterTests(unittest.TestCase):
             self.assertGreater(len(b), 1000)
 
     def test_bad_amount_is_refused_not_shown_as_zero(self):
-        bad = dict(AOL, figures=dict(AOL["figures"], lines=[{"label": "Sum insured", "amount": "abc"}]))
+        # The money block now reads the three approved figures, so the bad value
+        # goes where the letter actually reads it.
+        bad = dict(AOL, figures=dict(AOL["figures"], total_claim="abc"))
         with self.assertRaises(ValueError):
             render_html("aol", bad)
 

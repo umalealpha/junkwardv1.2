@@ -24,6 +24,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from hris.dd_template import needs_template, seed_into
 from hris.feature_views import _gate
 from hris.models import DevelopmentDialogue, HRISProfile
 from payroll.models import Employee
@@ -100,9 +101,33 @@ def _managed_emails(user) -> set:
             .values_list('email', flat=True) if e}
 
 
+class _TeamScope:
+    """A manager's reach: the CURRENT dialogue refs they may touch, plus the
+    work emails of their whole reporting chain.
+
+    The emails matter on their own. Scope used to be the set of refs alone, so a
+    manager whose reports had no dialogue yet resolved to an EMPTY set and the
+    cockpit answered 403 — the first dialogue could never be started, which is
+    exactly the state every new manager is in.
+    """
+
+    def __init__(self, refs, emails):
+        self.refs = frozenset(refs)
+        self.emails = frozenset(emails)
+
+    def __contains__(self, ref):
+        return ref in self.refs
+
+    def __iter__(self):
+        return iter(self.refs)
+
+    def covers_email(self, email) -> bool:
+        return (email or '').strip().lower() in self.emails
+
+
 def _scope(user):
-    """Return 'all' (explicit exec/HR allowlist), a set of CURRENT refs the
-    manager may touch (their reporting chain), or None (no talent access)."""
+    """Return 'all' (explicit exec/HR allowlist), a _TeamScope for a manager
+    (their reporting chain), or None (no talent access)."""
     if _sees_all(user):
         return 'all'
     emails = _managed_emails(user)
@@ -110,7 +135,7 @@ def _scope(user):
         return None
     refs = {d.ref for d in DevelopmentDialogue.objects.filter(is_current=True)
             if (d.email or '').lower() in emails}
-    return refs or None
+    return _TeamScope(refs, emails)
 
 
 # ---- scoring (mirrors the cockpit app's formula) ----------------------------
@@ -120,9 +145,14 @@ def _recompute(payload: dict):
     any_s = False
     for sec in dd.get('sections', []) or []:
         for r in sec.get('rows', []) or []:
-            emp = _num(r.get('employee')); w = _num(r.get('weight'))
-            if emp is not None and w is not None:
-                r['weighted'] = round(emp * w, 4); sb += r['weighted']; any_s = True
+            # D2 (CFO 21-Sep-2026): the headline follows the MANAGER's score, not
+            # the employee self-score. Previously this used r['employee'], so a
+            # reviewer could move a score 2→5 and the overall % did not shift, in
+            # front of the person being reviewed. Forward-only — callers never
+            # recompute a locked/signed period, so past ratings are untouched.
+            mgr = _num(r.get('manager')); w = _num(r.get('weight'))
+            if mgr is not None and w is not None:
+                r['weighted'] = round(mgr * w, 4); sb += r['weighted']; any_s = True
             else:
                 r['weighted'] = None
     dd['sectionB'] = round(sb, 4) if any_s else None
@@ -209,6 +239,14 @@ def _row_from_person(row: DevelopmentDialogue, p: dict) -> None:
     row.payload = {k: v for k, v in p.items()
                    if k not in ('_ref', 'periodLabel', 'personKey', 'locked',
                                 'company', 'grade', 'manager', 'deptCanonical')}
+    # A dialogue with no competency structure is not scorable — the manager
+    # opens it and there is nothing to fill in. Fill in the framework, MERGING:
+    # `dd` also carries the development plan, career aspirations, priorities,
+    # measures, the manager's comments and the rating, and this runs on the
+    # field-scoped section save too. Assigning a fresh dd here would destroy all
+    # of that and answer 200 — the exact wipe `save_section` was written to stop.
+    if needs_template(row.payload.get('dd')):
+        row.payload['dd'] = seed_into(row.payload.get('dd'))
 
 
 def _filter_keys(row: DevelopmentDialogue) -> dict:
@@ -263,9 +301,32 @@ def cockpit(request):
                                     'employee__hris_profile__manager'))
         if scope != 'all':
             rows = [r for r in rows if r.ref in scope]
+        local = (getattr(request.user, 'email', '') or '').split('@')[0].strip().lower()
+        # The live-review "Last time" rail needs each person's PREVIOUS period.
+        # One extra query for the whole page (never per row).
+        keys = [r.person_key for r in rows if r.person_key]
+        prev_map = {}
+        for pr in (DevelopmentDialogue.objects.filter(person_key__in=keys, is_current=False)
+                   .order_by('person_key', '-created_at')):
+            prev_map.setdefault(pr.person_key, pr)
+        people = []
+        for r in rows:
+            d = _payload(r)
+            prev = prev_map.get(r.person_key)
+            if prev is not None:
+                pdd = (prev.payload or {}).get('dd') or {}
+                d['prevDD'] = {'sections': pdd.get('sections') or [],
+                               'overall': prev.overall, 'rating': prev.rating,
+                               'box': _box_name(prev.performance, prev.potential)}
+            people.append(d)
         return Response({'can_manage': True,
                          'scope': 'all' if scope == 'all' else 'team',
-                         'people': [_payload(r) for r in rows]})
+                         # D1: the live-review greeting needs to know who is looking.
+                         'me': {'name': (request.user.get_full_name() or '').strip(),
+                                'email': getattr(request.user, 'email', '') or '',
+                                'isCFO': local in ('pganesharajah', 'cfo')},
+                         'nine_box': NINE_BOX,   # T9: one canonical list for the finale grid
+                         'people': people})
 
     # ---- PUT: save the CURRENT-period dataset (scoped, lock-aware) ----
     people = request.data.get('people')
@@ -285,7 +346,30 @@ def cockpit(request):
             # ref) are exec/HR-only.
             existing = DevelopmentDialogue.objects.filter(ref=ref).first()
             if allowed is not None and ref not in allowed:
-                continue
+                # A manager may START a first dialogue for someone in their own
+                # reporting chain. Anything else out of scope is skipped — and
+                # an existing row is never adopted this way, only a NEW one.
+                #
+                # The ref is checked against the email it claims, because the
+                # email arrives in the CLIENT's payload: without this, a manager
+                # could pass a report's address alongside ANY ref and mint a row
+                # under a key that is not theirs. The cockpit mints its ids as
+                # `<email>::<period>`, so the ref must lead with the address the
+                # create was authorised on.
+                new_email = _person_email(p, ref)
+                ref_head = ref.split('::', 1)[0].strip().lower()
+                # ...and only a FIRST one. `ref` is unique but `person_key` is
+                # not, so without this a manager could mint `neo@x::2099`,
+                # `neo@x::2100` … and the same person would appear twice in the
+                # cockpit list and twice in the nine-box. A further period is
+                # opened with new_period, which archives the current one.
+                already = (bool(new_email) and DevelopmentDialogue.objects
+                           .filter(is_current=True, email__iexact=new_email).exists())
+                if not (existing is None
+                        and not already
+                        and allowed.covers_email(new_email)
+                        and ref_head == new_email.strip().lower()):
+                    continue
             seen_refs.add(ref)
             if existing and existing.locked:
                 continue  # signed-off period is read-only
@@ -618,3 +702,206 @@ def talent_employees(request):
         })
     return Response({'employees': out,
                      'scope': 'all' if scope == 'all' else 'team'})
+
+
+# ===========================================================================
+# Development Dialogue LIVE-REVIEW rebuild (board dd515fa8, CFO 21-Sep-2026)
+# ===========================================================================
+
+# Employee-owned fields a MANAGER save must never overwrite (mirror of the
+# my_dialogue self-assessment: the employee owns their score + self comment).
+_EMPLOYEE_OWNED = ('employee', 'selfComment', 'self')
+
+
+def _merge_row(stored: dict, inc: dict) -> None:
+    """Field-scoped merge of one incoming row onto the stored row. Manager
+    fields overwrite; employee-owned fields are left exactly as stored. This is
+    the pattern that keeps a section-by-section save from wiping anything."""
+    for k, v in (inc or {}).items():
+        if k in _EMPLOYEE_OWNED:
+            continue
+        if k == 'manager':
+            stored[k] = _clamp01(v)
+        elif k == 'weight':
+            stored[k] = _num(v)
+        else:
+            stored[k] = v
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_section(request):
+    """Manager-side save of ONE part of a live review, field-merged into the
+    stored payload so the other parts are never touched (T1). A save that would
+    leave a section with fewer rows than are stored is REFUSED unless it carries
+    an explicit `remove` flag — that silent drop wiped four of five sections
+    once. Scoped and lock-aware."""
+    scope = _scope(request.user)
+    if scope is None:
+        return Response({'detail': 'You do not have access to the Talent Cockpit.'},
+                        status=status.HTTP_403_FORBIDDEN)
+    ref = str(request.data.get('ref') or '')
+    row = DevelopmentDialogue.objects.filter(ref=ref, is_current=True).first()
+    if row is None:
+        return Response({'detail': 'Dialogue not found.'}, status=status.HTTP_404_NOT_FOUND)
+    if scope != 'all' and ref not in scope:
+        return Response({'detail': 'Out of scope.'}, status=status.HTTP_403_FORBIDDEN)
+    if row.locked:
+        return Response({'detail': 'This review is signed off and locked.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    part = str(request.data.get('part') or 'section')
+    remove_ok = bool(request.data.get('remove'))
+    payload = dict(row.payload or {})
+    dd = payload.get('dd') or {}
+
+    if part == 'section':
+        try:
+            idx = int(request.data.get('index'))
+        except (TypeError, ValueError):
+            return Response({'detail': 'A section index is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        secs = dd.get('sections') or []
+        if idx < 0 or idx >= len(secs):
+            return Response({'detail': 'Unknown section.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        secs[idx].setdefault('rows', [])          # a section may arrive with no rows key
+        stored_rows = secs[idx]['rows']
+        inc_rows = request.data.get('rows') or []
+        if len(inc_rows) < len(stored_rows) and not remove_ok:
+            return Response(
+                {'detail': 'Refusing to save: fewer rows than are on record for '
+                           'this section. Remove a row with the explicit remove '
+                           'action, not by leaving it out of a save.'},
+                status=status.HTTP_400_BAD_REQUEST)
+        for ri in range(min(len(stored_rows), len(inc_rows))):
+            _merge_row(stored_rows[ri], inc_rows[ri])
+        if len(inc_rows) > len(stored_rows):                 # explicit appends
+            stored_rows.extend(inc_rows[len(stored_rows):])
+        elif remove_ok and len(inc_rows) < len(stored_rows):  # explicit removal
+            del stored_rows[len(inc_rows):]
+
+    elif part == 'values':
+        stored_vals = dd.get('values') or []
+        inc_vals = request.data.get('values') or []
+        if len(inc_vals) < len(stored_vals) and not remove_ok:
+            return Response({'detail': 'Refusing to save: fewer values than on record.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        for vi, sv in enumerate(stored_vals):
+            if vi < len(inc_vals):
+                for k, v in (inc_vals[vi] or {}).items():
+                    if k in ('self',):
+                        continue
+                    sv[k] = _clamp01(v) if k == 'raw' else v
+
+    elif part in ('development', 'verdict'):
+        # Top-level narrative + placement fields. Merge only what arrives; never
+        # blank a field the save did not mention.
+        fields = request.data.get('fields') or {}
+        for k in ('pdp', 'careerAspirations', 'developmentPriorities',
+                  'developmentMeasures', 'targets', 'managerComment', 'rating'):
+            if k in fields:
+                dd[k] = fields[k]
+        for k in ('performance', 'potential'):
+            if k in fields:
+                payload[k] = _clamp01(fields[k])
+        if 'rating' in fields:
+            payload['rating'] = str(fields['rating'] or '')[:120]
+    else:
+        return Response({'detail': f'Unknown part "{part}".'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    payload['dd'] = dd
+    _recompute(payload)
+    payload['stepIndex'] = request.data.get('stepIndex', payload.get('stepIndex'))
+    _row_from_person(row, payload)
+    row.is_current = True
+    row.save(audit_user=request.user)
+    return Response({'person': _payload(row), 'saved_at': timezone.localtime().strftime('%H:%M')})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def moderator_challenge(request):
+    """The moderator (a later-period reviewer, D4) records a CHALLENGE alongside a
+    signed-off dialogue. CFO 21-Sep-2026: a sealed review is never unlocked or
+    rewritten — the challenge is a separate, attributed, audited layer, and the
+    manager's original rating is left exactly as signed."""
+    scope = _scope(request.user)
+    if scope is None:
+        return Response({'detail': 'You are not a moderator for the Talent Cockpit.'},
+                        status=status.HTTP_403_FORBIDDEN)
+    ref = str(request.data.get('ref') or '')
+    row = DevelopmentDialogue.objects.filter(ref=ref, is_current=True).first()
+    if row is None:
+        return Response({'detail': 'Dialogue not found.'}, status=status.HTTP_404_NOT_FOUND)
+    if scope != 'all' and ref not in scope:
+        return Response({'detail': 'Out of scope.'}, status=status.HTTP_403_FORBIDDEN)
+    if not row.locked:
+        return Response({'detail': 'A challenge only applies to a signed-off review.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    who = (getattr(request.user, 'get_full_name', lambda: '')()
+           or getattr(request.user, 'email', '') or 'moderator')
+    payload = dict(row.payload or {})
+    # Stored as its own layer. The original dd is NOT read or written here.
+    ch = {
+        'by': who,
+        'at': timezone.now().isoformat(timespec='minutes'),
+        'reason': str(request.data.get('reason') or '')[:4000],
+        'sections': request.data.get('sections') or [],
+        'overall': _num(request.data.get('overall')),
+    }
+    # Append — a second moderator must never erase the first. `challenge` keeps
+    # the latest for readers that want just one; `challenges` is the full record.
+    payload.setdefault('challenges', [])
+    payload['challenges'].append(ch)
+    payload['challenge'] = ch
+    row.payload = payload
+    row.save(audit_user=request.user)   # row.locked stays True; dd untouched
+    return Response({'challenge': ch, 'challenges': payload['challenges'], 'locked': row.locked})
+
+
+# One canonical nine-box list, so the finale grid and the succession grid can
+# never name the same square differently (T9). perf/pot are the low/med/high
+# band each square sits in; `line` is the plain sentence shown to the employee.
+NINE_BOX = [
+    {'name': 'Star',             'perf': 'high', 'pot': 'high',
+     'line': 'Top talent — high performance and high potential.'},
+    {'name': 'High Potential',   'perf': 'med',  'pot': 'high',
+     'line': 'Strong potential, performance still growing into the role.'},
+    {'name': 'Rough Diamond',    'perf': 'low',  'pot': 'high',
+     'line': 'High potential not yet showing in results — invest and stretch.'},
+    {'name': 'High Performer',   'perf': 'high', 'pot': 'med',
+     'line': 'Delivers strongly and reliably in the current role.'},
+    {'name': 'Core Player',      'perf': 'med',  'pot': 'med',
+     'line': 'Solid, dependable contributor — the backbone of the team.'},
+    {'name': 'Inconsistent',     'perf': 'low',  'pot': 'med',
+     'line': 'Results vary — needs support to perform consistently.'},
+    {'name': 'Solid Specialist', 'perf': 'high', 'pot': 'low',
+     'line': 'Deep expert in the role; growth is in depth, not breadth.'},
+    {'name': 'Underperformer',   'perf': 'med',  'pot': 'low',
+     'line': 'Below expectation — a clear improvement plan is needed.'},
+    {'name': 'Talent Risk',      'perf': 'low',  'pot': 'low',
+     'line': 'Low performance and potential — act with care and urgency.'},
+]
+
+
+_BOX_BY_BAND = {(b['perf'], b['pot']): b['name'] for b in NINE_BOX}
+
+
+def _box_name(performance, potential) -> str:
+    """Canonical nine-box name for a perf/potential pair (0..1). Same bands as the
+    client so the rail, grid and finale never disagree (T9)."""
+    perf = _num(performance) or 0.0
+    pot = _num(potential) or 0.0
+    pb = 'high' if perf >= 0.6667 else ('med' if perf >= 0.3333 else 'low')
+    qb = 'high' if pot > 0.6667 else ('med' if pot > 0.3333 else 'low')
+    return _BOX_BY_BAND.get((pb, qb), '')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def nine_box_labels(request):
+    """The single source of truth for the nine-box square names + sentences."""
+    return Response({'labels': NINE_BOX})

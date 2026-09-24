@@ -313,6 +313,90 @@ table.tt tr:hover td{background:var(--line-2)}
   .pgrid{grid-template-columns:1fr 1fr}
   .card{box-shadow:none}
 }
+/* ===== Development Dialogue LIVE REVIEW — full-screen flow (board dd515fa8) ===== */
+#review{position:fixed;inset:0;z-index:60;background:var(--bg,#f4f5f8);display:none;flex-direction:column;overflow:hidden}
+#review.on{display:flex}
+.rv-top{display:flex;align-items:center;gap:14px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--line,#e6e8ee);flex:0 0 auto}
+.rv-top .who{font-weight:800;color:var(--navy);font-size:16px;letter-spacing:-.01em}
+.rv-top .sect{color:var(--muted);font-size:13px}
+.rv-top .saved{margin-left:auto;color:var(--muted);font-size:12px;min-width:72px;text-align:right}
+.rv-top .rv-x{border:none;background:var(--line,#eef0f4);width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:18px;color:var(--navy)}
+.rv-top .rv-present{border:1px solid var(--line,#e6e8ee);background:#fff;border-radius:9px;padding:7px 12px;cursor:pointer;font-size:12.5px;color:var(--navy)}
+.rv-body{flex:1 1 auto;display:flex;min-height:0}
+.rv-stepper{flex:0 0 56px;display:flex;flex-direction:column;align-items:center;gap:16px;padding:22px 0;background:#fff;border-right:1px solid var(--line,#e6e8ee)}
+.rv-dot{width:13px;height:13px;border-radius:50%;background:var(--line,#d7dbe4);position:relative;cursor:pointer;transition:transform .15s,background .2s}
+.rv-dot.done{background:var(--navy)}
+.rv-dot.now{background:var(--orange);transform:scale(1.35);box-shadow:0 0 0 4px rgba(244,124,32,.16)}
+.rv-dot:not(:last-child)::after{content:"";position:absolute;left:50%;top:16px;transform:translateX(-50%);width:2px;height:16px;background:var(--line,#e0e3ea)}
+.rv-main{flex:1 1 auto;overflow:auto;padding:30px clamp(20px,4vw,56px)}
+.rv-rail{flex:0 0 320px;max-width:320px;border-left:1px solid var(--line,#e6e8ee);background:#fbfbfd;overflow:auto;padding:22px 20px;transition:flex-basis .2s ease,max-width .2s ease}
+.rv-rail.collapsed{flex-basis:44px;max-width:44px;padding:22px 6px;overflow:hidden}
+.rv-rail h4{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.rv-rail .rail-hd{font-weight:800;color:var(--navy);font-size:15px;margin-bottom:2px}
+.rv-rail .rail-row{padding:9px 0;border-bottom:1px solid var(--line,#eef0f4);font-size:12.5px;color:var(--slate,#475069)}
+.rv-rail .rail-row .rr-t{font-weight:600;color:var(--navy);display:block;margin-bottom:2px}
+.rv-rail .rail-row .rr-s{color:var(--muted)}
+.rv-railtog{position:absolute;margin-left:-34px;margin-top:-4px;width:28px;height:28px;border-radius:8px;border:1px solid var(--line,#e6e8ee);background:#fff;cursor:pointer;color:var(--navy)}
+.rv-h{font-size:clamp(20px,2.4vw,28px);font-weight:800;color:var(--navy);letter-spacing:-.02em;margin:0 0 4px}
+.rv-sub{color:var(--muted);font-size:13.5px;margin:0 0 22px}
+.rv-card{background:#fff;border:1px solid var(--line,#e6e8ee);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.rv-card.diff{border-left:3px solid var(--orange)}
+.rv-card .rc-h{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.rv-card .rc-h b{color:var(--navy);font-size:15px}
+.rv-card .rc-tag{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--line,#f0f2f6);padding:2px 8px;border-radius:20px}
+.rv-narr{width:100%;min-height:74px;border:1px solid var(--line,#e6e8ee);border-radius:10px;padding:10px 12px;font:inherit;font-size:13.5px;resize:vertical;line-height:1.5}
+.rv-pips{display:flex;align-items:center;gap:14px;margin-top:12px;flex-wrap:wrap}
+.rv-piprow{display:flex;align-items:center;gap:7px}
+.rv-piprow .pl{font-size:11px;color:var(--muted);width:64px}
+.pip{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line,#cdd3df);background:#fff;cursor:pointer;font-size:11px;color:var(--slate,#475069);transition:transform .12s,background .12s,border-color .12s}
+.pip.emp{border-style:dashed}
+.pip.on{background:var(--navy);color:#fff;border-color:var(--navy);transform:scale(1.08)}
+.pip.on.emp{background:var(--slate,#6b7280);border-color:var(--slate,#6b7280)}
+.rv-disc{margin-top:10px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+.rv-disc[open] summary{margin-bottom:8px}
+.rv-foot{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:14px 22px;background:#fff;border-top:1px solid var(--line,#e6e8ee)}
+.rv-foot .sp{flex:1}
+.rv-btn{border:1px solid var(--line,#d7dbe4);background:#fff;border-radius:10px;padding:10px 18px;cursor:pointer;font-size:13.5px;color:var(--navy);font-weight:600}
+.rv-btn.solid{background:var(--navy);color:#fff;border-color:var(--navy)}
+.rv-btn.warn{background:var(--orange);color:#fff;border-color:var(--orange)}
+.rv-btn:disabled{opacity:.45;cursor:not-allowed}
+.rv-welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.rv-welcome .wgreet{font-size:clamp(26px,4vw,40px);font-weight:800;color:var(--navy);letter-spacing:-.02em}
+.rv-welcome .wrule{height:3px;width:0;background:var(--orange);border-radius:2px;margin:10px 0}
+.rv-welcome .wline{font-size:15px;color:var(--slate,#475069)}
+.rv-finale{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.rv-grid{position:relative;width:min(70vh,520px);aspect-ratio:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:8px}
+.rv-cell{border-radius:12px;background:#fff;border:1px solid var(--line,#e6e8ee);display:flex;align-items:flex-end;justify-content:flex-start;padding:8px;font-size:10.5px;color:var(--muted);opacity:0;transform:scale(.96)}
+.rv-cell.live{opacity:1;transform:none;transition:opacity .3s,transform .3s}
+.rv-cell.hot{background:#fff7ee;border-color:var(--orange)}
+.rv-dotperson{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--orange);box-shadow:0 4px 12px rgba(244,124,32,.5);border:3px solid #fff;transform:translate(-50%,-50%);left:50%;top:50%;transition:left .7s cubic-bezier(.65,0,.35,1),top .7s cubic-bezier(.65,0,.35,1)}
+.rv-finale .fb{font-weight:800;color:var(--navy);font-size:20px}
+.rv-finale .fl{color:var(--slate,#475069);font-size:14px;max-width:440px;text-align:center}
+.rv-banner{border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:13.5px}
+.rv-banner.lock{background:#eef1f8;color:var(--navy);border:1px solid #d7ddf0}
+.rv-banner.self{background:#FDECEC;color:#C62828;border:1px solid #f3c9c9;font-weight:600}
+.rv-note{background:#fbfbe8;border:1px solid #ecebc4;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#6b6a3a;margin-bottom:16px}
+@media (max-width:1024px){ .rv-rail{flex-basis:44px;max-width:44px;padding:22px 6px;overflow:hidden} .rv-rail .rail-body{display:none} }
+/* PHONE (<=720px). The 1024 rule above collapses the rail to a 44px strip —
+   on a 360px screen that strip eats the right edge and CLIPS the score pips
+   (5 and its value were unreachable). Below 720 the review stacks instead:
+   stepper across the top, content full width, "Last time" reflowed underneath
+   where it stays readable rather than hidden behind a toggle. */
+@media (max-width:720px){
+  .rv-body{flex-direction:column;overflow:auto}
+  .rv-stepper{flex:0 0 auto;flex-direction:row;justify-content:center;gap:22px;padding:12px 0;border-right:none;border-bottom:1px solid var(--line,#e6e8ee)}
+  .rv-dot:not(:last-child)::after{left:16px;top:50%;transform:translateY(-50%);width:16px;height:2px}
+  .rv-main{flex:1 1 auto;overflow:visible;padding:22px 16px}
+  .rv-rail,.rv-rail.collapsed{flex:0 0 auto;max-width:none;border-left:none;border-top:1px solid var(--line,#e6e8ee);padding:18px 16px;overflow:visible}
+  .rv-rail .rail-body{display:block}
+  .rv-railtog{display:none}
+  .rv-pips{gap:10px}
+  .rv-piprow{flex-wrap:wrap}
+  .rv-piprow .pl{width:auto;flex:0 0 100%}
+  .rv-foot{padding:12px 16px;gap:8px}
+  .rv-top{padding:12px 16px;gap:10px}
+}
+@media (prefers-reduced-motion:reduce){ .rv-dotperson{transition:none} .rv-cell{transition:none} }
 </style>
 </head>
 <body>
@@ -453,6 +537,8 @@ function save(){
 window.addEventListener('message', ev=>{
   const m = ev.data || {};
   if(m.type==='cockpit-init' && Array.isArray(m.people)){
+    if(m.me){ VIEWER = m.me; }
+    if(Array.isArray(m.nineBox) && m.nineBox.length===9){ NINE_BOX = m.nineBox; }
     const keepSel = m.focus!=null ? m.focus : null;
     STATE = withTargets(m.people); try{ localStorage.setItem(KEY, JSON.stringify(STATE)); }catch(e){}
     sel=null; closeDrawer(); renderAll();
@@ -461,7 +547,12 @@ window.addEventListener('message', ev=>{
         a.textContent="Performance · Potential · Job Descriptions · Targets"
           + (periods.length===1?(" · "+periods[0]):"")
           + " · as at "+new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}); } }
-    if(keepSel!=null && byId(keepSel)){ openDrawer(keepSel); }
+    if(keepSel!=null && byId(keepSel)){
+      // If the live review is already open (e.g. a sign-off just re-inited the
+      // cockpit), rebind it in place — do NOT restart it at the brief (#5).
+      if(window.Review && Review.isOpen()){ Review.rebind(keepSel); }
+      else openDrawer(keepSel);
+    }
   }
   if(m.type==='cockpit-history-result'){ renderHistoryPanel(m.periods||[]); }
   if(m.type==='cockpit-employees-result'){ onEmployees(m.employees); }
@@ -474,9 +565,13 @@ function round(v){ return Math.round(v*1000)/1000; }
 /* ---- bands + box name ---- */
 function bandPerf(y){ return y>=0.6667?"High":(y>=0.3333?"Medium":"Low"); }
 function bandPot(x){ return x<0.3333?"Low":(x<0.6667?"Medium":"High"); }
-const BOX={ "High|Low":"Key contributor","High|Medium":"Strong performer","High|High":"Star performer",
- "Medium|Low":"Acceptable performer","Medium|Medium":"Core performer","Medium|High":"Rising star",
- "Low|Low":"Unsatisfactory performer","Low|Medium":"Marginal performer","Low|High":"Emerging star"};
+/* T9 (CFO 21-Sep-2026): ONE canonical nine-box naming, shared by the cockpit
+   grid, the finale and the server (NINE_BOX in talent_cockpit_views). The old
+   grid used different names ("Star performer" / "Emerging star") from the other
+   grids — that disagreement is what this replaces. Keyed PerfBand|PotBand. */
+const BOX={ "High|Low":"Solid Specialist","High|Medium":"High Performer","High|High":"Star",
+ "Medium|Low":"Underperformer","Medium|Medium":"Core Player","Medium|High":"High Potential",
+ "Low|Low":"Talent Risk","Low|Medium":"Inconsistent","Low|High":"Rough Diamond"};
 function boxFor(p){ return BOX[bandPerf(p.performance)+"|"+bandPot(p.potential)]; }
 
 /* ---- target status helpers ---- */
@@ -604,6 +699,10 @@ function renderKPIs(){
   }
 }
 const REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Web Animations API is absent in jsdom (the vitest test loads this app) and in
+// older browsers. Feature-detect so a missing Element.animate never throws —
+// motion just falls back to the instant/opacity path.
+const CAN_ANIM = !REDUCED && typeof HTMLElement !== "undefined" && typeof HTMLElement.prototype.animate === "function";
 /** Roll a KPI's digits from one value to the next; anything non-numeric just swaps. */
 function countUp(node, from, to){
   const a=parseFloat(String(from).replace(/[^0-9.\-]/g,"")), b=parseFloat(String(to).replace(/[^0-9.\-]/g,""));
@@ -786,7 +885,11 @@ function renderTargets(){
 
 /* ================= DRAWER ================= */
 let DRAWER_OPENER=null;
-function openDrawer(id){ sel=id; curTab="overview";
+function openDrawer(id){
+  // Board dd515fa8: opening a person now launches the full-screen LIVE review
+  // instead of the 560px drawer. The old drawer stays as a fallback only.
+  if(window.Review){ Review.open(id); return; }
+  sel=id; curTab="overview";
   DRAWER_OPENER=document.activeElement;
   document.querySelectorAll(".dtab").forEach(t=>t.classList.toggle("active",t.dataset.pane==="overview"));
   document.querySelectorAll(".dpane").forEach(p=>p.classList.remove("active"));
@@ -865,6 +968,14 @@ function renderHead(){
   const sb=document.getElementById("signBtn"); if(sb) sb.onclick=()=>{
     if(p.locked){ alert('This review is already signed off and locked.'); return; }
     if(confirm('Sign off '+p.name+"'s review for "+(per||'this period')+"? This LOCKS the review — no more edits.")){
+      // Review.flushSaves — NOT a bare flushSaves(). This button is rendered in
+      // the OUTER scope; the flush lives inside the Review module, so a bare
+      // call threw ReferenceError here and killed the button silently. Caught
+      // by a reviewer who ran the page instead of reading it.
+      if(window.Review && window.Review.flushSaves && !window.Review.flushSaves()){
+        alert('Your last change has not saved yet. It was not signed off — please try again in a moment.');
+        return;
+      }
       window.parent.postMessage({type:'cockpit-sign', ref:p.id, role:'manager'}, '*');
     }
   };
@@ -956,7 +1067,10 @@ function computeScores(p){
   const dd=p.dd; if(!dd) return;
   let sb=0, any=false;
   dd.sections.forEach(sec=> sec.rows.forEach(r=>{
-    if(r.employee!=null && r.weight!=null){ r.weighted=Math.round(r.employee*r.weight*10000)/10000; sb+=r.weighted; any=true; }
+    // D2 (CFO 21-Sep-2026): the headline follows the MANAGER's score, not the
+    // employee self-score — matches the server _recompute. A reviewer moving a
+    // score must move the overall %, in front of the person being reviewed.
+    if(r.manager!=null && r.weight!=null){ r.weighted=Math.round(r.manager*r.weight*10000)/10000; sb+=r.weighted; any=true; }
     else r.weighted=null;
   }));
   dd.sectionB = any? Math.round(sb*10000)/10000 : null;
@@ -969,8 +1083,8 @@ function computeScores(p){
   if(dd.overallAll!=null){ p.overall = Math.round(dd.overallAll*1000)/10; }
 }
 function renderDD(p){
-  const dd=p.dd;
   const el=document.getElementById("pane-dd");
+  const dd=p.dd;
   if(!dd){ el.innerHTML='<div class="meta">No dialogue structure for this person yet.</div>'; return; }
   computeScores(p);
   let h='';
@@ -1243,6 +1357,484 @@ function renderAll(){ renderCockpitFilters(); renderKPIs(); setView(curView); }
 readHash();
 renderAll();
 if(EMBED){ window.parent.postMessage({type:'cockpit-ready'}, '*'); }
+</script>
+<div id="review" role="dialog" aria-modal="true" aria-label="Development Dialogue live review"></div>
+<script>
+/* =====================================================================
+   Development Dialogue — LIVE REVIEW controller (board dd515fa8)
+   Full-screen, one section at a time, previous review on a 320px rail,
+   ending on the nine-box. Saves per-section through the merge endpoint so
+   it can never wipe the other sections. Data + helpers are shared with the
+   cockpit above (byId, esc, initials, boxFor, bandPerf/bandPot, computeScores).
+   ===================================================================== */
+window.VIEWER = window.VIEWER || null;
+window.NINE_BOX = window.NINE_BOX || [
+  {name:'Star',perf:'high',pot:'high',line:'Top talent — high performance and high potential.'},
+  {name:'High Potential',perf:'med',pot:'high',line:'Strong potential, performance still growing into the role.'},
+  {name:'Rough Diamond',perf:'low',pot:'high',line:'High potential not yet showing in results — invest and stretch.'},
+  {name:'High Performer',perf:'high',pot:'med',line:'Delivers strongly and reliably in the current role.'},
+  {name:'Core Player',perf:'med',pot:'med',line:'Solid, dependable contributor — the backbone of the team.'},
+  {name:'Inconsistent',perf:'low',pot:'med',line:'Results vary — needs support to perform consistently.'},
+  {name:'Solid Specialist',perf:'high',pot:'low',line:'Deep expert in the role; growth is in depth, not breadth.'},
+  {name:'Underperformer',perf:'med',pot:'low',line:'Below expectation — a clear improvement plan is needed.'},
+  {name:'Talent Risk',perf:'low',pot:'low',line:'Low performance and potential — act with care and urgency.'}
+];
+let _welcomedToday = false;
+
+const Review = (function(){
+  const el = ()=>document.getElementById('review');
+  let p=null, steps=[], idx=0, screen='welcome', railCollapsed=false;
+
+  function firstName(name){ return String(name||'').trim().split(/\s+/)[0] || 'there'; }
+  function greeting(){
+    const v = window.VIEWER;
+    if(v && v.isCFO) return 'Alpha Male';
+    if(v && v.name) return firstName(v.name);
+    return 'there';
+  }
+  function hasSelf(pp){
+    return !!(pp.dd && (pp.dd.sections||[]).some(s=>(s.rows||[]).some(r=>r.employee!=null)));
+  }
+  function anyCompRows(pp){
+    return !!(pp.dd && (pp.dd.sections||[]).some(s=>(s.rows||[]).length));
+  }
+  // Blocked only for a LIVE review with scored competencies but no self-scores
+  // (T6). A locked/read-only review always opens — nothing is being scored.
+  function selfBlocked(){ return anyCompRows(p) && !hasSelf(p) && !p.locked; }
+  // Build the step list FROM THE DATA (T4). Competency sections are paired so a
+  // single-row section never sits alone on a full screen; an empty pair is dropped.
+  function buildSteps(pp){
+    const out=[]; const dd=pp.dd||{};
+    const secs = dd.sections||[];
+    const names=['Competencies I','Competencies II','Competencies III','Competencies IV'];
+    for(let i=0;i<secs.length;i+=2){
+      const idxs=[i]; if(i+1<secs.length) idxs.push(i+1);
+      const rows = idxs.reduce((n,si)=>n+((secs[si].rows||[]).length),0);
+      if(rows>0) out.push({kind:'comp', title:names[out.length]||('Competencies '+(out.length+1)), secIdxs:idxs});
+    }
+    if((dd.values||[]).length) out.push({kind:'values', title:'Values'});
+    out.push({kind:'development', title:'Development'});
+    out.push({kind:'verdict', title:'Verdict'});
+    return out;
+  }
+
+  /* 37 of the 45 live records carry no `dd` structure at all — they predate
+     the full review. Every step body read p.dd.* directly, so opening one
+     threw "Cannot read properties of undefined" and the manager could not get
+     past Development. Normalise ONCE, here, to the empty shape the bodies
+     already know how to render; the stepper is then built from the data, and a
+     record with nothing in it simply shows empty fields instead of dying.
+     (An earlier comment here claimed "this writes nothing: dd only reaches the
+     server through a section save". That was FALSE — it also reaches the server
+     through the bulk save, which REPLACES the payload. Verify an invariant
+     before you write it down.) */
+  function ensureDD(rec){
+    if(!rec) return rec;
+    // FILL ONLY WHAT IS ABSENT. An earlier version coerced anything that was
+    // not an array into [], which DISCARDS a legacy shape — and because this
+    // mutates the record inside STATE, the bulk save would write that emptiness
+    // back over a real appraisal with nobody having typed a thing. A "guard"
+    // that rewrites the record is a data-loss bug in a guard's clothing.
+    if(rec.dd==null) rec.dd={};
+    if(typeof rec.dd!=='object') return rec;      // an odd shape is LEFT ALONE
+    if(rec.dd.sections==null) rec.dd.sections=[];
+    if(rec.dd.values==null) rec.dd.values=[];
+    return rec;
+  }
+
+  function open(id){
+    const src = byId(id); if(!src){ return; }
+    p = ensureDD(src); steps = buildSteps(p); idx = 0;
+    el().classList.add('on'); document.body.style.overflow='hidden';
+    history.pushState({rv:1}, '');           // so Back lands on the curtain, not the picker
+    screen = _welcomedToday ? 'brief' : 'welcome';
+    render();
+    if(screen==='welcome'){ setTimeout(()=>{ _welcomedToday=true; if(screen==='welcome'){ screen='brief'; render(); } }, REDUCED?400:2400); }
+  }
+  // Back/Escape mid-review must NOT flash the cockpit (its 9-grid + every name in
+  // scope) at the person sitting there. Show a neutral curtain; the cockpit is
+  // revealed only on a deliberate click. (T7 privacy curtain.)
+  function close(){
+    screen='curtain';
+    el().innerHTML='<div class="rv-welcome"><div class="wgreet" style="opacity:1">Review closed</div>'+
+      '<div class="wline" style="opacity:1">The dialogue is saved. Nothing else is shown here.</div>'+
+      '<button class="rv-btn solid" id="rvExit" style="margin-top:18px">Open the cockpit</button></div>';
+    const b=document.getElementById('rvExit'); if(b) b.onclick=exit;
+  }
+  function exit(){
+    el().classList.remove('on'); el().innerHTML=''; document.body.style.overflow='';
+    p=null; screen='welcome';
+    if(typeof renderAll==='function') renderAll();
+  }
+  // After a server round-trip (e.g. sign-off re-inits the cockpit), keep the
+  // review where it is instead of restarting it at the brief.
+  function rebind(id){ const src=byId(id); if(!src) return; p=ensureDD(src); steps=buildSteps(p); render(); }
+
+  // ---------- save (per section, through the merge endpoint) ----------
+  const saveTimers={};                               // one debounce per save TARGET, never shared
+  const savePending={};                              // the SAME work, callable early — see flushSaves
+  function setSaved(txt){ const s=document.querySelector('#review .saved'); if(s) s.textContent=txt; }
+  function fmtNow(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  function scheduleSave(part, payloadExtra){
+    if(p.locked) return;
+    setSaved('Saving…');
+    const key = part + ':' + (payloadExtra && payloadExtra.index!=null ? payloadExtra.index : '');
+    clearTimeout(saveTimers[key]);
+    const doSave=()=>{
+      delete savePending[key];
+      computeScores(p);                              // keep the headline live (manager-driven)
+      try{ localStorage.setItem(KEY, JSON.stringify(STATE)); }catch(e){}
+      if(window.parent && window.parent!==window){
+        // The "Saved HH:MM" stamp is written from the server's reply
+        // (cockpit-section-saved), never here — a post is not a save.
+        window.parent.postMessage(Object.assign({type:'cockpit-save-section', ref:p.id, part:part, stepIndex:idx}, payloadExtra), '*');
+      } else {
+        setSaved('Saved '+fmtNow());                 // standalone: localStorage IS the save
+      }
+    };
+    savePending[key]=doSave;
+    saveTimers[key]=setTimeout(doSave, 800);
+  }
+  /* Sign-off must never overtake a save that is still sitting in the 800ms
+     debounce. The backend LOCKS on sign and then rejects the late save, so a
+     manager who types a score and signs straight away loses that score while
+     the screen already reads signed. Flush every pending save FIRST, in the
+     order they were queued, then sign. */
+  function flushSaves(){
+    let ok=true;
+    Object.keys(savePending).forEach(key=>{      // keys() is snapshotted, so a
+      clearTimeout(saveTimers[key]);             // save queued DURING the flush
+      const fn=savePending[key];                 // is caught by the re-check below
+      delete savePending[key];
+      if(!fn) return;
+      try{ fn(); }
+      catch(e){
+        // NEVER swallow this. A save that threw here is an edit that is about
+        // to be locked away, and signing anyway is exactly how the manager
+        // loses it silently — the defect this function exists to prevent.
+        ok=false;
+        setSaved('Save failed — do not sign yet');
+      }
+    });
+    return ok && Object.keys(savePending).length===0;
+  }
+  // The parent confirms (or fails) each section save; only then do we stamp it.
+  window.addEventListener('message', ev=>{
+    const m=ev.data||{};
+    if(m.type==='cockpit-section-saved' && el().classList.contains('on')){
+      setSaved(m.ok ? ('Saved '+fmtNow()) : 'Save failed — retry');
+    }
+  });
+  // The full development/verdict field-set — sent on EVERY dev/verdict save so a
+  // shared-timer collision can never drop a field (Opus, fix round 2).
+  function ddFields(){ const dd=p.dd||{}; return {
+    pdp:dd.pdp||'', careerAspirations:dd.careerAspirations||'',
+    developmentPriorities:dd.developmentPriorities||'', developmentMeasures:dd.developmentMeasures||'',
+    managerComment:dd.managerComment||'', rating:p.rating||'',
+    performance:p.performance, potential:p.potential }; }
+
+  // ---------- render ----------
+  function render(){
+    const box = el();
+    if(screen==='welcome'){ box.innerHTML = welcomeHTML(); animateWelcome(); return; }
+    const top = topHTML();
+    const body = (screen==='finale') ? finaleBody()
+               : (screen==='signoff') ? signoffBody()
+               : (screen==='brief')   ? briefBody()
+               : stepBody();
+    const showChrome = (screen!=='finale' && screen!=='signoff');
+    box.innerHTML =
+      top +
+      '<div class="rv-body">' +
+        (showChrome? stepperHTML() : '') +
+        '<div class="rv-main" id="rvMain">'+body+'</div>' +
+        (showChrome? railHTML() : '') +
+      '</div>' +
+      footHTML();
+    wire();
+  }
+  function topHTML(){
+    const cur = steps[idx];
+    const label = screen==='brief'?'The brief' : (cur? cur.title : '');
+    return '<div class="rv-top">'+
+      '<button class="rv-x" id="rvClose" aria-label="Close">&times;</button>'+
+      '<div><div class="who">'+esc(p.name)+'</div><div class="sect">'+esc(label)+'</div></div>'+
+      '<button class="rv-present" id="rvPresent" title="Full screen for a TV">Present</button>'+
+      '<div class="saved" aria-live="polite"></div>'+
+    '</div>';
+  }
+  function stepperHTML(){
+    let dots='';
+    const active = screen==='brief' ? -1 : idx;
+    dots += '<span class="rv-dot '+(screen==='brief'?'now':'done')+'" data-go="brief" title="Brief"></span>';
+    steps.forEach((s,i)=>{ const cls = i<active?'done':(i===active?'now':''); dots+='<span class="rv-dot '+cls+'" data-step="'+i+'" title="'+esc(s.title)+'"></span>'; });
+    return '<div class="rv-stepper">'+dots+'</div>';
+  }
+  function railHTML(){
+    const prev = p.prevDD || null;   // previous period, when the bridge supplies it
+    let body;
+    if(!prev){
+      body = '<div class="rail-body"><div class="rail-hd">First dialogue</div><div class="rail-row"><span class="rr-s">Nothing to compare yet for '+esc(firstName(p.name))+'.</span></div></div>';
+    } else {
+      const head = '<div class="rail-hd">'+(prev.overall!=null?prev.overall+'%':'—')+'</div><div class="rail-row"><span class="rr-s">'+esc(prev.rating||'')+' · '+esc(prev.box||'')+'</span></div>';
+      let rows='';
+      const cur = steps[idx];
+      if(cur && cur.kind==='comp'){ cur.secIdxs.forEach(si=>{ (prev.sections&&prev.sections[si]?prev.sections[si].rows:[]||[]).forEach(r=>{ rows+='<div class="rail-row"><span class="rr-t">'+esc(r.perspective||'')+'</span><span class="rr-s">mgr '+(r.manager!=null?r.manager:'—')+' · self '+(r.employee!=null?r.employee:'—')+'</span></div>'; }); }); }
+      body = '<div class="rail-body">'+head+rows+'</div>';
+    }
+    return '<div class="rv-rail'+(railCollapsed?' collapsed':'')+'" id="rvRail">'+
+      '<button class="rv-railtog" id="rvRailTog" title="Show/hide last time">'+(railCollapsed?'‹':'›')+'</button>'+
+      '<h4>Last time</h4>'+body+'</div>';
+  }
+  function footHTML(){
+    if(screen==='finale'){
+      return '<div class="rv-foot"><button class="rv-btn" id="rvBack">Back</button><span class="sp"></span>'+
+        (p.locked?'':'<button class="rv-btn solid" id="rvToSign">Continue to sign-off</button>')+'</div>';
+    }
+    if(screen==='signoff'){
+      return '<div class="rv-foot"><button class="rv-btn" id="rvBack">Back</button><span class="sp"></span></div>';
+    }
+    const atLast = (screen==='step' && idx===steps.length-1);
+    const nextLabel = atLast ? 'See the nine-box' : 'Next';
+    const canStart = screen!=='brief' || !selfBlocked();
+    return '<div class="rv-foot">'+
+      (screen==='brief'?'':'<button class="rv-btn" id="rvPrev">Back</button>')+
+      '<span class="sp"></span>'+
+      '<button class="rv-btn solid" id="rvNext"'+(canStart?'':' disabled')+'>'+(screen==='brief'?(p.locked?'Open the review':'Start dialogue'):nextLabel)+'</button>'+
+    '</div>';
+  }
+
+  function welcomeHTML(){
+    const periods = p.period||p.periodLabel||'this period';
+    const counts = STATE.length;
+    return '<div class="rv-welcome">'+
+      '<div class="wl wgreet" style="opacity:0">Welcome to the Development Dialogue, '+esc(greeting())+'.</div>'+
+      '<div class="wrule" id="wrule"></div>'+
+      '<div class="wl wline" style="opacity:0">Development Dialogue · '+esc(periods)+'</div>'+
+      '<div class="wl wline" style="opacity:0;color:var(--muted)">'+counts+' '+(counts===1?'dialogue':'dialogues')+' in view</div>'+
+    '</div>';
+  }
+  function animateWelcome(){
+    const lines=[...document.querySelectorAll('#review .wl')];
+    const rule=document.getElementById('wrule');
+    if(!CAN_ANIM){ lines.forEach(l=>l.style.opacity=1); if(rule) rule.style.width="240px"; return; }
+    lines.forEach((l,i)=>{ l.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'none'}],{duration:320,delay:80*i,fill:'forwards',easing:'cubic-bezier(0.2,0.8,0.2,1)'}); });
+    if(rule) rule.animate([{width:'0'},{width:'240px'}],{duration:400,delay:120,fill:'forwards',easing:'cubic-bezier(0.2,0.8,0.2,1)'});
+  }
+
+  function briefBody(){
+    const d = (p.dd&&p.dd.details)||{};
+    const selfMissing = anyCompRows(p) && !hasSelf(p);
+    let h='';
+    if(p.locked){ const so=(p.signoff||{}); const m=so.manager||{}; h+='<div class="rv-banner lock">Signed off'+(m.by?(' by '+esc(m.by)):'')+(m.at?(' on '+esc(String(m.at).slice(0,10))):'')+'. This review is read-only.</div>'; }
+    if(selfMissing){ h+='<div class="rv-banner self">Self-assessment pending — ask '+esc(firstName(p.name))+' to complete their self-assessment before you start. Opening now would show 0%.</div>'; }
+    if(!anyCompRows(p)){ h+='<div class="rv-note">Narrative-only review — no scored competencies this period.</div>'; }
+    h+='<h2 class="rv-h">'+esc(p.name)+'</h2><div class="rv-sub">'+esc(p.position||d.position||'')+(p.dept||d.department?(' · '+esc(p.dept||d.department)):'')+'</div>';
+    h+='<div class="rv-card"><div class="rc-h"><b>This time so far</b></div>'+
+       '<div style="font-size:34px;font-weight:800;color:var(--navy)">'+(p.overall!=null?p.overall+'%':'—')+'</div>'+
+       '<div class="rr-s" style="color:var(--muted)">Placement: '+esc(boxFor(p))+'</div></div>';
+    h+='<div class="rv-card"><div class="rc-h"><b>Identity</b></div>'+
+       kv('Job title', p.position||d.position)+kv('Department', p.dept||d.department)+kv('Reports to', d.supName||p.supervisor)+kv('Reviewed period', p.period||d.reviewedPeriod)+kv('Date appointed', d.dateAppointed)+'</div>';
+    if(p.locked){
+      // D4: the moderator records a challenge ALONGSIDE the signed review. The
+      // original is never unlocked or edited (enforced server-side too).
+      const last=p.challenge;
+      h+='<div class="rv-card"><div class="rc-h"><b>Moderator challenge</b></div>'+
+         '<p class="rr-s" style="color:var(--muted);margin-bottom:8px">Record a challenge next to this signed review. The manager’s original rating is not changed.</p>'+
+         '<textarea class="rv-narr" id="rvChReason" placeholder="Why do you disagree, and what would you change?"></textarea>'+
+         '<div style="margin-top:10px"><button class="rv-btn warn" id="rvChSend">Record challenge</button></div>'+
+         (last?('<div class="rr-s" style="margin-top:10px;color:var(--muted)">Last challenge by '+esc(last.by||'')+' — '+esc(String(last.reason||'').slice(0,140))+'</div>'):'')+
+         '</div>';
+    }
+    return h;
+  }
+  function kv(k,v){ return '<div style="display:flex;gap:14px;padding:6px 0;border-bottom:1px solid var(--line,#eef0f4);font-size:13.5px"><span style="color:var(--muted);min-width:132px;flex:0 0 auto">'+esc(k)+'</span><span style="color:var(--navy);font-weight:600">'+esc(v||'—')+'</span></div>'; }
+
+  function stepBody(){
+    const s=steps[idx];
+    if(s.kind==='comp') return compBody(s);
+    if(s.kind==='values') return valuesBody();
+    if(s.kind==='development') return devBody();
+    if(s.kind==='verdict') return verdictBody();
+    return '';
+  }
+  function pipRow(label, val, cls, onAttr){
+    let pips='';
+    for(let i=1;i<=5;i++){ const v=i/5; const on = (val!=null && Math.round(val*5)===i); pips+='<button class="pip '+cls+(on?' on':'')+'" data-v="'+v+'" '+onAttr+' '+(cls==='emp'?'disabled':'')+'>'+i+'</button>'; }
+    return '<div class="rv-piprow"><span class="pl">'+label+'</span>'+pips+'<span class="rr-s" style="margin-left:6px">'+(val!=null?val:'—')+'</span></div>';
+  }
+  function compBody(s){
+    let h='';
+    s.secIdxs.forEach(si=>{
+      const sec=p.dd.sections[si]; if(!sec) return;
+      (sec.rows||[]).forEach((r,ri)=>{
+        const diff = (r.manager!=null&&r.employee!=null&&Math.abs(r.manager-r.employee)>=0.2)?' diff':'';
+        h+='<div class="rv-card'+diff+'" data-si="'+si+'" data-ri="'+ri+'">'+
+           '<div class="rc-h"><b>'+esc(r.perspective||sec.name)+'</b><span class="rc-tag">'+esc(sec.name)+'</span></div>'+
+           '<textarea class="rv-narr" data-k="sbi" '+(p.locked?'readonly':'')+' placeholder="Situation, Behaviour & Impact — the evidence">'+esc(r.sbi||'')+'</textarea>'+
+           '<div class="rv-pips">'+
+             pipRow('Manager', r.manager, 'mgr', p.locked?'disabled':'')+
+             pipRow('Self', r.employee, 'emp', '')+
+           '</div>'+
+           '<details class="rv-disc"><summary>Dates and comments</summary>'+
+             '<textarea class="rv-narr" data-k="comments" '+(p.locked?'readonly':'')+' placeholder="Comments">'+esc(r.comments||'')+'</textarea></details>'+
+           '</div>';
+      });
+    });
+    return h || '<div class="rv-note">No entries in this section.</div>';
+  }
+  function valuesBody(){
+    let h='<h2 class="rv-h">Values</h2><div class="rv-sub">Botho, Integrity, Diversity, Passion, Accountability</div>';
+    (p.dd.values||[]).forEach((v,vi)=>{
+      h+='<div class="rv-card" data-vi="'+vi+'"><div class="rc-h"><b>'+esc(v.value||'Value')+'</b></div>'+
+         '<textarea class="rv-narr" data-k="behaviours" '+(p.locked?'readonly':'')+' placeholder="Value supporting behaviours">'+esc(v.behaviours||'')+'</textarea>'+
+         '<div class="rv-pips">'+pipRow('Score', v.raw, 'mgr', p.locked?'disabled':'')+'</div></div>';
+    });
+    return h;
+  }
+  function devBody(){
+    const dd=p.dd||{};
+    const f=(k,lbl,ph)=>'<div class="rv-card"><div class="rc-h"><b>'+lbl+'</b></div><textarea class="rv-narr" data-fk="'+k+'" '+(p.locked?'readonly':'')+' placeholder="'+ph+'">'+esc(dd[k]||'')+'</textarea></div>';
+    return '<h2 class="rv-h">Development</h2><div class="rv-sub">The plan agreed in the room</div>'+
+      f('pdp','Personal development plan','What will they work on next?')+
+      f('careerAspirations','Career aspirations','Where do they want to go?')+
+      f('developmentPriorities','Development priorities','')+
+      f('developmentMeasures','Development measures','How will progress be measured?');
+  }
+  function verdictBody(){
+    const dd=p.dd||{}; if(!p.locked) computeScores(p);  // D2 forward-only: never recompute a signed period
+    const ratings=['','Exceptional','Exceeds','Meets','Partially meets','Does not meet'];
+    let opt=ratings.map(r=>'<option'+((p.rating||'')===r?' selected':'')+'>'+r+'</option>').join('');
+    return '<h2 class="rv-h">Verdict</h2><div class="rv-sub">The headline follows the manager score</div>'+
+      '<div class="rv-card"><div class="rc-h"><b>Overall</b></div><div style="font-size:38px;font-weight:800;color:var(--navy)">'+(p.overall!=null?p.overall+'%':'—')+'</div>'+
+        '<div class="rr-s" style="color:var(--muted)">Section B '+(dd.sectionB!=null?Math.round(dd.sectionB*1000)/10+'%':'—')+' · Values '+(dd.valuesScore!=null?Math.round(dd.valuesScore*1000)/10+'%':'—')+'</div></div>'+
+      '<div class="rv-card"><div class="rc-h"><b>Rating</b></div><select class="rv-narr" id="rvRating" style="min-height:auto" '+(p.locked?'disabled':'')+'>'+opt+'</select></div>'+
+      '<div class="rv-card"><div class="rc-h"><b>Manager comments</b></div><textarea class="rv-narr" data-fk="managerComment" '+(p.locked?'readonly':'')+'>'+esc(dd.managerComment||'')+'</textarea></div>'+
+      '<div class="rv-card"><div class="rc-h"><b>Placement</b></div>'+
+        sliderRow('Performance', p.performance, 'perf')+sliderRow('Potential', p.potential, 'pot')+
+        '<div class="rr-s" style="margin-top:8px">Nine-box: <b>'+esc(boxFor(p))+'</b></div></div>';
+  }
+  function sliderRow(lbl,val,k){
+    return '<div class="rv-piprow" style="margin-top:8px"><span class="pl">'+lbl+'</span>'+
+      '<input type="range" min="0" max="100" value="'+Math.round((val||0)*100)+'" data-slider="'+k+'" '+(p.locked?'disabled':'')+' style="flex:1"><span class="rr-s" id="sl-'+k+'">'+(k==='perf'?bandPerf(val):bandPot(val))+'</span></div>';
+  }
+
+  function finaleBody(){
+    const box = boxFor(p);
+    const meta = (window.NINE_BOX||[]).find(b=>b.name===box) || {line:''};
+    // 3x3: cols = potential low..high, rows(top..bottom) = perf high..low
+    let cells='';
+    const perfBands=['High','Medium','Low'], potBands=['Low','Medium','High'];
+    perfBands.forEach(pb=>{ potBands.forEach(qb=>{ const nm=BOX[pb+'|'+qb]; const hot = nm===box; cells+='<div class="rv-cell'+(hot?' hot':'')+'" data-cell="'+pb+'|'+qb+'">'+esc(nm)+'</div>'; }); });
+    return '<div class="rv-finale">'+
+      '<div class="rv-grid" id="rvGrid">'+cells+'<div class="rv-dotperson" id="rvPin" style="opacity:0"></div></div>'+
+      '<div class="fb" id="rvBoxName" style="opacity:0">'+esc(box)+'</div>'+
+      '<div class="fl" id="rvBoxLine" style="opacity:0">'+esc(meta.line)+'</div>'+
+    '</div>';
+  }
+  function playFinale(){
+    const cells=[...document.querySelectorAll('#review .rv-cell')];
+    const pin=document.getElementById('rvPin');
+    const grid=document.getElementById('rvGrid');
+    const name=document.getElementById('rvBoxName'), line=document.getElementById('rvBoxLine');
+    // target cell centre
+    const box=boxFor(p);
+    const target=document.querySelector('#review .rv-cell.hot');
+    function place(node){ if(!node||!grid) return; const gr=grid.getBoundingClientRect(), cr=node.getBoundingClientRect(); pin.style.left=((cr.left+cr.width/2-gr.left)/gr.width*100)+'%'; pin.style.top=((cr.top+cr.height/2-gr.top)/gr.height*100)+'%'; }
+    if(!pin||!name||!line||!grid){ return; }        // finale not on screen
+    // Guard every deferred step: the user may leave the finale before it fires.
+    const alive=()=> screen==='finale' && document.body.contains(pin);
+    if(!CAN_ANIM){ cells.forEach(c=>c.classList.add('live')); place(target); pin.style.opacity=1; name.style.opacity=1; line.style.opacity=1; return; }
+    cells.forEach((c,i)=> setTimeout(()=>{ if(alive()) c.classList.add('live'); }, 40*i));
+    setTimeout(()=>{ if(!alive()) return; place(target); pin.style.opacity=1; if(!p.locked) pin.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.15)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:200,delay:400}); }, 40*cells.length+100);
+    setTimeout(()=>{ if(!alive()) return; name.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:260,fill:'forwards'}); line.animate([{opacity:0},{opacity:1}],{duration:260,delay:120,fill:'forwards'}); name.style.opacity=1; line.style.opacity=1; }, 40*cells.length+400);
+  }
+
+  function signoffBody(){
+    return '<div class="rv-main"><h2 class="rv-h">Sign off</h2>'+
+      '<div class="rv-card"><p style="color:var(--slate,#475069);line-height:1.6">Signing off <b>locks this dialogue permanently</b>. After sign-off nobody can edit it — it becomes the record of what was said to '+esc(firstName(p.name))+' about their career.</p>'+
+      '<div style="margin-top:16px"><button class="rv-btn warn" id="rvSign">Sign off and lock</button></div></div></div>';
+  }
+
+  // ---------- wiring ----------
+  function setScoreOnCard(card, val){
+    const si=card.getAttribute('data-si'), ri=card.getAttribute('data-ri'), vi=card.getAttribute('data-vi');
+    if(si!=null && ri!=null){ const r=p.dd.sections[+si].rows[+ri]; r.manager=val;
+      const rows=p.dd.sections[+si].rows.map(x=>({manager:x.manager,sbi:x.sbi,comments:x.comments}));
+      scheduleSave('section', {index:+si, rows:rows}); }
+    else if(vi!=null){ const v=p.dd.values[+vi]; v.raw=val; scheduleSave('values', {values:p.dd.values.map(x=>({raw:x.raw,behaviours:x.behaviours}))}); }
+  }
+  function wire(){
+    const box=el();
+    const close1=box.querySelector('#rvClose'); if(close1) close1.onclick=()=>{ history.back(); };
+    const pres=box.querySelector('#rvPresent'); if(pres) pres.onclick=()=>{ (box.requestFullscreen?box:document.documentElement).requestFullscreen&&box.requestFullscreen().catch(()=>{}); };
+    const tog=box.querySelector('#rvRailTog'); if(tog) tog.onclick=()=>{ railCollapsed=!railCollapsed; render(); };
+    box.querySelectorAll('.rv-dot[data-step]').forEach(d=>d.onclick=()=>{ if(selfBlocked()) return; idx=+d.dataset.step; screen='step'; render(); });
+    const brd=box.querySelector('.rv-dot[data-go="brief"]'); if(brd) brd.onclick=()=>{ screen='brief'; render(); };
+    const nx=box.querySelector('#rvNext'); if(nx) nx.onclick=next;
+    const pv=box.querySelector('#rvPrev'); if(pv) pv.onclick=prev;
+    const bk=box.querySelector('#rvBack'); if(bk) bk.onclick=prev;
+    const ts=box.querySelector('#rvToSign'); if(ts) ts.onclick=()=>{ screen='signoff'; render(); };
+    const sg=box.querySelector('#rvSign'); if(sg) sg.onclick=doSign;
+    const chb=box.querySelector('#rvChSend'); if(chb) chb.onclick=()=>{
+      const ta=box.querySelector('#rvChReason'); const reason=(ta&&ta.value||'').trim();
+      if(!reason){ if(ta) ta.focus(); return; }
+      if(window.parent && window.parent!==window){ window.parent.postMessage({type:'cockpit-moderator-challenge', ref:p.id, reason:reason, sections:[]}, '*'); }
+      if(!p.challenge) p.challenge={}; p.challenge={by:(window.VIEWER&&window.VIEWER.name)||'Moderator', reason:reason};
+      setSaved('Challenge recorded'); if(ta) ta.value=''; render();
+    };
+    // pips
+    box.querySelectorAll('.pip.mgr:not([disabled])').forEach(b=>b.onclick=()=>{ const card=b.closest('.rv-card'); setScoreOnCard(card, +b.dataset.v); render(); });
+    // narratives
+    box.querySelectorAll('textarea[data-k]').forEach(t=>t.oninput=()=>{
+      const card=t.closest('.rv-card'); const k=t.dataset.k;
+      const si=card&&card.getAttribute('data-si'), ri=card&&card.getAttribute('data-ri'), vi=card&&card.getAttribute('data-vi');
+      if(si!=null&&ri!=null){ p.dd.sections[+si].rows[+ri][k]=t.value; scheduleSave('section',{index:+si, rows:p.dd.sections[+si].rows.map(x=>({manager:x.manager,sbi:x.sbi,comments:x.comments}))}); }
+      else if(vi!=null){ p.dd.values[+vi][k]=t.value; scheduleSave('values',{values:p.dd.values.map(x=>({raw:x.raw,behaviours:x.behaviours}))}); }
+    });
+    // Development/verdict fields share one save target, so a save must carry the
+    // WHOLE current field-set — never a single field. Otherwise editing field A
+    // then field B within 800ms cancels A's save and only B reaches the server,
+    // silently losing A. (The backend merge only writes fields that arrive.)
+    box.querySelectorAll('textarea[data-fk]').forEach(t=>t.oninput=()=>{ p.dd[t.dataset.fk]=t.value; scheduleSave('development',{fields:ddFields()}); });
+    const rat=box.querySelector('#rvRating'); if(rat) rat.onchange=()=>{ p.rating=rat.value; p.dd.rating=rat.value; scheduleSave('verdict',{fields:ddFields()}); };
+    box.querySelectorAll('input[data-slider]').forEach(s=>{ s.oninput=()=>{ const k=s.dataset.slider; const v=round(s.value/100); if(k==='perf'){p.performance=v; document.getElementById('sl-perf').textContent=bandPerf(v);} else {p.potential=v; document.getElementById('sl-pot').textContent=bandPot(v);} }; s.onchange=()=>{ scheduleSave('verdict',{fields:ddFields()}); }; });
+    if(screen==='finale') setTimeout(playFinale, 30);  // timeout (not rAF) so it also runs if the tab is backgrounded
+  }
+  function next(){
+    if(screen==='brief'){ if(selfBlocked()) return; idx=0; screen='step'; render(); return; }
+    if(screen==='step'){ if(idx<steps.length-1){ idx++; render(); } else { screen='finale'; render(); } }
+  }
+  function prev(){
+    if(screen==='finale'){ screen='step'; idx=steps.length-1; render(); return; }
+    if(screen==='signoff'){ screen='finale'; render(); return; }
+    if(screen==='step'){ if(idx>0){ idx--; render(); } else { screen='brief'; render(); } return; }
+    if(screen==='brief'){ history.back(); }
+  }
+  function doSign(){
+    if(!flushSaves()){   // same rule on this path
+      alert('Your last change has not saved yet. It was not signed off — please try again in a moment.');
+      return;
+    }
+    if(window.parent && window.parent!==window){ window.parent.postMessage({type:'cockpit-sign', ref:p.id, role:'manager'}, '*'); }
+    p.locked=true; if(!p.signoff) p.signoff={}; p.signoff.manager={by:(window.VIEWER&&window.VIEWER.name)||'Manager', at:new Date().toISOString().slice(0,16)};
+    screen='finale'; render();
+  }
+
+  // Back button = the privacy curtain: never expose the picker mid-review.
+  window.addEventListener('popstate', ()=>{ if(el().classList.contains('on')) close(); });
+  document.addEventListener('keydown', e=>{
+    if(!el().classList.contains('on')) return;
+    if(e.key==='Escape'){ e.preventDefault(); history.back(); }
+    else if(e.key==='ArrowRight'){ next(); }
+    else if(e.key==='ArrowLeft'){ prev(); }
+  });
+
+  return { open, close, rebind, isOpen:()=>el().classList.contains('on'),
+           flushSaves,
+           ensureDD };   // exported so a test can RUN it, not just grep for it
+})();
+window.Review = Review;
 </script>
 
 </body>

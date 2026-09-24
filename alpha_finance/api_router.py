@@ -1188,6 +1188,16 @@ urlpatterns = [
          __import__('core.vault_views',
                     fromlist=['vault_detail']).vault_detail,
          name='v1-admin-vault-detail'),
+    path('admin/vault/<uuid:pk>/share/',
+         __import__('core.vault_views',
+                    fromlist=['vault_share']).vault_share,
+         name='v1-admin-vault-share'),
+    # Recipient side of a one-time hand-over link: public by design, the
+    # unguessable token IS the credential, and it dies on first use.
+    path('vault-share/<str:token>/',
+         __import__('core.vault_views',
+                    fromlist=['vault_share_open']).vault_share_open,
+         name='v1-vault-share-open'),
     path('admin/vault/<uuid:pk>/reveal/',
          __import__('core.vault_views',
                     fromlist=['vault_reveal']).vault_reveal,

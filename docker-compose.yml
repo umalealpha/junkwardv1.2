@@ -76,6 +76,12 @@ services:
       CLAIMS_LETTER_WORDING_APPROVED: ${CLAIMS_LETTER_WORDING_APPROVED:-False}
       CLAIMS_VERITAS_SALVAGE_RECEIVABLE_ACCOUNT: ${CLAIMS_VERITAS_SALVAGE_RECEIVABLE_ACCOUNT:-260001}
       CLAIMS_VERITAS_SALVAGE_INCOME_ACCOUNT: ${CLAIMS_VERITAS_SALVAGE_INCOME_ACCOUNT:-}
+      # Claims Life Cycle Tracker (CFO board item B14, 21-Sep-2026). The six
+      # claim events Graphite fires are ALWAYS accepted and stored; this decides
+      # whether Omni then ACTS on one — tasks, internal emails, draft letters.
+      # Ships OFF and is armed in the premium wave on 1 October. Must be named
+      # here: compose injects only the variables listed in this block.
+      CLAIMS_LIFECYCLE_FORWARD_EVENTS: ${CLAIMS_LIFECYCLE_FORWARD_EVENTS:-False}
 
       # Transformation Board (CFO 2026-09-20). Compose injects ONLY named
       # variables — a var read from os.environ but missing here is simply
@@ -451,6 +457,9 @@ services:
         NEXT_PUBLIC_AZURE_TENANT_ID: ${NEXT_PUBLIC_AZURE_TENANT_ID:-}
         NEXT_PUBLIC_AZURE_CLIENT_ID: ${NEXT_PUBLIC_AZURE_CLIENT_ID:-}
         NEXT_PUBLIC_AZURE_API_SCOPE: ${NEXT_PUBLIC_AZURE_API_SCOPE:-}
+        # Server-side /api proxy target — baked into the Next standalone build
+        # (rewrite destination is fixed at build time, not runtime).
+        BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
     image: alpha-finance-frontend:local
     container_name: alpha-finance-frontend
     restart: unless-stopped

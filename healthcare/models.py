@@ -735,10 +735,17 @@ class ServiceProvider(AuditableMixin, BaseModel):
 
     @property
     def adh_ready(self) -> bool:
-        """DERIVED: ready if (AFA-registered AND QC-confirmed) OR the team
-        manually marked ADH Acceptance = YES in the spreadsheet."""
-        if (self.adh_acceptance or "").strip().upper() == "YES":
-            return True
+        """DERIVED: ready only if AFA-registered AND QC-confirmed.
+
+        This used to also answer True whenever the sheet's "ADH Acceptance
+        (Ready)" said YES. That first branch answered first, so the second was
+        never reached: readiness was the spreadsheet column read back, and the
+        tile could not disagree with the file it was meant to check. Ritah
+        Tonkope's ruling (21-Sep-2026) is that QC validates AFA's readiness
+        rather than overriding it — validating needs the two to be able to
+        differ, so the manual column is now reconciled against this number
+        (`ready_mismatch`) and never feeds it.
+        """
         return self.afa_registered == "Yes" and self.qc_confirmed_flag
 
     @property
@@ -748,8 +755,10 @@ class ServiceProvider(AuditableMixin, BaseModel):
         manual = (self.adh_acceptance or "").strip().upper()
         if manual not in {"YES", "NO"}:   # NA / blank are not a disagreement
             return False
-        derived = self.afa_registered == "Yes" and self.qc_confirmed_flag
-        return (manual == "YES") != derived
+        # Compare against the SAME property the tile counts. This used to
+        # recompute readiness inline, so the check and the number it checked
+        # could drift apart.
+        return (manual == "YES") != self.adh_ready
 
 
 class ServiceProviderApplication(BaseModel):

@@ -127,17 +127,24 @@ describe('Development Dialogue (All Employees) — filters', () => {
 describe('keyboard', () => {
   beforeEach(() => boot([person(1), person(2, { name: 'Bob Claims' })]));
 
-  it('Escape closes the dialogue drawer and puts focus back on a live pin', () => {
+  it('opening a person launches the full-screen live review, and Back closes to a neutral curtain (board dd515fa8)', () => {
     const pin = pins()[0] as HTMLElement;
     pin.focus();
+    // Opening a person now launches the full-screen review, not the 560px drawer.
     win.openDrawer(1);
-    expect(win.document.getElementById('drawer')?.classList.contains('open')).toBe(true);
+    const review = win.document.getElementById('review') as HTMLElement;
+    expect(review.classList.contains('on')).toBe(true);
 
-    win.document.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    // Back mid-review must NOT flash the cockpit's names — it shows a neutral
+    // "Review closed" curtain with a deliberate way back (privacy curtain, T7).
+    win.Review.close();
+    expect(review.classList.contains('on')).toBe(true);
+    expect(review.querySelector('#rvExit')).toBeTruthy();
+    expect(review.textContent).toContain('Review closed');
 
-    expect(win.document.getElementById('drawer')?.classList.contains('open')).toBe(false);
-    // The grid re-rendered while the drawer was open, so this must be the NEW pin.
-    expect(win.document.activeElement?.classList.contains('pin')).toBe(true);
+    // Leaving the curtain returns to the cockpit.
+    (win.document.getElementById('rvExit') as HTMLElement).click();
+    expect(review.classList.contains('on')).toBe(false);
   });
 
   it('a person hidden by the filter cannot be moved or tabbed to', () => {

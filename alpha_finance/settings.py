@@ -139,6 +139,10 @@ LOCAL_APPS = [
     'jobs',
     'watchdog',
     'training',
+    # Claims Life Cycle Tracker (CFO 21-Sep-2026, board items B1-B14) — the
+    # weighted steps, the traffic light, the three clocks and the performance
+    # dashboard. Every piece sits behind its own switch, all of them off.
+    'claims_lifecycle',
     # Transformation Board — the CFO's four-month automation programme
     # (2026-09-20). Reads what Omni already knows; writes only progress.
     'transformation',
@@ -159,6 +163,14 @@ import os as _os
 # auto-fixes stay OFF until deliberately armed. Dangerous findings (finance /
 # permissions / data) are ALWAYS report-only regardless of this switch.
 WATCHDOG_AUTOFIX_ENABLED = _os.environ.get('WATCHDOG_AUTOFIX_ENABLED', '').lower() in ('1', 'true', 'yes')
+
+# Claims Life Cycle Tracker (CFO board item B14, 21-Sep-2026). The six claim
+# events Graphite fires are ALWAYS accepted and stored at /api/v1/events/ — the
+# door never rejects a real event. This switch decides whether Omni then ACTS on
+# one: tasks, internal emails and draft letters. It ships OFF, and is armed in
+# the premium wave on 1 October, never between 07:45 and 12:00.
+CLAIMS_LIFECYCLE_FORWARD_EVENTS = _os.environ.get(
+    'CLAIMS_LIFECYCLE_FORWARD_EVENTS', '').lower() in ('1', 'true', 'yes')
 
 M365_TENANT_ID = _os.environ.get("M365_TENANT_ID", "")
 M365_CLIENT_ID = _os.environ.get("M365_CLIENT_ID", "")
@@ -244,6 +256,9 @@ MIDDLEWARE = [
     # the database.
     'core.review_demo.ReviewDemoMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # LOCAL DOCKER: re-add the trailing slash the Next.js proxy strips, before
+    # CommonMiddleware's APPEND_SLASH would raise on a slash-less POST.
+    'core.api_slash_middleware.ApiTrailingSlashMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',

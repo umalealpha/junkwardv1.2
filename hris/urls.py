@@ -212,6 +212,15 @@ urlpatterns = [
     # A manager sees their team's dialogues (downward reporting chain, read-only).
     path('api/talent/team/',
          talent_cockpit_views.team_dialogues, name='api-talent-team'),
+    # Live-review rebuild (board dd515fa8): section-by-section save that MERGES
+    # (never wipes the other sections), the moderator's challenge-alongside layer,
+    # and the one canonical nine-box list.
+    path('api/talent/save-section/',
+         talent_cockpit_views.save_section,   name='api-talent-save-section'),
+    path('api/talent/moderator-challenge/',
+         talent_cockpit_views.moderator_challenge, name='api-talent-moderator-challenge'),
+    path('api/talent/nine-box-labels/',
+         talent_cockpit_views.nine_box_labels, name='api-talent-nine-box-labels'),
     path('api/talent/nine-box/',
          talent_views.nine_box,             name='api-talent-nine-box'),
     path('api/talent/succession/',

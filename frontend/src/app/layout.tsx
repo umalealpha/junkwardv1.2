@@ -5,7 +5,11 @@ import { QuoteProvider } from '@/contexts/QuoteContext'
 import { NumberFormatProvider } from '@/contexts/NumberFormatContext'
 import { MsalAuthProvider } from '@/auth/MsalAuthProvider'
 import ErrorBoundary from '@/components/ErrorBoundary'
-import { Caveat, Inter, Kaushan_Script } from 'next/font/google'
+// LOCAL TEST ENV: next/font/google fetch removed — this machine builds behind a
+// TLS-intercepting proxy that blocks the build-time Google Fonts download. The
+// fonts are only used as CSS-variable classes with a system-ui fallback, so we
+// stub .variable to '' and fall back to system fonts. Restore next/font when
+// building off-proxy.
 import { Toaster } from '@/components/Toaster'
 import UpdateChecker from '@/components/UpdateChecker'
 
@@ -18,9 +22,7 @@ import UpdateChecker from '@/components/UpdateChecker'
 // (2026-09-08) sets it in Caveat, and no system font is close to a handwriting
 // face. next/font downloads it AT BUILD TIME and serves it from our own origin,
 // so there is still no runtime call to Google.
-const caveat = Caveat({
-  subsets: ['latin'], weight: ['600'], variable: '--font-caveat', display: 'swap',
-})
+const caveat = { variable: '' }
 
 // The 2026-09-12 sign-in design (design_handoff_omni_signin) replaces the
 // Caveat wordmark with Kaushan Script and sets the whole access portal in
@@ -29,13 +31,8 @@ const caveat = Caveat({
 // BUILD TIME and served from our own origin, exactly as Caveat already is.
 // Caveat stays declared: it is still the face asserted by the design-freeze
 // test for the older surfaces and costs nothing to keep.
-const kaushan = Kaushan_Script({
-  subsets: ['latin'], weight: ['400'], variable: '--font-kaushan', display: 'swap',
-})
-const inter = Inter({
-  subsets: ['latin'], weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-inter', display: 'swap',
-})
+const kaushan = { variable: '' }
+const inter = { variable: '' }
 
 export const metadata: Metadata = {
   title: {

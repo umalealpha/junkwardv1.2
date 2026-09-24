@@ -1,8 +1,9 @@
 """send_screen_integrity_digest — weekly frozen-screen hand-off to HR.
 
-Why it exists: the detector flagged Snehal 3× suspicious + 12× watch and
-Natasha 3× in 30 days, and nobody told; found in the CFO 20-Sep-2026 control
-check. The CFO chose a weekly note to HR.
+Why it exists: in the CFO's 20-Sep-2026 control check the detector was found to
+have flagged two people repeatedly over 30 days (one of them 3× suspicious plus
+12× watch) with nobody told. The CFO chose a weekly note to HR. Staff are never
+named in source — the names live in the flag records only (C5).
 """
 from __future__ import annotations
 
@@ -115,7 +116,13 @@ class Command(BaseCommand):
                 group['suspicious'] += 1
             else:
                 group['watch'] += 1
-            group['hours'] += flag.frozen_typing_hours or Decimal('0')
+            # The hours behind WHICHEVER rule raised this flag. An idle-frozen row
+            # has frozen_typing_hours = 0 by definition, so adding that column
+            # alone would put the worst cases in this email as "0.0 h" — the same
+            # defect that was fixed on the screen. Mirrors _flag_weight in
+            # hris/screen_integrity_views.py.
+            group['hours'] += max(flag.frozen_typing_hours or Decimal('0'),
+                                  getattr(flag, 'idle_frozen_hours', None) or Decimal('0'))
 
         groups_list = list(groups.values())
         for group in groups_list:
@@ -143,7 +150,7 @@ class Command(BaseCommand):
             address = _manager_email_for_td_user(group['td_user_id']) if group['td_user_id'] else None
             _add_cc(cc, address, hr_emails)
 
-        subject = 'Frozen-screen check — last week'
+        subject = 'Screen check — last week'
         html = self._build_html(groups_list, no_reply_banner)
 
         sent = 0
@@ -183,11 +190,11 @@ class Command(BaseCommand):
 <div style="font-family: 'Book Antiqua', Georgia, serif; color:#1b1b1b; max-width:760px; margin:0 auto;">
   {no_reply_banner()}
   <div style="background:#0D1B2A; padding:18px 24px; border-radius:8px 8px 0 0;">
-    <h1 style="color:#F4A623; margin:0; font-size:24px;">Frozen-screen check — last week</h1>
+    <h1 style="color:#F4A623; margin:0; font-size:24px;">Screen check — last week</h1>
   </div>
   <div style="border:1px solid #e3e0d8; border-top:none; border-radius:0 0 8px 8px; padding:24px;">
     <p>Hi Unami,</p>
-    <p>These people were flagged by the frozen-screen check — heavy typing on a screen that never changed, with no mouse. This is a flag to look into with the person and their manager, not a verdict; nothing has been deducted.</p>
+    <p>These people were flagged by the screen check &mdash; either heavy typing on a screen that never changed with no mouse, or no typing, mouse or clicks at all on a screen that never changed. The reason for each person is on the Screen Integrity page. This is a flag to look into with the person and their manager, not a verdict; nothing has been deducted.</p>
     <table style="border-collapse:collapse; width:100%;">
       <thead>
         <tr>
@@ -195,7 +202,7 @@ class Command(BaseCommand):
           <th align="left" style="padding:8px; background:#0D1B2A; color:#ffffff;">Days flagged</th>
           <th align="left" style="padding:8px; background:#0D1B2A; color:#ffffff;">Suspicious</th>
           <th align="left" style="padding:8px; background:#0D1B2A; color:#ffffff;">Watch</th>
-          <th align="left" style="padding:8px; background:#0D1B2A; color:#ffffff;">Hours credited on a frozen screen</th>
+          <th align="left" style="padding:8px; background:#0D1B2A; color:#ffffff;">Hours credited on an unchanging screen</th>
         </tr>
       </thead>
       <tbody>

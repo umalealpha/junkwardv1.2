@@ -78,6 +78,11 @@ def submit(sub: CommissionSubmission, user) -> CommissionSubmission:
     S = CommissionSubmission.Status
     if sub.status not in (S.DRAFT, S.REJECTED):
         raise ValueError(f'Cannot submit a submission that is {sub.get_status_display()}.')
+    # b6ccaa38 (CFO 21-Sep-2026): a submission MUST record who submitted it. A
+    # NULL submitter made the self-review guard blind, so the summary-upload path
+    # (which submitted with None) sailed past approval. Fail closed, never NULL.
+    if user is None or getattr(user, 'id', None) is None:
+        raise ValueError('A submission must record who submitted it.')
     recompute_submission(sub)
     sub.status = S.SUBMITTED
     sub.submitted_by = user
@@ -139,7 +144,12 @@ def review(sub: CommissionSubmission, user, approve: bool, note: str = '') -> Co
         raise ValueError('You are not a reviewer for this stage.')
     if approve:
         uid = getattr(user, 'id', None)
-        if sub.submitted_by_id and uid is not None and sub.submitted_by_id == uid:
+        # Fail closed (b6ccaa38): a submission with no recorded submitter is
+        # REFUSED at approval, never waved through. The old guard was skipped
+        # when submitted_by_id was NULL, which is how the blind control passed.
+        if sub.submitted_by_id is None:
+            raise ValueError('This submission has no recorded submitter and cannot be approved.')
+        if uid is not None and sub.submitted_by_id == uid:
             raise ValueError('You cannot review your own submission.')
         if agent_for_user(user) == sub.agent:
             raise ValueError('You cannot review a submission that pays you.')
@@ -191,7 +201,10 @@ def final_approve(sub: CommissionSubmission, user, approve: bool = True,
         raise ValueError('Only the final approver can approve directly.')
     if approve:
         uid = getattr(user, 'id', None)
-        if sub.submitted_by_id and uid is not None and sub.submitted_by_id == uid:
+        # Fail closed (b6ccaa38): no recorded submitter → refuse the direct approve.
+        if sub.submitted_by_id is None:
+            raise ValueError('This submission has no recorded submitter and cannot be approved.')
+        if uid is not None and sub.submitted_by_id == uid:
             raise ValueError('You cannot approve your own submission.')
         if agent_for_user(user) == sub.agent:
             raise ValueError('You cannot approve a submission that pays you.')

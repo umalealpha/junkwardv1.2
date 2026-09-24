@@ -746,7 +746,11 @@ const hrisGroup: NavGroup = {
     { label: 'Talent Management', icon: Target,    href: '#',                    header: true },
     // Development Dialogue self-service — staff were emailed "Talent Management →
     // Development Dialogue" but only /hris/profile linked it (Kago 2026-07-18).
-    { label: 'Development Dialogue', icon: ClipboardCheck, href: '/hris/my-dialogue' },
+    // T8 (board dd515fa8): this was a bare "Development Dialogue" — the same words
+    // as the all-employees link below, which is the collision the CFO flagged.
+    // Renamed to disambiguate; the all-employees one keeps its name so the
+    // 19-Sep findability the CFO's boss relies on is untouched.
+    { label: 'My Development Dialogue', icon: ClipboardCheck, href: '/hris/my-dialogue' },
     { label: 'Team Dialogues',    icon: Users,     href: '/hris/team-dialogues' },
     // The CENTRAL 9-grid + every employee's Development Dialogue (the Talent
     // Cockpit). It had no sidebar link at all and the palette called it "Talent

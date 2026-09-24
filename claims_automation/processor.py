@@ -223,6 +223,18 @@ def _letter_context(case: ClaimCase) -> dict:
         "policy_number": policy.get("number") or "",
         "vehicle": veh,
         "date_of_loss": claim.get("date_of_loss") or "",
+        "postal_address": insured.get("postal_address") or "",
+        # B9 — the excess is READ FROM THE POLICY and never defaulted. If
+        # Graphite has not sent the wording the letter refuses to render rather
+        # than inventing one; that figure sets the client's payout and the 20%
+        # invoice to Veritas.
+        "excess_wording": policy.get("excess_wording") or "",
+        # B10 — the decline is signed by the Claims Manager for the company.
+        "claims_manager_name": getattr(_claims_manager(), "get_full_name", lambda: "")()
+        or "",
+        "policy_section": policy.get("section") or "",
+        "clause_number": policy.get("clause_number") or "",
+        "clause_text": policy.get("clause_text") or "",
     }
 
 
@@ -246,11 +258,13 @@ def draft_aol(case: ClaimCase, why: str) -> str:
             f"draft will follow on the next update.</p>",
             high=True,
         )
-    excess = (
-        _dec(policy.get("excess"))
-        or _dec((assessment.get("summary") or {}).get("Excess"))
-        or 0
-    )
+    # B9: THE EXCESS IS READ FROM THE POLICY AND NEVER DEFAULTED. `or 0` here
+    # turned a policy with no excess on file into a printed "Less Excess -0.00",
+    # and that figure sets both the client's payout and the 20% invoice to
+    # Veritas. None flows through to the letter, which refuses to render.
+    excess = _dec(policy.get("excess"))
+    if excess is None:
+        excess = _dec((assessment.get("summary") or {}).get("Excess"))
     outstanding = 0
     bal = _dec(premium.get("balance"))
     if bal and bal > 0 and not premium.get("settled"):
@@ -407,8 +421,46 @@ def draft_pos(case: ClaimCase, assessment: dict) -> str:
 # ── event handlers ──────────────────────────────────────────────────────────
 
 
+def _stamp_notification_date(case, payload) -> bool:
+    """B1 — the date every clock counts from.
+
+    Graphite is the only source. If it sends nothing we leave the field blank
+    and the tracker reads "unknown": falling back to the date the file was
+    opened is exactly the measurement error B5 exists to stop.
+    """
+    if case.notification_date:
+        return False
+    claim = (payload.get("facts") or {}).get("claim") or {}
+    raw = (
+        payload.get("notification_date")
+        or claim.get("notification_date")
+        or claim.get("date_notified")
+        or claim.get("notified_on")
+    )
+    if not raw:
+        return False
+    from django.utils.dateparse import parse_date
+
+    parsed = parse_date(str(raw)[:10])
+    if parsed is None:
+        log.warning("claims_automation: %s sent an unreadable notification date %r",
+                    case.claim_ref, raw)
+        return False
+    case.notification_date = parsed
+    case.save(update_fields=["notification_date", "updated_at"])
+    return True
+
+
 def _on_registered(case, payload):
-    return [f"Claim recorded (premium: {case.premium_light or 'not checked'})"]
+    actions = [f"Claim recorded (premium: {case.premium_light or 'not checked'})"]
+    if _stamp_notification_date(case, payload):
+        actions.append(f"Notification date recorded: {case.notification_date}")
+    else:
+        actions.append(
+            "No notification date on this event — every claim clock will read "
+            "'unknown' until Graphite sends one."
+        )
+    return actions
 
 
 _DOC_HOST_SUFFIXES = (".amazonaws.com", ".cloudfront.net")
@@ -562,8 +614,22 @@ def _on_decision(case, payload):
     return [f"Decision recorded in Graphite: {d.get('decision') or 'unknown'}"]
 
 
+def _on_premium_checked(case, payload):
+    """Graphite checked the premium. Record the light; decide nothing.
+
+    Green auto-releases elsewhere; RED NEVER AUTO-DECLINES — a machine may
+    pause a claim, only management may refuse one.
+    """
+    light = str(payload.get("premium_light") or payload.get("light") or "").strip()
+    if light:
+        case.premium_light = light[:10]
+        case.save(update_fields=["premium_light", "updated_at"])
+    return [f"Premium checked in Graphite: {light or 'no result given'}"]
+
+
 HANDLERS = {
     ClaimAutomationEvent.Type.CLAIM_REGISTERED: _on_registered,
+    ClaimAutomationEvent.Type.PREMIUM_CHECKED: _on_premium_checked,
     ClaimAutomationEvent.Type.FORM_SUBMITTED: _on_form,
     ClaimAutomationEvent.Type.ASSESSMENT_RECEIVED: _on_assessment,
     ClaimAutomationEvent.Type.WRITE_OFF_FLAGGED: _on_write_off,
@@ -708,14 +774,26 @@ def _approve_locked(letter, user, render_html, render_pdf, original):
         title = (
             "Agreement of Loss" if letter.kind == ClaimLetter.Kind.AOL else "Your claim"
         )
+        try:
+            body_html = render_html(letter.kind, ctx)
+            body_pdf = render_pdf(letter.kind, ctx)
+        except ValueError as exc:
+            # The letter refuses to be produced — a decline with no clause, or
+            # an Agreement of Loss with a defaulted excess. Say so plainly and
+            # leave it awaiting. Never send a half-empty legal document, and
+            # never report it as sent.
+            log.warning("letter %s could not be produced: %s", letter.pk, exc)
+            letter.decision_note = f"Not sent — the letter cannot be produced: {exc}"
+            letter.save(update_fields=["decision_note", "updated_at"])
+            return letter.decision_note
         send_html_with_cfo_cc(
             f"{title} — {letter.case.claim_ref}",
-            render_html(letter.kind, ctx),
+            body_html,
             [to],
             attachments=[
                 (
                     f"{letter.kind}-{letter.case.claim_ref}.pdf",
-                    render_pdf(letter.kind, ctx),
+                    body_pdf,
                     "application/pdf",
                 )
             ],

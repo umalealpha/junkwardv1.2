@@ -35,6 +35,11 @@ interface Flag {
   frozen_typing_hours: number
   mouse_dead_pct: number
   identical_pct: number
+  idle_frozen_pct?: number
+  idle_frozen_hours?: number
+  // Which rule raised this row. The SERVER decides, from the detector's own
+  // thresholds — never re-derive it here from percentages.
+  raised_by?: 'typing' | 'idle' | 'both'
   reasons: string[]
 }
 interface Scan {
@@ -153,7 +158,7 @@ export default function ScreenIntegrityPage() {
           <div>
             <h1 style={{ margin: 0, fontSize: 22, color: ink, fontWeight: 700 }}>Screen-Integrity Monitor</h1>
             <p style={{ margin: '2px 0 0', fontSize: 13, color: mut }}>
-              Heavy typing on a screen that never changes — the weight-on-a-key cheat. Flags for review; never docks pay.
+              Two cheats on one screen: heavy typing on a picture that never changes, and no typing, mouse or clicks at all while the clock keeps running. Flags for review; never docks pay.
             </p>
           </div>
         </div>
@@ -251,9 +256,23 @@ export default function ScreenIntegrityPage() {
                         <Badge tone={SUSP_TONE[f.suspicion]} text={f.suspicion} />
                       </div>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8, fontSize: 12.5, color: mut }}>
-                        <Metric icon={<Keyboard size={13} />} label="frozen-typing" value={`${f.frozen_typing_pct}%`} strong tone={SUSP_TONE[f.suspicion]} />
-                        <Metric label="credited" value={`${f.frozen_typing_hours.toFixed(1)}h`} />
-                        <Metric icon={<MousePointer2Off size={13} />} label="mouse dead" value={`${f.mouse_dead_pct}%`} />
+                        {/* Two different rules can raise a row. Show the numbers for the
+                            one that actually fired — a row raised by the idle rule has
+                            frozen-typing 0% by definition, and printing that next to
+                            "suspicious" reads as a glitch to the manager. */}
+                        {f.raised_by !== 'idle' && (
+                          <>
+                            <Metric icon={<Keyboard size={13} />} label="frozen-typing" value={`${f.frozen_typing_pct}%`} strong tone={SUSP_TONE[f.suspicion]} />
+                            <Metric label="credited (typing)" value={`${f.frozen_typing_hours.toFixed(1)}h`} />
+                            <Metric icon={<MousePointer2Off size={13} />} label="mouse dead" value={`${f.mouse_dead_pct}%`} />
+                          </>
+                        )}
+                        {(f.raised_by === 'idle' || f.raised_by === 'both') && (
+                          <>
+                            <Metric icon={<MousePointer2Off size={13} />} label="no input at all" value={`${f.idle_frozen_pct}%`} strong tone={SUSP_TONE[f.suspicion]} />
+                            <Metric label="credited (idle)" value={`${(f.idle_frozen_hours ?? 0).toFixed(1)}h`} />
+                          </>
+                        )}
                         <Metric label="screens identical" value={`${f.identical_pct}%`} />
                         <Metric label="shots" value={String(f.shots)} />
                       </div>

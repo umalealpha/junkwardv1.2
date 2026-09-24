@@ -57,14 +57,26 @@ class DerivedReadinessTests(TestCase):
         p.contract_status = "AFA Signing"
         self.assertFalse(p.adh_ready)          # QC'd but not registered
 
-    def test_adh_ready_true_when_acceptance_yes(self):
-        """adh_acceptance=YES makes a provider ADH-ready regardless of derived status."""
+    def test_the_sheets_yes_alone_does_not_make_a_provider_ready(self):
+        """The manual column must NOT be able to answer the readiness question.
+
+        It used to: `adh_ready` returned True on adh_acceptance == YES before it
+        ever looked at the contract or the QC tick, so the number was the sheet
+        read back and could not disagree with it. Readiness is now the contract
+        AND a person's QC, and the sheet is only reconciled against it.
+        """
         p = ServiceProvider(contract_status="", qc_confirmed=False, adh_acceptance="YES")
-        self.assertTrue(p.adh_ready)
+        self.assertFalse(p.adh_ready)
         p2 = ServiceProvider(contract_status="AFA Signing", qc_confirmed=False, adh_acceptance="yes")
-        self.assertTrue(p2.adh_ready)
-        p3 = ServiceProvider(contract_status="", qc_confirmed=False, adh_acceptance="NO")
+        self.assertFalse(p2.adh_ready)
+        # Signed but nobody has QC'd them -> still not ready, and it shows up.
+        p3 = ServiceProvider(contract_status="Signed", qc_confirmed=False, adh_acceptance="YES")
         self.assertFalse(p3.adh_ready)
+        self.assertTrue(p3.ready_mismatch)
+        # Signed AND QC'd by a person -> ready, and the two now agree.
+        p4 = ServiceProvider(contract_status="Signed", qc_confirmed=True, adh_acceptance="YES")
+        self.assertTrue(p4.adh_ready)
+        self.assertFalse(p4.ready_mismatch)
 
     def test_ready_mismatch_flags_disagreement(self):
         # Manual says YES, derived says No (not QC'd) -> mismatch.
@@ -116,6 +128,30 @@ class ParseAndImportTests(TestCase):
         self.assertTrue(any(d["name"] == "Ready but unkeyed" for d in preview["dropped"]),
                         "the dropped provider is named so the user knows which one to fix")
 
+    def test_file_row_count_is_reported_and_a_duplicate_is_not_double_counted(self):
+        """The screen tells the user "you uploaded a file with N rows", so N has
+        to be the file. `total_rows` counts only what could be matched, and a
+        duplicate lands in BOTH `rows` and `dropped` — adding the two would
+        report 4 rows for a 3-row file."""
+        preview = reg.preview_import(_sheet([
+            {"practice": "500", "name": "Keeps its key"},
+            {"practice": "", "name": "No key at all"},      # in the file, not imported
+            {"practice": "500", "name": "Same number again"},  # in the file AND imported
+        ]))
+        self.assertEqual(preview["file_rows"], 3, "three data rows were uploaded")
+        self.assertEqual(preview["dropped_count"], 2, "both are worth the user's eye")
+        kinds = sorted(d["kind"] for d in preview["dropped"])
+        self.assertEqual(kinds, ["not_imported", "overwrites_earlier"],
+                         "a duplicate overwrites, it is not a row lost from the file")
+        # The box on screen tells the user the file adds up. Prove the identity
+        # it prints — file = providers written + repeats + unmatchable — or the
+        # reconciliation is just another number for them to distrust.
+        providers = len(preview["new"]) + len(preview["changed"]) + preview["unchanged"]
+        dupes = sum(1 for d in preview["dropped"] if d["kind"] == "overwrites_earlier")
+        no_key = sum(1 for d in preview["dropped"] if d["kind"] == "not_imported")
+        self.assertEqual(providers, 1, "the two rows sharing 500 are one provider")
+        self.assertEqual(preview["file_rows"], providers + dupes + no_key)
+
     def test_preview_classifies_new_changed_unchanged(self):
         ServiceProvider.objects.create(
             practice_number="14065", name="Kadiyala Surgery",
@@ -129,9 +165,14 @@ class ParseAndImportTests(TestCase):
         self.assertEqual(len(preview["changed"]), 1)
         self.assertIn("contract_status", preview["changed"][0]["changes"])
 
-    def test_manual_ready_seeds_qc_on_create_only(self):
-        # Their sheet "ADH Acceptance (Ready) = YES" seeds qc_confirmed on a NEW
-        # record, so a Signed+YES provider is ready on day one.
+    def test_the_sheet_never_grants_qc(self):
+        """21-Sep-2026: readiness answered out of the column it was meant to
+        check. A create-time seed copied "ADH Acceptance (Ready) = YES" into
+        qc_confirmed, so the derived number could not disagree with the sheet —
+        222 rows said YES and 222 counted ready. QC is a person's call in Omni,
+        never the spreadsheet's, so an imported YES must leave QC untouched and
+        show up as a mismatch to work through.
+        """
         p = reg.preview_import(_sheet([
             {"practice": "1", "name": "Signed Ready", "contract": "Signed", "ready": "YES"},
             {"practice": "2", "name": "Signed NotYes", "contract": "Signed", "ready": "NO"},
@@ -139,21 +180,86 @@ class ParseAndImportTests(TestCase):
         reg.commit_import([r["values"] for r in p["new"]], source_file="s.xlsx")
         a = ServiceProvider.objects.get(practice_number="1")
         b = ServiceProvider.objects.get(practice_number="2")
-        self.assertTrue(a.qc_confirmed)
-        self.assertTrue(a.adh_ready)
+        self.assertFalse(a.qc_confirmed, "the sheet must not grant QC")
+        self.assertFalse(a.adh_ready, "readiness needs a real QC, not a YES on a sheet")
+        self.assertTrue(a.ready_mismatch, "their YES vs our not-ready is the work queue")
         self.assertFalse(b.qc_confirmed)
-        # Re-import must NOT clobber an in-system QC decision: un-QC provider 1,
-        # then re-import the same YES row — qc stays as the human set it.
-        a.qc_confirmed = False
+
+        # And the two numbers must now be able to disagree at all — the whole
+        # point. A person QCs provider 1; only then does it count as ready.
+        a.qc_confirmed = True
         a.save()
-        p2 = reg.preview_import(_sheet([
+        counts = reg.dashboard_counts()
+        self.assertEqual(counts["afa_says_ready"], 1, "AFA's own claim, counted separately")
+        self.assertEqual(counts["adh_ready"], 1, "our derived check, agreeing on its own evidence")
+
+    def test_reimport_never_clobbers_an_in_system_qc_decision(self):
+        p = reg.preview_import(_sheet([
             {"practice": "1", "name": "Signed Ready", "contract": "Signed", "ready": "YES"},
         ]))
-        # it's an unchanged/changed row now (existing) — commit both buckets
+        reg.commit_import([r["values"] for r in p["new"]], source_file="s.xlsx")
+        a = ServiceProvider.objects.get(practice_number="1")
+        a.qc_confirmed = True          # a person QC'd it in Omni
+        a.save()
+        p2 = reg.preview_import(_sheet([
+            {"practice": "1", "name": "Signed Ready", "contract": "Signed", "ready": "NO"},
+        ]))
         rows = [r["values"] for r in (p2["new"] + p2["changed"])]
-        if rows:
-            reg.commit_import(rows, source_file="s2.xlsx")
-        self.assertFalse(ServiceProvider.objects.get(practice_number="1").qc_confirmed)
+        self.assertTrue(rows, "the row must actually reach the importer, or this "
+                              "test passes without exercising anything")
+        reg.commit_import(rows, source_file="s2.xlsx")
+        a.refresh_from_db()
+        self.assertTrue(a.qc_confirmed,
+                        "a later sheet must not undo a QC a person made in Omni")
+        self.assertEqual(a.adh_acceptance, "NO", "but the sheet's own column does update")
+        self.assertTrue(a.ready_mismatch, "and the disagreement is now visible")
+
+    def test_yes_no_columns_are_stored_in_one_spelling(self):
+        """The sheet answered four ways where it meant two (NO/No/YES/Yes), so
+        a count of "YES" saw a fraction of the real number. Canonicalise in, by
+        allowlist — anything that is not a yes/no answer survives verbatim."""
+        p = reg.preview_import(_sheet([
+            {"practice": "1", "name": "Mixed case", "ready": "yes", "welcome": "Yes",
+             "sticker": " no ", "orientation": "N/A"},
+            {"practice": "2", "name": "Not an answer", "sticker": "Posted 3 Aug"},
+        ]))
+        reg.commit_import([r["values"] for r in p["new"]], source_file="s.xlsx")
+        a = ServiceProvider.objects.get(practice_number="1")
+        self.assertEqual(a.adh_acceptance, "YES")
+        self.assertEqual(a.welcome_pack, "YES")
+        self.assertEqual(a.sticker_displayed, "NO")
+        self.assertEqual(a.provider_orientation, "NA")
+        b = ServiceProvider.objects.get(practice_number="2")
+        self.assertEqual(b.sticker_displayed, "Posted 3 Aug",
+                         "an answer we do not recognise is preserved, never mangled")
+
+    def test_recased_sheet_is_not_reported_as_a_change(self):
+        """Re-importing the same answers in different capitals must read as
+        unchanged, or every casing tidy-up looks like 291 edits to approve."""
+        ServiceProvider.objects.create(practice_number="1", name="Same",
+                                       sticker_displayed="YES", welcome_pack="NO")
+        preview = reg.preview_import(_sheet([
+            {"practice": "1", "name": "Same", "sticker": "Yes", "welcome": "no"},
+        ]))
+        self.assertEqual(len(preview["changed"]), 0)
+        self.assertEqual(preview["unchanged"], 1)
+
+    def test_normalise_command_fixes_stored_rows_and_is_dry_by_default(self):
+        from io import StringIO
+        from django.core.management import call_command
+        ServiceProvider.objects.create(practice_number="1", name="Mixed",
+                                       sticker_displayed="Yes", welcome_pack="No",
+                                       provider_orientation="Posted 3 Aug")
+        call_command("normalise_provider_answers", stdout=StringIO())
+        p = ServiceProvider.objects.get(practice_number="1")
+        self.assertEqual(p.sticker_displayed, "Yes", "dry run must not write")
+
+        call_command("normalise_provider_answers", "--apply", stdout=StringIO())
+        p.refresh_from_db()
+        self.assertEqual(p.sticker_displayed, "YES")
+        self.assertEqual(p.welcome_pack, "NO")
+        self.assertEqual(p.provider_orientation, "Posted 3 Aug",
+                         "a non-answer is left alone")
 
     def test_commit_creates_updates_and_audits(self):
         u = User.objects.create_user("medu", email="mtlagae@alphadirect.co.bw")
@@ -414,14 +520,17 @@ class SnapshotTests(TestCase):
         call_command("snapshot_provider_counts")
         self.assertEqual(ProviderDailySnapshot.objects.count(), 1)
 
-    def test_adh_ready_counts_acceptance_yes(self):
-        """The dashboard_counts adh_ready must include acceptance=YES providers."""
+    def test_the_two_readiness_numbers_are_counted_separately(self):
+        """The tile used to fold the sheet's YES into the derived count, so the
+        two could never be seen to differ. They are now two numbers."""
         ServiceProvider.objects.create(practice_number="1", name="Derived Ready",
-            contract_status="Signed", qc_confirmed=True)
+            contract_status="Signed", qc_confirmed=True, adh_acceptance="YES")
         ServiceProvider.objects.create(practice_number="2", name="Accepted Only",
             contract_status="", qc_confirmed=False, adh_acceptance="YES")
         c = reg.dashboard_counts()
-        self.assertEqual(c["adh_ready"], 2)
+        self.assertEqual(c["adh_ready"], 1, "only the one we actually verified")
+        self.assertEqual(c["afa_says_ready"], 2, "what their list claims")
+        self.assertEqual(c["mismatches"], 1, "and the gap is visible, not hidden")
 
 
 class TrendApiTests(APITestCase):

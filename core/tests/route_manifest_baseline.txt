@@ -1658,6 +1658,7 @@ v1-admin-vault
 v1-admin-vault-detail
 v1-admin-vault-qc-get
 v1-admin-vault-reveal
+v1-admin-vault-share
 v1-adoption
 v1-adoption-screen-view
 v1-adoption-screens
@@ -2325,6 +2326,7 @@ v1-user-titles
 v1-user-titles-template
 v1-user-titles-upload
 v1-vat-return
+v1-vault-share-open
 v1-vendor-address-access
 v1-vendor-address-list
 v1-vendor-address-template

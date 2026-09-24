@@ -52,6 +52,16 @@ class ClaimCase(BaseModel):
     facts = models.JSONField(
         default=dict, blank=True, help_text="Latest facts Graphite sent (merged)."
     )
+    # B1 — every clock in the Claims Life Cycle Tracker counts from the date
+    # the claim was NOTIFIED, not the date the file was opened and not the date
+    # the police report arrived. Blank means not measurable: the tracker shows
+    # "unknown" rather than falling back to another date.
+    notification_date = models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Date the claim was notified to us. Every clock counts from here.",
+    )
     handler_email = models.CharField(max_length=254, blank=True, default="")
     premium_light = models.CharField(max_length=10, blank=True, default="")
     stage = models.CharField(
@@ -90,6 +100,7 @@ class ClaimAutomationEvent(BaseModel):
     class Type(models.TextChoices):
         CLAIM_REGISTERED = "claim_registered", "Claim registered"
         FORM_SUBMITTED = "claim_form_submitted", "Customer form submitted"
+        PREMIUM_CHECKED = "premium_checked", "Premium checked"
         ASSESSMENT_RECEIVED = "assessment_received", "Assessment received"
         WRITE_OFF_FLAGGED = "write_off_flagged", "Write-off flagged"
         DECISION_RECORDED = "decision_recorded", "Decision recorded"

@@ -66,3 +66,32 @@ class SettlementTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AMissingExcessStaysMissing(unittest.TestCase):
+    """B9 — THE EXCESS IS READ FROM THE POLICY AND NEVER DEFAULTED.
+
+    settlement() used to quantise a missing excess to "0.00", which slipped past
+    the letter's own guard and printed "Less Excess -0.00" on a real Agreement of
+    Loss. That figure sets the client's payout AND the 20% invoice to Veritas.
+    """
+
+    def test_settlement_reports_a_missing_excess_as_missing(self):
+        self.assertIsNone(settlement("100000", None)["excess"])
+
+    def test_a_supplied_zero_excess_is_still_a_real_zero(self):
+        self.assertEqual(settlement("100000", "0")["excess"], "0.00")
+
+    def test_the_letter_refuses_the_settlement_of_a_policy_with_no_excess(self):
+        from claims_automation.letters import render_html
+        ctx = {
+            "insured_name": "Test Claimant",
+            "claim_number": "DEMO-CLAIM-0002",
+            "policy_number": "DEMO-POLICY-0002",
+            "vehicle": "Demo vehicle",
+            "date_of_loss": "2026-05-22",
+            "excess_wording": "Less Excess as per policy schedule",
+            "figures": settlement("100000", None),
+        }
+        with self.assertRaises(ValueError):
+            render_html("aol", ctx)

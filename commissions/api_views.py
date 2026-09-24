@@ -391,10 +391,12 @@ class CommissionSubmissionViewSet(viewsets.ModelViewSet):
             if preview:
                 r = self._preview_workbook(importer, tmp.name, period, inhouse, agent_name)
             elif inhouse:
-                r = importer.import_inhouse(tmp.name, period, commit=True, submit=submit)
+                r = importer.import_inhouse(tmp.name, period, commit=True, submit=submit,
+                                            user=request.user)
             else:
                 r = importer.import_workbook(tmp.name, group_key, period,
-                                            agent_name=agent_name, commit=True, submit=submit)
+                                            agent_name=agent_name, commit=True, submit=submit,
+                                            user=request.user)
         except ValueError as e:
             # Aria adds a plain-English "why + fix" when she can (best-effort;
             # never picks amounts — the import itself stays fully deterministic).

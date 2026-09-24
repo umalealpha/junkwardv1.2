@@ -56,10 +56,23 @@ def settlement(sum_insured, excess, outstanding_premium=None, salvage_retained=N
         note = "Deductions exceed the sum insured; net settlement floored at zero and requires review."
 
     net_dec = _quantize(total)
+    # B9 — the approved Agreement of Loss money block is exactly three lines:
+    # Total Claim, Less Excess, Total Claim Payable. `other_deductions` is what
+    # this function took off BEYOND the excess; the letter refuses to print a
+    # three-line block while that is non-zero, because the block would then show
+    # a payable the three lines do not add up to. What else comes off is
+    # for Finance to confirm.
+    # A missing excess stays MISSING all the way to the letter. Quantising it to
+    # 0.00 here is what made the letter's "never defaulted" guard useless.
+    excess_dec = _quantize(_to_decimal(excess)) if excess is not None else None
+    other = _quantize(sum_insured_dec - (excess_dec or Decimal("0.00")) - net_dec)
     return {
         "net": _fmt_2dp(net_dec),
         "net_display": f"{net_dec:,.2f}",
         "requires_review": True,
         "note": note,
         "lines": lines,
+        "total_claim": _fmt_2dp(sum_insured_dec),
+        "excess": _fmt_2dp(excess_dec) if excess_dec is not None else None,
+        "other_deductions": _fmt_2dp(other if other > 0 else Decimal("0.00")),
     }

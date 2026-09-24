@@ -27,6 +27,13 @@ ENV NEXT_PUBLIC_AZURE_TENANT_ID=$NEXT_PUBLIC_AZURE_TENANT_ID \
     NEXT_PUBLIC_AZURE_CLIENT_ID=$NEXT_PUBLIC_AZURE_CLIENT_ID \
     NEXT_PUBLIC_AZURE_API_SCOPE=$NEXT_PUBLIC_AZURE_API_SCOPE
 
+# Server-side /api proxy target. next.config's rewrites() reads this, and with
+# Next standalone output the rewrite destination is BAKED AT BUILD TIME — the
+# runtime env cannot override it. Must be set here or the frontend proxies to
+# the 127.0.0.1:8000 fallback (dead inside the container). Docker-network host.
+ARG BACKEND_INTERNAL_URL="http://backend:8000"
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Generate ONE build id and use it everywhere: next.config reads OMNI_BUILD_ID

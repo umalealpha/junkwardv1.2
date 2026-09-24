@@ -62,6 +62,8 @@ def persist_day(day: _date, sigs: List, *, status: str = ScreenIntegrityScan.Sta
             frozen_typing_hours=_dec(s.frozen_typing_hours),
             mouse_dead_pct=_dec(round(s.mouse_dead_pct * 100, 1)),
             identical_pct=_dec(round(s.identical_pct * 100, 1)),
+            idle_frozen_pct=_dec(getattr(s, 'idle_frozen_pct', 0) * 100),
+            idle_frozen_hours=_dec(getattr(s, 'idle_frozen_hours', 0)),
             reasons=list(s.reasons or []),
         )
         for s in flags

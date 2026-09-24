@@ -67,6 +67,15 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api-token-auth/`,
       },
       {
+        // Preserve a trailing slash when proxying to Django (belt-and-braces
+        // with the backend's ApiTrailingSlashMiddleware). path-to-regexp drops
+        // the empty trailing segment from :path*, so /api/x/ would reach Django
+        // as /api/x and APPEND_SLASH raises on a slash-less POST. Match the
+        // slash-terminated form first and re-add the slash to the destination.
+        source: '/api/:path*/',
+        destination: `${backendUrl}/api/:path*/`,
+      },
+      {
         source: '/api/:path*',
         destination: `${backendUrl}/api/:path*`,
       },
