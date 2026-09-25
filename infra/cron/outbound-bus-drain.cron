@@ -1,0 +1,22 @@
+# WS1 outbound state bus — retry worker (2026-09-26).
+#
+# Every Omni->Graphite write-back now goes through the outbound bus
+# (integrations.outbound): the sending request tries once inline; anything that
+# fails is persisted as an OutboundEvent and left for THIS job to retry, on the
+# per-event backoff (30s, 2m, 10m, 30m, 1h). Sending is idempotent per event and
+# deduped on the sender key, so a retry never double-delivers a fact.
+#
+# Silent on a clean run; `drain_outbound_events` still prints its counts every
+# pass, so the log proves it ran even when there was nothing due (silence and
+# death look the same — see fnb-three-way-check.cron).
+#
+# Gated at the app by OUTBOUND_BUS_ENABLED: with the bus off, drain() no-ops and
+# events simply queue, so this cron is safe to leave installed while the switch
+# is down. flock stops a slow pass overlapping the next one.
+#
+# Runs every 2 minutes (UTC, like everything here). The bus carries FACTS/STATES
+# only — it never moves money.
+#
+# ⚠ infra/install-crons.sh must LIST this file (ENABLED) or nothing is scheduled.
+SHELL=/bin/bash
+*/2 * * * * root flock -n /var/lock/outbound-bus-drain.lock -c 'cd /opt/alpha-finance && docker compose --env-file /etc/alpha-finance/.env exec -T backend python manage.py drain_outbound_events' >> /var/log/outbound-bus-drain.log 2>&1

@@ -120,6 +120,75 @@ class IntegrationEvent(BaseModel):
         return f"{self.source_system}/{self.event_type} [{self.status}] {self.received_at:%Y-%m-%d %H:%M}"
 
 
+class OutboundEvent(BaseModel):
+    """Durable OUTBOUND event — the write-back twin of IntegrationEvent.
+
+    WS1 two-way state bus (2026-09-26): today Omni's only write to Graphite is the
+    bespoke `post_refund_back_to_graphite` urllib call — no record, no retry, no
+    sender idempotency. This is the generalised outbox: enqueue a fact/state to
+    deliver to another system, and a worker (or the same request) POSTs it with
+    retry+backoff, deduped on `idempotency_key`. FACTS/STATES ONLY — the bus never
+    moves money. Secrets are never stored: only the endpoint + the NAME of the
+    settings attr holding the token are persisted; the token is resolved at send.
+    """
+
+    class Target(models.TextChoices):
+        GRAPHITE = 'graphite', 'Graphite (Policy System)'
+
+    class AuthKind(models.TextChoices):
+        BEARER = 'bearer', 'Bearer token'
+        APIKEY = 'apikey', 'ApiKey scope'
+        NONE   = 'none',   'No auth'
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        SENT    = 'sent',    'Sent'
+        FAILED  = 'failed',  'Failed (will retry)'
+        DEAD    = 'dead',    'Dead (gave up)'
+
+    target       = models.CharField(max_length=30, choices=Target.choices, db_index=True)
+    event_type   = models.CharField(max_length=64, db_index=True)
+    payload      = models.JSONField(help_text='Fact/state to deliver. No money, no external PII.')
+    endpoint     = models.URLField(max_length=500, help_text='Resolved target URL to POST to.')
+    auth_kind    = models.CharField(max_length=10, choices=AuthKind.choices, default=AuthKind.BEARER)
+    token_setting = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='NAME of the settings attribute holding the secret (resolved at send; never stored).')
+
+    status          = models.CharField(max_length=10, choices=Status.choices,
+                                        default=Status.PENDING, db_index=True)
+    attempts        = models.IntegerField(default=0)
+    max_attempts    = models.IntegerField(default=6)
+    next_attempt_at = models.DateTimeField(null=True, blank=True, db_index=True,
+                                           help_text='When the worker should next try (backoff).')
+    response_status = models.IntegerField(null=True, blank=True)
+    last_error      = models.TextField(blank=True, default='')
+    sent_at         = models.DateTimeField(null=True, blank=True)
+
+    # Sender idempotency — a repeat enqueue with the same key returns the original
+    # row rather than delivering the same fact twice (mirrors IntegrationEvent).
+    idempotency_key = models.CharField(
+        max_length=128, blank=True, default='', db_index=True,
+        help_text="Sender's own unique id for this event; blank = not supplied.")
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'next_attempt_at'], name='outevent_due_idx'),
+            models.Index(fields=['target', 'event_type']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['idempotency_key'],
+                condition=~models.Q(idempotency_key=''),
+                name='outevent_idempotency_key_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.target}/{self.event_type} [{self.status}] a{self.attempts}"
+
+
 # ---------------------------------------------------------------------------
 # Graphite V2 Finance feed — pulled payment transactions (read-only mirror)
 # ---------------------------------------------------------------------------

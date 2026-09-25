@@ -1,9 +1,12 @@
 """integrations/admin.py"""
 from django.contrib import admin
+from django.utils import timezone
+
 from .models import (
     GraphitePaymentSyncRun,
     GraphitePaymentTransaction,
     IntegrationEvent,
+    OutboundEvent,
     TimeDoctorUserMap,
 )
 
@@ -17,6 +20,35 @@ class IntegrationEventAdmin(admin.ModelAdmin):
     readonly_fields = ['id', 'received_at', 'processed_at', 'result_type',
                        'result_id', 'retry_count', 'error_message']
     ordering = ['-received_at']
+
+
+@admin.register(OutboundEvent)
+class OutboundEventAdmin(admin.ModelAdmin):
+    """WS1 outbound state bus — the write-back outbox. Operators watch failures
+    here and can force a retry."""
+    list_display  = ['created_at', 'target', 'event_type', 'status', 'attempts',
+                     'response_status', 'next_attempt_at', 'idempotency_key']
+    list_filter   = ['target', 'status', 'event_type']
+    search_fields = ['event_type', 'idempotency_key', 'last_error', 'endpoint']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'sent_at', 'attempts',
+                       'response_status', 'last_error', 'next_attempt_at']
+    ordering = ['-created_at']
+    actions = ['retry_now']
+
+    @admin.action(description='Retry now (re-deliver selected events)')
+    def retry_now(self, request, queryset):
+        from .outbound import deliver
+        sent = 0
+        for ev in queryset:
+            ev.status = OutboundEvent.Status.PENDING
+            ev.attempts = 0          # a manual retry is a clean fresh start
+            ev.last_error = ''
+            ev.next_attempt_at = timezone.now()
+            ev.save(update_fields=['status', 'attempts', 'last_error',
+                                   'next_attempt_at', 'updated_at'])
+            if deliver(ev).get('sent'):
+                sent += 1
+        self.message_user(request, f'{queryset.count()} re-attempted, {sent} sent.')
 
 
 @admin.register(GraphitePaymentSyncRun)

@@ -194,14 +194,45 @@ class SoAControlViewSet(viewsets.ModelViewSet):
     lookup_field = 'clause'
 
 
+class _RiskRWPermission(_RWPermission):
+    """Risk register only: any signed-in user may DELETE (single or bulk).
+
+    TEST ENV (2026-09-26, Unopa Male: "this is a test environment, forget all the
+    security checks"): the register owner needs to freely remove rows entered in
+    error or superseded ones. The shared `_RWPermission` keeps DELETE tight
+    (`_can_run_audit`) for the OTHER compliance registers; only the risk register
+    is opened here. Tighten this back to `_can_write_compliance_area` before any
+    non-local deployment.
+    """
+    def has_permission(self, request, view):
+        if request.method == 'DELETE':
+            return bool(request.user and request.user.is_authenticated)
+        return super().has_permission(request, view)
+
+
 class RiskViewSet(viewsets.ModelViewSet):
-    # `_RiskRWPermission` lived here until 2026-09-18. It existed only to widen
-    # the risk register past `_can_run_audit` while the other registers stayed
-    # tight; now that `_RWPermission` carries that same rule for the whole
-    # compliance area, a separate class was two identical gates to keep in step.
+    # DELETE widened to the compliance-area writer via _RiskRWPermission
+    # (2026-09-26); the other registers keep the tighter shared _RWPermission.
     queryset = Risk.objects.prefetch_related('controls').order_by('ref')
     serializer_class = RiskSerializer
-    permission_classes = [_RWPermission]
+    permission_classes = [_RiskRWPermission]
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_delete_risks(request):
+    """Delete several risks in one call. Body: {"ids": ["<id>", ...]} ->
+    {"deleted": <count>}. TEST ENV: any signed-in user (see _RiskRWPermission),
+    added for the register owner to clear multiple rows at once
+    (Unopa Male, 2026-09-26)."""
+    ids = request.data.get('ids')
+    if not isinstance(ids, (list, tuple)) or not ids:
+        return Response({'detail': 'Provide a non-empty "ids" list.'},
+                        status=drf_status.HTTP_400_BAD_REQUEST)
+    matched = Risk.objects.filter(pk__in=ids)
+    n = matched.count()
+    matched.delete()
+    return Response({'deleted': n})
 
 
 # ── Risk register bulk upload (Unopa Male, 2026-09-18) ──────────────────

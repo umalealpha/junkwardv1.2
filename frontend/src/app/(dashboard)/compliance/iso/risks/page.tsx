@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { Card, CardContent } from '@/components/ui/card'
 import { apiFetch } from '@/lib/api'
-import { AlertTriangle, Plus, Upload, X } from 'lucide-react'
+import { AlertTriangle, Plus, Upload, X, Trash2 } from 'lucide-react'
 
 interface Risk {
   id: string
@@ -70,6 +70,7 @@ export default function RiskRegisterPage() {
   const [editing, setEditing] = useState<Risk | null>(null)
   const [creating, setCreating] = useState(false)
   const [importInfo, setImportInfo] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -78,6 +79,7 @@ export default function RiskRegisterPage() {
       const res = await apiFetch<any>('/iso/risks/?page_size=200')
       const list: Risk[] = Array.isArray(res) ? res : (res?.results ?? [])
       setRows(list)
+      setSelected(new Set())
     } catch (e: any) { setErr(e?.message || 'Load failed') }
     finally { setLoading(false) }
   }, [])
@@ -100,6 +102,28 @@ export default function RiskRegisterPage() {
     if (!confirm('Delete this risk?')) return
     await apiFetch(`/iso/risks/${id}/`, { method: 'DELETE' })
     setEditing(null)
+    await load()
+  }
+
+  const toggle = (id: string) =>
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleAll = () =>
+    setSelected((s) => (s.size === rows.length ? new Set() : new Set(rows.map((r) => r.id))))
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return
+    if (!confirm(`Delete ${selected.size} selected risk${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return
+    setErr(null)
+    try {
+      const res = await apiFetch<{ deleted: number }>('/iso/risks/bulk-delete/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      })
+      setImportInfo(`${res.deleted} risk${res.deleted === 1 ? '' : 's'} deleted`)
+    } catch (e: any) {
+      setErr(e?.message || 'Bulk delete failed')
+    }
     await load()
   }
 
@@ -151,6 +175,18 @@ export default function RiskRegisterPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {rows.length > 0 && (
+              <button onClick={toggleAll}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                {selected.size === rows.length ? 'Clear selection' : `Select all (${rows.length})`}
+              </button>
+            )}
+            {selected.size > 0 && (
+              <button onClick={bulkDelete}
+                className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
+                <Trash2 size={14} /> Delete selected ({selected.size})
+              </button>
+            )}
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv"
                    className="hidden" onChange={e => uploadExcel(e.target.files)} />
             <button onClick={() => fileRef.current?.click()}
@@ -211,6 +247,12 @@ export default function RiskRegisterPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
               <tr>
+                <th className="px-3 py-2 w-8">
+                  <input type="checkbox" aria-label="Select all risks"
+                    checked={rows.length > 0 && selected.size === rows.length}
+                    ref={(el) => { if (el) el.indeterminate = selected.size > 0 && selected.size < rows.length }}
+                    onChange={toggleAll} />
+                </th>
                 <th className="px-3 py-2">Risk ID</th>
                 <th className="px-3 py-2">Division / Source</th>
                 <th className="px-3 py-2">Risk Category</th>
@@ -223,14 +265,18 @@ export default function RiskRegisterPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">Loading…</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-500">
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-500">
                   No risks logged. Click <strong>New Risk</strong> to add one.
                 </td></tr>
               ) : rows.map((r) => (
                 <tr key={r.id} onClick={() => setEditing(r)}
-                    className="cursor-pointer hover:bg-slate-50">
+                    className={`cursor-pointer hover:bg-slate-50 ${selected.has(r.id) ? 'bg-amber-50' : ''}`}>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label={`Select ${r.ref}`}
+                      checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
+                  </td>
                   <td className="px-3 py-2 font-mono text-xs">{r.ref}</td>
                   <td className="px-3 py-2">
                     <div className="font-medium" style={{ color: '#0D1B2A' }}>{r.title}</div>
@@ -320,10 +366,10 @@ function RiskEditor({
 
         <div className="grid grid-cols-2 gap-3 text-sm">
           <Field label="Risk ID" full={isNew}>
-            <input value={r.ref}
-              readOnly
-              placeholder={isNew ? 'Auto (e.g. R-001)' : ''}
-              className="w-full rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-600" />
+            <input value={r.ref} onChange={(e) => set('ref', e.target.value)}
+              readOnly={!isNew}
+              placeholder={isNew ? 'e.g. R-001 — or leave blank to auto-number' : ''}
+              className={`w-full rounded border border-slate-300 px-3 py-2 text-sm ${isNew ? '' : 'bg-slate-50 text-slate-600'}`} />
           </Field>
           <Field label="Division / Source" full>
             <input value={r.title} onChange={(e) => set('title', e.target.value)}

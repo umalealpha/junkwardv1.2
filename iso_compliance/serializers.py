@@ -88,10 +88,11 @@ class RiskSerializer(serializers.ModelSerializer):
     score = serializers.IntegerField(read_only=True)
     residual_score = serializers.IntegerField(read_only=True)
     control_clauses = serializers.SerializerMethodField()
-    # Unopa Male, 2026-09-18: the Risk ID (formerly "Reference") is auto-
-    # generated. Making it read-only stops the browser sending back an empty
-    # `ref` on a new row and hitting the CharField unique-index at "".
-    ref = serializers.CharField(read_only=True)
+    # Risk ID is now MANUAL (Unopa Male, 2026-09-26): the register owner types the
+    # ID on a new risk. Left blank, it auto-numbers (R-###) as before, so the
+    # spreadsheet import and quick "just add one" flow still work. Writable +
+    # optional; validate_ref enforces uniqueness with a clean message.
+    ref = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Risk
@@ -103,11 +104,28 @@ class RiskSerializer(serializers.ModelSerializer):
             'owner', 'status', 'status_label',
             'control_clauses', 'created_at', 'reviewed_at',
         )
-        read_only_fields = ('id', 'ref', 'score', 'residual_score', 'created_at')
+        read_only_fields = ('id', 'score', 'residual_score', 'created_at')
+
+    def validate_ref(self, value):
+        value = (value or '').strip()
+        if value:
+            qs = Risk.objects.filter(ref=value)
+            if self.instance is not None:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(f'Risk ID "{value}" is already in use.')
+        return value
 
     def create(self, validated_data):
-        validated_data['ref'] = next_risk_ref()
+        # Manual ID if given, else auto-number (R-###) exactly as before.
+        validated_data['ref'] = (validated_data.get('ref') or '').strip() or next_risk_ref()
         return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # A blank ID on edit means "leave it as is" — never wipe the existing ref.
+        if not (validated_data.get('ref') or '').strip():
+            validated_data.pop('ref', None)
+        return super().update(instance, validated_data)
 
     def get_control_clauses(self, obj):
         return list(obj.controls.values_list('clause', flat=True))
