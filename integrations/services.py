@@ -158,6 +158,7 @@ class EventProcessor:
             IntegrationEvent.EventType.CLAIM_APPROVED:        self._claim_approved,
             IntegrationEvent.EventType.COMMISSION_CALCULATED:  self._commission_calculated,
             IntegrationEvent.EventType.POLICY_CANCELLED:      self._policy_cancelled,
+            IntegrationEvent.EventType.BUS_PING:              self._bus_ping,
         }
         if event.event_type in self.CLAIM_LIFECYCLE_TYPES:
             return self._claim_lifecycle(event)
@@ -208,6 +209,42 @@ class EventProcessor:
         if not data.get('claim_ref'):
             data['claim_ref'] = (data.get('claim') or {}).get('claim_ref') or ''
         processor.receive(data, received_via=event.received_via or 'integrations')
+        return None, None
+
+    # ------------------------------------------------------------------
+    # bus.ping → bus.pong  (WS1 two-way state-bus harness)
+    # ------------------------------------------------------------------
+
+    def _bus_ping(self, data):
+        """Prove the round trip: a ping arrived from Graphite; push a 'bus.pong'
+        straight back onto the durable outbound bus so the record on the Graphite
+        side flips to confirmed. Facts/states only, never money — and behind the
+        BUS_PING_ENABLED switch (off by default, no redeploy to flip).
+        """
+        from django.conf import settings as dj
+
+        if not getattr(dj, 'BUS_PING_ENABLED', False):
+            self._not_acted = 'stored, not acted on: BUS_PING_ENABLED is off'
+            return None, None
+
+        from .models import OutboundEvent
+        from .outbound import enqueue_and_deliver
+
+        data = data or {}
+        ref = str(data.get('ref') or '')
+        callback = str(data.get('callback_url') or '')
+        if not callback:
+            self._not_acted = 'no callback_url in bus.ping payload'
+            return None, None
+
+        enqueue_and_deliver(
+            target=OutboundEvent.Target.GRAPHITE,
+            event_type='bus.pong',
+            endpoint=callback,
+            auth_kind=OutboundEvent.AuthKind.NONE,
+            idempotency_key=('pong:' + ref) if ref else '',
+            payload={'ref': ref, 'status': 'confirmed', 'omni_event_id': 'omni-bus'},
+        )
         return None, None
 
     # ------------------------------------------------------------------

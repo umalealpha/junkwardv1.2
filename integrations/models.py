@@ -38,6 +38,10 @@ class IntegrationEvent(BaseModel):
         ASSESSMENT_RECEIVED    = 'assessment_received',    'Assessment Received'
         WRITE_OFF_FLAGGED      = 'write_off_flagged',      'Write-off Flagged'
         DECISION_RECORDED      = 'decision_recorded',      'Decision Recorded'
+        # WS1 two-way state-bus harness: a no-op ping used to prove the round
+        # trip (Graphite -> Omni -> Graphite) end to end. Handled behind the
+        # BUS_PING_ENABLED switch; enqueues a 'bus.pong' back to Graphite.
+        BUS_PING               = 'bus.ping',               'Bus Ping (WS1 harness)'
 
     class Status(models.TextChoices):
         RECEIVED   = 'received',   'Received'

@@ -973,6 +973,11 @@ GRAPHITE_REFUND_CALLBACK_TOKEN = config('GRAPHITE_REFUND_CALLBACK_TOKEN', defaul
 # nothing is sent — the bus can be stopped without a redeploy. Default on.
 OUTBOUND_BUS_ENABLED = config('OUTBOUND_BUS_ENABLED', default=True, cast=bool)
 
+# WS1 two-way state-bus harness: when on, a 'bus.ping' received from Graphite is
+# answered with a 'bus.pong' back onto the outbound bus (proves the round trip).
+# Off by default — a demo/harness switch, flipped without a redeploy.
+BUS_PING_ENABLED = config('BUS_PING_ENABLED', default=False, cast=bool)
+
 # ── Omni → Alpha Brain aggregate feed (CFO directive 2026-07-25) ─────────────
 # GET /api/v1/intel/summary/ serves counts + GL totals ONLY (no customer rows)
 # to Alpha Brain, authenticated by this shared bearer token. Empty = endpoint is
