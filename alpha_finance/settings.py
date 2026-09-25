@@ -968,6 +968,11 @@ CUSTOMER_REFUND_BANK_GL_CODE = config('CUSTOMER_REFUND_BANK_GL_CODE', default=''
 GRAPHITE_REFUND_CALLBACK_URL   = config('GRAPHITE_REFUND_CALLBACK_URL',   default='')
 GRAPHITE_REFUND_CALLBACK_TOKEN = config('GRAPHITE_REFUND_CALLBACK_TOKEN', default='')
 
+# WS1 outbound state bus (integrations.outbound). Kill switch for ALL write-backs
+# to Graphite: when False, OutboundEvents still enqueue (nothing is lost) but
+# nothing is sent — the bus can be stopped without a redeploy. Default on.
+OUTBOUND_BUS_ENABLED = config('OUTBOUND_BUS_ENABLED', default=True, cast=bool)
+
 # ── Omni → Alpha Brain aggregate feed (CFO directive 2026-07-25) ─────────────
 # GET /api/v1/intel/summary/ serves counts + GL totals ONLY (no customer rows)
 # to Alpha Brain, authenticated by this shared bearer token. Empty = endpoint is

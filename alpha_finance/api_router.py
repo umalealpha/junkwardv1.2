@@ -2014,6 +2014,7 @@ from iso_compliance.views import (
     seed_soa as iso_seed_soa, soa_summary as iso_soa_summary,
     auditor_pack as iso_auditor_pack,
     import_risks as iso_import_risks,
+    bulk_delete_risks as iso_bulk_delete_risks,
 )
 # `urlpatterns` was already built above as `[…] + router.urls + [...]` — at that
 # moment the routes from `router.urls` were snapshot. Any router.register call
@@ -2052,6 +2053,9 @@ iso_router.register(r'aml/supplier-screening',   VendorKYCScreeningViewSet, base
 # and answers 404 (Unopa Male, 2026-09-18).
 urlpatterns += [
     path('iso/risks/import/',                iso_import_risks,         name='v1-iso-risks-import'),
+    # Bulk delete — same precedence reason as import: must sit above the router's
+    # /iso/risks/<pk>/ lookup so 'bulk-delete' is not read as a pk (2026-09-26).
+    path('iso/risks/bulk-delete/',           iso_bulk_delete_risks,    name='v1-iso-risks-bulk-delete'),
 ]
 
 urlpatterns += iso_router.urls

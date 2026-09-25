@@ -256,38 +256,43 @@ def post_refund_back_to_graphite(refund) -> dict:
     """Tell Graphite the refund is paid so it can post to the policy + flip the
     portal flag. Dormant until GRAPHITE_REFUND_CALLBACK_URL + token are set —
     never crashes the caller.
+
+    WS1 (2026-09-26): now goes through the generalised outbound state bus
+    (integrations.outbound) instead of a bespoke urllib call. The send is
+    persisted as an OutboundEvent, deduped on graphite_ref, and retried by the
+    `drain_outbound_events` worker if the live attempt fails. Caller behaviour is
+    unchanged: on a 2xx the refund flips to POSTED_BACK in the same request.
     """
-    import json
-    import urllib.error
-    import urllib.request
+    from integrations.models import OutboundEvent
+    from integrations.outbound import enqueue_and_deliver
 
     url = getattr(settings, 'GRAPHITE_REFUND_CALLBACK_URL', '') or ''
     token = getattr(settings, 'GRAPHITE_REFUND_CALLBACK_TOKEN', '') or ''
     if not url or not token:
         return {'sent': False, 'reason': 'callback_not_configured'}
 
-    payload = json.dumps({
-        'graphite_ref': refund.graphite_ref,
-        'policy_number': refund.policy_number,
-        'amount': str(refund.refund_amount),
-        'fnb_reference': getattr(refund.fnb_batch, 'fnb_reference', ''),
-        'status': 'paid',
-    }).encode()
-    req = urllib.request.Request(
-        url, data=payload, method='POST',
-        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            ok = 200 <= r.status < 300
-        if ok:
-            refund.graphite_posted = True
-            refund.graphite_posted_at = timezone.now()
-            refund.status = refund.Status.POSTED_BACK
-            refund.save(update_fields=['graphite_posted', 'graphite_posted_at',
-                                       'status', 'updated_at'])
-        return {'sent': ok}
-    except (urllib.error.URLError, urllib.error.HTTPError) as e:
-        return {'sent': False, 'reason': str(e)[:200]}
+    result = enqueue_and_deliver(
+        target=OutboundEvent.Target.GRAPHITE,
+        event_type='refund.paid',
+        endpoint=url,
+        auth_kind=OutboundEvent.AuthKind.BEARER,
+        token_setting='GRAPHITE_REFUND_CALLBACK_TOKEN',
+        idempotency_key=str(refund.graphite_ref or ''),
+        payload={
+            'graphite_ref': refund.graphite_ref,
+            'policy_number': refund.policy_number,
+            'amount': str(refund.refund_amount),
+            'fnb_reference': getattr(refund.fnb_batch, 'fnb_reference', ''),
+            'status': 'paid',
+        },
+    )
+    if result.get('sent'):
+        refund.graphite_posted = True
+        refund.graphite_posted_at = timezone.now()
+        refund.status = refund.Status.POSTED_BACK
+        refund.save(update_fields=['graphite_posted', 'graphite_posted_at',
+                                   'status', 'updated_at'])
+    return {'sent': result.get('sent', False), 'reason': result.get('reason', '')}
 
 
 # ─── Auto-stage on Graphite handoff + notify the CFO (CFO 2026-07-28) ────────

@@ -109,6 +109,9 @@ ENABLED=(
     fnb-three-way-check
     bank-integrity-watch
     bank-balances
+    # WS1 outbound state bus retry worker (2026-09-26): pushes out any Graphite
+    # write-back that failed its live send and is now past its backoff.
+    outbound-bus-drain
     payment-ageing-escalation
     staff-loan-rate
     # staff-loan-repayments moved to DISABLED below — the orchestrator owns the
